@@ -96,14 +96,14 @@ ignore:
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: anatole-core
+theme: landscape
 
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: ''
 
-
+<!-- 
 #anatole-core theme
 live2d:
   enable: true
@@ -127,3 +127,4 @@ live2d:
   react:
      opacityDefault: 0.8
      opacityOnHover: 0.2
+-->
