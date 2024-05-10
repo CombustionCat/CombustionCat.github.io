@@ -1,7 +1,7 @@
 ---
 title: Custom OpenFOAM Equation of State
 date: 2024-05-10 23:42:23
-tags: OpenFOAM; thermophysicalModel
+tags: [OpenFOAM, thermophysicalModel]
 ---
 Yo! Here is a guide on how to compile and run your custom equation of state in OpenFOAM. This is tested in OpenFOAM version 10. 
 
