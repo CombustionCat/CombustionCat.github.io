@@ -115,7 +115,7 @@ live2d:
   model:
     use: live2d-widget-model-tororo
   display:
-    position: left
+    position: right
     width: 200
     height: 400
     hOffset: 5
