@@ -5,10 +5,11 @@
 menu:
   Home: /
   Archives: /archives
+  About: /About
 # RSS link
 rss: /atom.xml
 # Path of title banner image of page top
-banner: "images/banner.jpg"
+banner: "images/70669312_p0_master1200.jpg"
 # Subtitle of page top
 subtitle:
 # Header links with icon, specified links will appear at the top right corner of the page
@@ -46,7 +47,7 @@ sidebar: right
 widgets:
 - category
 - tag
-- tagcloud
+#- tagcloud
 - archive
 - recent_posts
 
@@ -78,7 +79,7 @@ fb_app_id:
 disqus_shortname:
 # valine comment system. https://valine.js.org
 valine:
-  enable: false # if you want use valine,please set this value is true
+  enable: True # if you want use valine,please set this value is true
   appId:  # leancloud application app id
   appKey:  # leancloud application app key
   notify: false # valine mail notify (true/false) https://github.com/xCss/Valine/wiki
@@ -86,5 +87,5 @@ valine:
   pageSize: 10 # comment list page size
   avatar: mm # gravatar style https://valine.js.org/#/avatar
   lang: zh-cn # i18n: zh-cn/en
-  placeholder: Just go go # valine comment input placeholder(like: Please leave your footprints )
+  placeholder: Humanity has never concealed its desires to control the heavens and I am no exception # valine comment input placeholder(like: Please leave your footprints )
   guest_info: nick,mail,link #valine comment header info
