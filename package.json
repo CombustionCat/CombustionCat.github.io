@@ -24,7 +24,9 @@
     "hexo-renderer-stylus": "^3.0.0",
     "hexo-server": "^3.0.0",
     "hexo-tag-aplayer": "^3.0.4",
+    "hexo-tag-google-photos-album-gallery": "^1.0.1",
     "hexo-theme-landscape": "^1.0.0",
+    "lightgallery.js": "^1.4.0",
     "live2d-widget-model-tororo": "^1.0.5"
   }
 }
