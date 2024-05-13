@@ -1,6 +1,5 @@
 ---
 title: Cloud photos
-date: Neverending
 tags: [Photos]
 categories: 
 - [Personal]
