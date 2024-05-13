@@ -53,3 +53,36 @@
 
   </section>
 <% } %>
+
+<%- js('js/lightgallery.min.js') %>
+<%- js('js/lg-thumbnail.min.js') %>
+<%- js('js/lg-fullscreen.min.js') %>
+
+<script>
+    <% if (item.dynamicEl && item.dynamicEl.length){ %>
+      var galleries = [];
+      <% item.dynamicEl.forEach(function(el){ %>
+        if (document.getElementById('gallery-cover-img-<%-el.id%>')) {
+            console.log(<%- JSON.stringify(el) %>);
+            galleries.push({
+                div: document.getElementById('gallery-cover-img-<%-el.id%>'),
+                dynEl: <%- el.dynEl %>
+            });
+        };
+
+      <% }); %>
+
+      galleries.forEach((gallery) => {
+        gallery.div.addEventListener('click', function() {
+            lightGallery(gallery.div, {
+                dynamic: true,
+                selector: '.child_element',
+                dynamicEl: gallery.dynEl
+            });
+        });
+
+        gallery.div.style.textAlign = 'center';
+        gallery.div.style.cursor = 'pointer';
+      });
+    <% } %>
+</script>
