@@ -1,6 +1,6 @@
 ---
 title: Cloud photos
-tags: [Photos]
+tags: Photos
 categories: Personal
 ---
 
