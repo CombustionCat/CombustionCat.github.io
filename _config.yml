@@ -139,4 +139,4 @@ googlePhotosAlbum:
   mediumSize: =s720-no
   smallSize:  =w225-no
   maxPics: 999
-  generateAlways: false
+  generateAlways: true
