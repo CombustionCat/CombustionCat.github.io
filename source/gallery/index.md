@@ -8,7 +8,7 @@ date: 2024-05-13 13:57:20
 	<div class="gallery-list">
 		<div class="gallery-column">
 			<div class="gallery-item">
-				<a href="Clouds"><img src="img/clouds.jpg">
+				<a href="Clouds"><img src="img/20240509_191149.jpg">
 				</a>
 			</div>
 		</div>
