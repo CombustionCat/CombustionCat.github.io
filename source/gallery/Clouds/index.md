@@ -14,8 +14,8 @@ title: Clouds
             justify-content: space-between;
         }
         .gallery-item {
-            flex: 0 0 48%;
-            margin-bottom: 20px; /* Adjust margin as needed */
+            flex: 0 0 50%;
+            margin-bottom: 0px; /* Adjust margin as needed */
         }
         @media (max-width: 992px) {
             .gallery-item {
