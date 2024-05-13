@@ -1,5 +1,6 @@
+---
 title: Clouds
-
+---
 <center></center>
 <center></center>
 <div class="gallery-page">
@@ -11,8 +12,6 @@ title: Clouds
 		<div class="img-column">
 			<a href="img/cloud3.jpg" target="_Blank"><img src="img/s/cloud3.jpg"></a>
 		</div>
-		<div class="img-column">
-			<a href="img/sample.jpg" target="_Blank"><img src="img/s/sample.jpg"></a>
 	</div>
 </div>
 <center></center>
