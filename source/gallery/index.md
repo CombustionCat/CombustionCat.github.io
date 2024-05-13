@@ -10,7 +10,9 @@ date: 2024-05-13 13:57:20
 			<div class="gallery-item">
 				<a href="Clouds"><img src="img/Clouds.jpg">
 				</a>
-				<p>-Clouds~~-</p>
+				<p></p>
 			</div>
+		</div>
+	</div>
 </div>
 <center></center>
