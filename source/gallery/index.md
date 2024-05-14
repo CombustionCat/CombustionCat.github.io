@@ -23,7 +23,7 @@ date: 2024-05-13 13:57:20
         }
         .gallery-column {
             flex: 1;
-            max-width: 300px;
+            max-width: 500px;
             margin: 0px;
         }
         .gallery-item {
