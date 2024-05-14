@@ -14,7 +14,7 @@ date: 2024-05-13 13:57:20
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            margin: 20px;
+            margin: 0px;
         }
         .gallery-list {
             display: flex;
@@ -24,7 +24,7 @@ date: 2024-05-13 13:57:20
         .gallery-column {
             flex: 1;
             max-width: 300px;
-            margin: 10px;
+            margin: 0px;
         }
         .gallery-item {
             position: relative;
@@ -43,7 +43,6 @@ date: 2024-05-13 13:57:20
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">Clouds</h1>
     <div class="gallery-page">
         <div class="gallery-list">
             <div class="gallery-column">
@@ -55,5 +54,6 @@ date: 2024-05-13 13:57:20
             </div>
         </div>
     </div>
+    <h3 style="text-align: center;">Click image for more clouds :D</h3>
 </body>
 </html>
