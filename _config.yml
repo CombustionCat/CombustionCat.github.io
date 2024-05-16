@@ -126,3 +126,9 @@ live2d:
   react:
      pacityDefault: 0.8
      opacityOnHover: 0.2
+
+postmap:
+  xml_path: 'locations.xml'
+  map_page_stub: 'mapofposts'
+  map_page_title: 'Map of posts'
+  google_maps_api_key: 'API_KEY'
