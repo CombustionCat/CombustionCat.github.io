@@ -131,4 +131,4 @@ postmap:
   xml_path: 'locations.xml'
   map_page_stub: 'map'
   map_page_title: 'Im the map, Im the map...'
-  google_maps_api_key: AIzaSyC6xgpuqofyxmcs2TgEB8fMyN8O5zUs7h4
+  google_maps_api_key: mapkey
