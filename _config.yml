@@ -129,6 +129,6 @@ live2d:
 
 postmap:
   xml_path: 'locations.xml'
-  map_page_stub: 'mapofposts'
-  map_page_title: 'Map of posts'
-  google_maps_api_key: 'API_KEY'
+  map_page_stub: 'map'
+  map_page_title: 'Map'
+  google_maps_api_key: AIzaSyC6xgpuqofyxmcs2TgEB8fMyN8O5zUs7h4
