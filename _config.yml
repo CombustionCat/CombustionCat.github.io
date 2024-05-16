@@ -127,16 +127,8 @@ live2d:
      pacityDefault: 0.8
      opacityOnHover: 0.2
 
-googlePhotosAlbum:
-  descriptionLength: 140
-  target: _blank
-  rel: noopener
-  className: google-photos-album-area
-  enableDefaultStyle: true
-  defaultStyle: google_photos_album.css
-  largeSizeThreshold: 768
-  largeSize:  =s1920-no
-  mediumSize: =s720-no
-  smallSize:  =w225-no
-  maxPics: 999
-  generateAlways: true
+postmap:
+  xml_path: 'locations.xml'
+  map_page_stub: 'mapofposts'
+  map_page_title: 'Map of posts'
+  google_maps_api_key: 'API_KEY'
