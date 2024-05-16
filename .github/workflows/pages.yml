@@ -35,6 +35,11 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./public
+
+      - name: Deploy to server
+        env:
+          mapkey: ${{ secrets.mapkey }}
+        run: npm run build
   deploy:
     needs: build
     permissions:
