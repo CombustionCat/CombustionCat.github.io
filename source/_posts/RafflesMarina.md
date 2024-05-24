@@ -5,7 +5,61 @@ categories:
 - [Stargazing sites]
 location: [1.3445524400150612, 103.63396206008923]
 ---
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clouds</title>
+    <style>
+        .gallery-page {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 0px;
+        }
+        .gallery-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .gallery-column {
+            flex: 1;
+            max-width: 500px;
+            margin: 0px;
+        }
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .gallery-item a {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
+</head>
+<body>
+    <div class="gallery-page">
+        <div class="gallery-list">
+            <div class="gallery-column">
+                <div class="gallery-item">
+                    <a href="Clouds">
+                        <img src="img/paranoma.jpg" alt="Paranoma">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3 style="text-align: center;">Click image for more clouds :D</h3>
+</body>
+</html>
 ## TLDR:
 - low horizon: east, west, south, north
 - overall darkness: 3/3
@@ -20,5 +74,48 @@ location: [1.3445524400150612, 103.63396206008923]
 - toilet: yes
 - obs site: paved
 
+
+
 #### Notes:
 Portable chairs are ok but might not have space if you bring a scope as well so its either or. There is a rule against obstructing the pathway.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clouds</title>
+    <style>
+        .gallery-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .gallery-item {
+            flex: 0 0 50%;
+            margin-bottom: 0px; /* Adjust margin as needed */
+        }
+        @media (max-width: 992px) {
+            .gallery-item {
+                flex: 0 0 100%; /* Make each item take up full width on smaller screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="gallery-container">
+        <div class="gallery-item">
+            <a href="img/lighthouse.jpg" target="_blank"><img src="img/lighthouse.jpg" alt="lighthouse"></a>
+        </div>
+        <div class="gallery-item">
+            <a href="img/walkway1.jpg" target="_blank"><img src="img/walkway1.jpg" alt="walkway1"></a>
+        </div>
+        <div class="gallery-item">
+            <a href="img/walkway2.jpg" target="_blank"><img src="img/walkway2.jpg" alt="walkway2"></a>
+        </div>
+        <div class="gallery-item">
+            <a href="img/causeway.jpg" target="_blank"><img src="img/causeway.jpg" alt="causeway"></a>
+        </div>
+    </div>
+</body>
+</html>
