@@ -3,10 +3,10 @@ title: Raffles Marina
 date: 2024-05-21 23:42:23
 categories: 
 - [Stargazing sites]
-location: [1.3446662051691047, 103.63390136862444]
+location: [1.3445524400150612, 103.63396206008923]
 ---
 
-##TLDR:
+## TLDR:
 - low horizon: east, west, south, north
 - overall darkness: 3/3
 - dark regions: west
@@ -20,5 +20,5 @@ location: [1.3446662051691047, 103.63390136862444]
 - toilet: yes
 - obs site: paved
 
-####Notes:
+#### Notes:
 Portable chairs are ok but might not have space if you bring a scope as well so its either or. There is a rule against obstructing the pathway.
