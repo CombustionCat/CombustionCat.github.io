@@ -73,16 +73,16 @@ location: [1.3445524400150612, 103.63396206008923]
     </div>
     <div class="gallery-container">
         <div class="gallery-item">
-            <a href="RafflesMarina/img/lighthouse.jpg" target="_blank"><img src="RafflesMarina/img/lighthouse.jpg" alt="Lighthouse"></a>
+            <a href="RafflesMarina/img/lighthouse.jpg" target="_blank"><img src="RafflesMarina/img/s/lighthouse.jpg" alt="Lighthouse"></a>
         </div>
         <div class="gallery-item">
-            <a href="RafflesMarina/img/walkway1.jpg" target="_blank"><img src="RafflesMarina/img/walkway1.jpg" alt="Walkway 1"></a>
+            <a href="RafflesMarina/img/walkway1.jpg" target="_blank"><img src="RafflesMarina/img/s/walkway1.jpg" alt="Walkway 1"></a>
         </div>
         <div class="gallery-item">
-            <a href="RafflesMarina/img/walkway2.jpg" target="_blank"><img src="RafflesMarina/img/walkway2.jpg" alt="Walkway 2"></a>
+            <a href="RafflesMarina/img/walkway2.jpg" target="_blank"><img src="RafflesMarina/img/s/walkway2.jpg" alt="Walkway 2"></a>
         </div>
         <div class="gallery-item">
-            <a href="RafflesMarina/img/causeway.jpg" target="_blank"><img src="RafflesMarina/img/causeway.jpg" alt="Causeway"></a>
+            <a href="RafflesMarina/img/causeway.jpg" target="_blank"><img src="RafflesMarina/img/s/causeway.jpg" alt="Causeway"></a>
         </div>
     </div>
     <div>
