@@ -10,7 +10,7 @@ location: [1.3445524400150612, 103.63396206008923]
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clouds</title>
+    <title>RafflesMarina</title>
     <style>
         .gallery-page {
             display: flex;
@@ -57,7 +57,6 @@ location: [1.3445524400150612, 103.63396206008923]
             </div>
         </div>
     </div>
-    <h3 style="text-align: center;">Click image for more clouds :D</h3>
 </body>
 </html>
 ## TLDR:
