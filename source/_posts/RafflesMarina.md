@@ -51,7 +51,7 @@ location: [1.3445524400150612, 103.63396206008923]
             <div class="gallery-column">
                 <div class="gallery-item">
                     <a href="Clouds">
-                        <img src="img/paranoma.jpg" alt="Paranoma">
+                        <img src="RafflesMarina/img/paranoma.jpg" alt="Paranoma">
                     </a>
                 </div>
             </div>
@@ -105,16 +105,16 @@ Portable chairs are ok but might not have space if you bring a scope as well so 
 <body>
     <div class="gallery-container">
         <div class="gallery-item">
-            <a href="img/lighthouse.jpg" target="_blank"><img src="img/lighthouse.jpg" alt="lighthouse"></a>
+            <a href="RafflesMarina/img/lighthouse.jpg" target="_blank"><img src="RafflesMarina/img/lighthouse.jpg" alt="lighthouse"></a>
         </div>
         <div class="gallery-item">
-            <a href="img/walkway1.jpg" target="_blank"><img src="img/walkway1.jpg" alt="walkway1"></a>
+            <a href="RafflesMarina/img/walkway1.jpg" target="_blank"><img src="RafflesMarina/img/walkway1.jpg" alt="walkway1"></a>
         </div>
         <div class="gallery-item">
-            <a href="img/walkway2.jpg" target="_blank"><img src="img/walkway2.jpg" alt="walkway2"></a>
+            <a href="RafflesMarina/img/walkway2.jpg" target="_blank"><img src="RafflesMarina/img/walkway2.jpg" alt="walkway2"></a>
         </div>
         <div class="gallery-item">
-            <a href="img/causeway.jpg" target="_blank"><img src="img/causeway.jpg" alt="causeway"></a>
+            <a href="RafflesMarina/img/causeway.jpg" target="_blank"><img src="RafflesMarina/img/causeway.jpg" alt="causeway"></a>
         </div>
     </div>
 </body>
