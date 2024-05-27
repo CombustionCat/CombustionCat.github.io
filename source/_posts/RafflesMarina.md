@@ -64,7 +64,7 @@ location: [1.3445524400150612, 103.63396206008923]
         <div class="gallery-list">
             <div class="gallery-column">
                 <div class="gallery-item">
-                    <a href="RafflesMarina">
+                    <a href="RafflesMarina/img/paranoma.jpg">
                         <img src="RafflesMarina/img/paranoma.jpg" alt="Panorama">
                     </a>
                 </div>
@@ -73,16 +73,16 @@ location: [1.3445524400150612, 103.63396206008923]
     </div>
     <div class="gallery-container">
         <div class="gallery-item">
-            <a href="RafflesMarina/img/lighthouse.jpg" target="_blank"><img src="RafflesMarina/img/s/lighthouse.jpg" alt="Lighthouse"></a>
+            <a href="RafflesMarina/img/s/lighthouse.jpg" target="_blank"><img src="RafflesMarina/img/s/lighthouse.jpg" alt="Lighthouse"></a>
         </div>
         <div class="gallery-item">
-            <a href="RafflesMarina/img/walkway1.jpg" target="_blank"><img src="RafflesMarina/img/s/walkway1.jpg" alt="Walkway 1"></a>
+            <a href="RafflesMarina/img/s/walkway1.jpg" target="_blank"><img src="RafflesMarina/img/s/walkway1.jpg" alt="Walkway 1"></a>
         </div>
         <div class="gallery-item">
-            <a href="RafflesMarina/img/walkway2.jpg" target="_blank"><img src="RafflesMarina/img/s/walkway2.jpg" alt="Walkway 2"></a>
+            <a href="RafflesMarina/img/s/walkway2.jpg" target="_blank"><img src="RafflesMarina/img/s/walkway2.jpg" alt="Walkway 2"></a>
         </div>
         <div class="gallery-item">
-            <a href="RafflesMarina/img/causeway.jpg" target="_blank"><img src="RafflesMarina/img/s/causeway.jpg" alt="Causeway"></a>
+            <a href="RafflesMarina/img/s/causeway.jpg" target="_blank"><img src="RafflesMarina/img/s/causeway.jpg" alt="Causeway"></a>
         </div>
     </div>
     <div>
@@ -95,7 +95,10 @@ location: [1.3445524400150612, 103.63396206008923]
             <li><strong>Insect:</strong> no, but yes if you sit at the restaurant seats</li>
             <li><strong>Transportation:</strong> good, Tuas Link station + drivable to carpark</li>
             <li><strong>Terrain accessibility:</strong> paved ground, no stairs, no slope, 10 mins from MRT, 5 mins from carpark</li>
-            <li><strong>Regulations:</strong> yes, no outside drinks, scope at your own risk, binoculars ok</li>
+            <li><strong>Regulations:</strong> 
+                <li>yes, no outside drinks</li>
+                <li>scope at your own risk, binoculars ok</li>
+            </li>
             <li><strong>Shelter:</strong> 3 mins away</li>
             <li><strong>Time-gated:</strong> no</li>
             <li><strong>Toilet:</strong> yes</li>
