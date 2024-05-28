@@ -60,18 +60,10 @@ location: [1.3445524400150612, 103.63396206008923]
     </style>
 </head>
 <body>
-    <div class="gallery-page">
-        <div class="gallery-list">
-            <div class="gallery-column">
-                <div class="gallery-item">
-                    <a href="Panorama">
-                        <img src="RafflesMarina/paranoma.jpg" alt="Panorama">
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="gallery-container">
+        <div class="gallery-item">
+            <a href="Panorama"><img src="RafflesMarina/paranoma.jpg" alt="Panorama"></a>
+        </div>
         <div class="gallery-item">
             <a href="RafflesMarina/s/lighthouse.jpg" target="_blank"><img src="RafflesMarina/lighthouse.jpg" alt="Lighthouse"></a>
         </div>
