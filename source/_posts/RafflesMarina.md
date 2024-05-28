@@ -10,7 +10,7 @@ location: [1.3445524400150612, 103.63396206008923]
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clouds</title>
+    <title>RafflesMarina</title>
     <style>
         .gallery-page {
             display: flex;
@@ -51,7 +51,7 @@ location: [1.3445524400150612, 103.63396206008923]
             <div class="gallery-column">
                 <div class="gallery-item">
                     <a href="RafflesMarina">
-                        <img src="RafflesMarina/paranoma.jpg" alt="Paranoma">
+                        <img src="RafflesMarina/panorama.jpg" alt="Panorama">
                     </a>
                 </div>
             </div>
