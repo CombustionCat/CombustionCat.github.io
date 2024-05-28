@@ -10,43 +10,54 @@ location: [1.3445524400150612, 103.63396206008923]
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raffles Marina</title>
+    <title>Clouds</title>
     <style>
-        .gallery-container {
+        .gallery-page {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 0px;
+        }
+        .gallery-list {
             display: flex;
             flex-wrap: wrap;
-            justify-content: space-between;
+            justify-content: center;
+        }
+        .gallery-column {
+            flex: 1;
+            max-width: 500px;
+            margin: 0px;
         }
         .gallery-item {
-            flex: 0 0 50%;
-            margin-bottom: 0px; /* Adjust margin as needed */
+            position: relative;
+            overflow: hidden;
         }
-        @media (max-width: 992px) {
-            .gallery-item {
-                flex: 0 0 100%; /* Make each item take up full width on smaller screens */
-            }
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .gallery-item a {
+            display: block;
+            text-decoration: none;
+            color: inherit;
         }
     </style>
 </head>
 <body>
-    <div class="gallery-container">
-        <div class="gallery-item">
-            <a href="RafflesMarina/s/panorama.jpg"><img src="RafflesMarina/paranoma.jpg" alt="Panorama"></a>
-        </div>
-        <div class="gallery-item">
-            <a href="RafflesMarina/s/lighthouse.jpg" target="_blank"><img src="RafflesMarina/lighthouse.jpg" alt="Lighthouse"></a>
-        </div>
-        <div class="gallery-item">
-            <a href="RafflesMarina/s/walkway1.jpg" target="_blank"><img src="RafflesMarina/walkway1.jpg" alt="Walkway 1"></a>
-        </div>
-        <div class="gallery-item">
-            <a href="RafflesMarina/s/walkway2.jpg" target="_blank"><img src="RafflesMarina/walkway2.jpg" alt="Walkway 2"></a>
-        </div>
-        <div class="gallery-item">
-            <a href="RafflesMarina/s/causeway.jpg" target="_blank"><img src="RafflesMarina/causeway.jpg" alt="Causeway"></a>
+    <div class="gallery-page">
+        <div class="gallery-list">
+            <div class="gallery-column">
+                <div class="gallery-item">
+                    <a href="RafflesMarina">
+                        <img src="RafflesMarina/paranoma.jpg" alt="Paranoma">
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    <div>
+     <div>
         <h2>TLDR:</h2>
         <ul>
             <li><strong>Low horizon:</strong> east, west, south, north</li>
