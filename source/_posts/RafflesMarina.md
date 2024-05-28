@@ -51,7 +51,7 @@ location: [1.3445524400150612, 103.63396206008923]
             <div class="gallery-column">
                 <div class="gallery-item">
                     <a href="RafflesMarina">
-                        <img src="RafflesMarina/panorama.jpg" alt="Panorama">
+                        <img src="RafflesMarina/paranoma.jpg" alt="Panorama">
                     </a>
                 </div>
             </div>
