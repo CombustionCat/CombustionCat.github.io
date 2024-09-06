@@ -13,13 +13,16 @@ location: [1.3445524400150612, 103.63396206008923]
     <title>RafflesMarina</title>
 </head>
 <body>
-    <img src="RafflesMarina/paranoma.jpg" alt="Panorama">
+    <img src="RafflesMarina/RafflesMarina.jpg" alt="RafflesMarina">
      <div>
-        <h2>TLDR:</h2>
+        <h2>Sky Conditions</h2>
         <ul>
             <li><strong>Low horizon:</strong> east, west, south, north</li>
             <li><strong>Overall darkness:</strong> 3/3</li>
             <li><strong>Dark regions:</strong> west</li>
+        </ul>
+        <img src="RafflesMarina/paranoma.jpg" alt="paranoma">
+        <h2>Location Information</h2>
             <li><strong>Food/drinks options:</strong> no food; drinks, food, and ice cream vending machines</li>
             <li><strong>Insect:</strong> no, but yes if you sit at the restaurant seats</li>
             <li><strong>Transportation:</strong> 10 mins walk from Tuas Link station OR 5 mins walk from carpark</li>
