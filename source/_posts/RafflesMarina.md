@@ -13,7 +13,7 @@ location: [1.3445524400150612, 103.63396206008923]
     <title>RafflesMarina</title>
 </head>
 <body>
-    <img src="RafflesMarina/RafflesMarina.jpg" alt="RafflesMarina">
+    <img src="RafflesMarina/walkway1.jpg" alt="walkway1">
      <div>
         <h2>Sky Conditions</h2>
         <ul>
