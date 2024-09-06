@@ -28,12 +28,11 @@ location: [1.3445524400150612, 103.63396206008923]
             <li><strong>Transportation:</strong> 10 mins walk from Tuas Link station OR 5 mins walk from carpark</li>
             <li><strong>Terrain accessibility:</strong> paved ground, no stairs, no slope, slight tiling on paved ground</li>
             <li><strong>Regulations:</strong> 
-            <ul>
-                <li>no outside drinks</li>
-                <li>scope at your own risk, binoculars ok</li>
-                <li>no obstructing pathway</li>
-            </ul>
-            </li>
+            <ul><ul>
+                  <li>no outside drinks</li>
+                  <li>scope at your own risk, binoculars ok</li>
+                  <li>no obstructing pathway</li>
+            </ul></ul>
             <li><strong>Shelter:</strong> 3 mins away</li>
             <li><strong>Time-gated:</strong> no</li>
             <li><strong>Toilet:</strong> yes</li>
