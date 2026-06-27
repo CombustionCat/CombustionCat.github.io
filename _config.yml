@@ -3,7 +3,7 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: CombustionCat's Cloud of Contemplation
+title: Light Sky Sites
 subtitle: ''
 description: ''
 keywords:
@@ -127,8 +127,4 @@ live2d:
      pacityDefault: 0.8
      opacityOnHover: 0.2
 
-postmap:
-  xml_path: 'locations.xml'
-  map_page_stub: 'map'
-  map_page_title: 'Im the map, Im the map...'
-  google_maps_api_key: AIzaSyDrKZfwRhMyfjDimrH2R9zILBm3CMNCdTE
+

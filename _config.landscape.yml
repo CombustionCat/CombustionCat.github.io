@@ -7,8 +7,8 @@ menu:
   Archives: /archives
   About: /about
   Gallery: /gallery
-  Stargazing Map: /map
-  Stargazing Sites: /Stargazing Sites
+  Stargazing Sites: /sites
+
 # RSS link
 rss: /atom.xml
 # Path of title banner image of page top

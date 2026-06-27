@@ -48,10 +48,7 @@ hexo.extend.generator.register('stargazing_atlas', function (locals) {
     '<script>var SITES = ' + JSON.stringify(sites) + ';</script>';
 
   return [
-    { path: 'index.html', data: homePage(dataScript) },
-    { path: 'sites/index.html', data: sitesPage(dataScript) },
-    { path: 'sites-data.json', data: JSON.stringify(sites, null, 2) },
-    { path: 'stargazing.css', data: STYLES }
+    { path: 'sites-data.json', data: JSON.stringify(sites, null, 2) }
   ];
 });
 
@@ -87,29 +84,28 @@ function nav(active) {
 
 function foot() {
   return `<footer class="foot">
-  <p>A slow but ongoing compilation of dark-ish skies over Singapore.
-     Want to contribute a spot? Use the form above or email
-     <a href="mailto:spacecatloaf@gmail.com">spacecatloaf@gmail.com</a>.</p>
+  <p>A slow but ongoing compilation of stargazing sites in Singapore.
+     Want to contribute a site? Use the form above.</p>
 </footer>`;
 }
 
 /* ------------------------------ home ---------------------------------- */
 
 function homePage(dataScript) {
-  return `${head('Stargazing Sites \u00B7 Singapore')}
-<body class="page-map">
+  return `${head('Stargazing Sites')}
+<body class="page-map">Re 
 ${nav('map')}
 
 <section class="hero">
-  <p class="eyebrow">A field guide to the city&rsquo;s night skies</p>
+  <p class="eyebrow">I'm the Map, I'm the Map</p>
   <div id="map" class="map" role="application" aria-label="Map of stargazing sites in Singapore"></div>
-  <p class="map-hint">Tap a star to see conditions, a photo, and the full write-up.</p>
+  <p class="map-hint">Tap a site to see conditions and link to full information.</p>
 </section>
 
 <section class="contact" id="ask">
   <div class="contact-inner">
-    <h2>Ask a question</h2>
-    <p class="lede">Spotted an error, know a darker corner, or just curious? Send a note &mdash; it lands straight in the inbox.</p>
+    <h2>Contact Me</h2>
+    <p class="lede">Any site updates, site recommendations, etc? Send a message &mdash; No promises to reply.</p>
     <form id="ask-form" class="ask-form" novalidate>
       <div class="field">
         <label for="f-name">Name</label>
@@ -227,7 +223,7 @@ ${dataScript}
 /* ------------------------------ sites --------------------------------- */
 
 function sitesPage(dataScript) {
-  return `${head('All sites \u00B7 Stargazing Sites Singapore')}
+  return `${head('All sites \u00B7 Stargazing Sites')}
 <body class="page-sites">
 ${nav('sites')}
 
