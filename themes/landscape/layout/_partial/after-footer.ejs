@@ -24,14 +24,36 @@
 
 <script>
 (function () {
+  var H = 340;
   document.querySelectorAll('[data-carousel]').forEach(function (car) {
     var track = car.querySelector('.carousel-track');
-    var slides = Array.prototype.slice.call(track.children);
-    var n = slides.length;
+    var imgs = Array.prototype.slice.call(track.querySelectorAll('img'));
+    var n = imgs.length;
     var cur = 0;
     var dotsEl = car.querySelector('.carousel-dots');
     var prevBtn = car.querySelector('.carousel-prev');
     var nextBtn = car.querySelector('.carousel-next');
+
+    /* Force container heights via inline style — beats any stylesheet rule */
+    car.style.height = H + 'px';
+    track.style.cssText = 'position:relative;width:100%;height:' + H + 'px;display:block;';
+
+    /* Kill margin/padding on any wrapper elements (e.g. <p> inserted by markdown) */
+    Array.prototype.forEach.call(track.children, function (el) {
+      if (el.tagName !== 'IMG') el.style.cssText = 'margin:0;padding:0;';
+    });
+
+    /* Absolutely position every image, stacked at the same spot */
+    imgs.forEach(function (img, i) {
+      img.style.cssText = [
+        'position:absolute', 'top:0', 'left:0',
+        'width:100%', 'height:' + H + 'px',
+        'object-fit:cover', 'display:block', 'margin:0',
+        'opacity:' + (i === 0 ? '1' : '0'),
+        'transition:opacity .4s ease',
+        'z-index:' + (i === 0 ? '1' : '0')
+      ].join(';');
+    });
 
     if (n <= 1) {
       if (prevBtn) prevBtn.style.display = 'none';
@@ -40,7 +62,7 @@
       return;
     }
 
-    slides.forEach(function (_, i) {
+    imgs.forEach(function (_, i) {
       var dot = document.createElement('button');
       dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
       dot.setAttribute('aria-label', 'Slide ' + (i + 1));
@@ -49,8 +71,11 @@
     });
 
     function go(i) {
+      imgs[cur].style.opacity = '0';
+      imgs[cur].style.zIndex = '0';
       cur = ((i % n) + n) % n;
-      track.style.transform = 'translateX(-' + (cur * 100) + '%)';
+      imgs[cur].style.opacity = '1';
+      imgs[cur].style.zIndex = '1';
       Array.prototype.forEach.call(dotsEl.querySelectorAll('.carousel-dot'), function (d, j) {
         d.classList.toggle('active', j === cur);
       });

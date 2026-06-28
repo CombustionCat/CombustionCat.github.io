@@ -56,16 +56,17 @@
 
 #banner { display: none; }
 
-/* compact dark bar, no bottom rule, no gradient overlays */
+/* thin nav bar, blends with page background, no borders or line */
 #header {
-  background: #0d1228;
-  border-bottom: none;
+  background: #0a0e22;
   border: none;
+  height: 48px;
 }
 #header:before, #header:after { display: none; }
-#header-outer, #header-inner { border-bottom: none; border: none; }
+#header-outer { border: none; overflow: visible; height: 48px; }
+#header-inner { border: none; overflow: visible; }
 
-/* site title — Fraunces, amber */
+/* logo — pull up to sit at top of the thin bar */
 #logo {
   font-family: 'Fraunces', Georgia, serif;
   font-weight: 600;
@@ -73,11 +74,13 @@
   font-size: 1.45rem;
   letter-spacing: 0.4px;
   text-shadow: none;
+  line-height: 48px;
 }
 #logo:hover { color: #f9c878; text-decoration: none; }
 #logo-wrap { margin: 0; }
+#header-title { top: 0; margin-top: 0; height: 48px; }
 
-/* nav links — keep landscape light-weight style, softer on dark bg */
+/* nav links — compact padding to match 48px bar height */
 .main-nav-link {
   font-weight: 300;
   letter-spacing: 1.4px;
@@ -87,16 +90,22 @@
   opacity: 1;
   text-shadow: none;
   border-radius: 6px;
+  padding: 13px 14px !important;
   transition: background .15s ease, color .15s ease;
 }
 .main-nav-link:hover {
-  color: #0d1228;
+  color: #0a0e22;
   background: #f4b860;
   opacity: 1;
 }
 
-/* icon buttons (RSS, search) */
-.nav-icon { color: rgba(233,236,251,.5); opacity: 1; text-shadow: none; }
+/* icon buttons (RSS, search) — match nav padding */
+.nav-icon {
+  color: rgba(233,236,251,.5);
+  opacity: 1;
+  text-shadow: none;
+  padding: 13px 15px !important;
+}
 .nav-icon:hover { color: #e9ecfb; opacity: 1; }
 
 /* hide post date and category display */
@@ -362,27 +371,13 @@ a.article-title:hover { color: #9cc1ff; }
   overflow: hidden;
   background: #0f1530;
   user-select: none;
+  height: 340px;
 }
+/* carousel-track and images are fully controlled by JS inline styles */
 .carousel-track {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 100%;
-  transition: transform .35s ease;
-  will-change: transform;
-}
-/* reset any article-entry overrides on grid items */
-.carousel-track > * {
-  margin: 0 !important;
-  padding: 0;
-  min-width: 0;
-  overflow: hidden;
-}
-.carousel-track img {
-  width: 100% !important;
-  height: 340px !important;
-  object-fit: cover !important;
-  display: block !important;
-  margin: 0 !important;
+  position: relative;
+  width: 100%;
+  height: 340px;
 }
 .carousel-btn {
   position: absolute;
