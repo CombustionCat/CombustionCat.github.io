@@ -89,8 +89,10 @@ var sites = site.posts.sort('-date').toArray()
     if (s.low_horizons && s.low_horizons.length)
       chips += '<span class="site-chip">Horizons: ' + s.low_horizons.map(function(d){ return d[0].toUpperCase(); }).join(' ') + '</span>';
     var chipsHtml = chips ? '<div class="pop-chips">' + chips + '</div>' : '';
+    var gmaps = '<a class="pop-gmaps" href="https://www.google.com/maps?q=' + s.lat + ',' + s.lng + '" target="_blank" rel="noopener">Google Maps</a>';
     return '<div class="pop">' + img +
       '<a class="pop-title" href="' + s.url + '">' + esc(s.name) + '</a>' +
+      gmaps +
       chipsHtml + '</div>';
   }
 

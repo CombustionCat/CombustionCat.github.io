@@ -45,6 +45,8 @@
 
     /* Absolutely position every image, stacked at the same spot */
     imgs.forEach(function (img, i) {
+      img.alt = '';
+      img.title = '';
       img.style.cssText = [
         'position:absolute', 'top:0', 'left:0',
         'width:100%', 'height:' + H + 'px',
