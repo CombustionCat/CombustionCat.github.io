@@ -364,15 +364,25 @@ a.article-title:hover { color: #9cc1ff; }
   user-select: none;
 }
 .carousel-track {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
   transition: transform .35s ease;
   will-change: transform;
 }
+/* reset any article-entry overrides on grid items */
+.carousel-track > * {
+  margin: 0 !important;
+  padding: 0;
+  min-width: 0;
+  overflow: hidden;
+}
 .carousel-track img {
-  flex: 0 0 auto;
-  height: 340px;
-  object-fit: cover;
-  display: block;
+  width: 100% !important;
+  height: 340px !important;
+  object-fit: cover !important;
+  display: block !important;
+  margin: 0 !important;
 }
 .carousel-btn {
   position: absolute;
