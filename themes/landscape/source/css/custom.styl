@@ -60,8 +60,10 @@
 #header {
   background: #0d1228;
   border-bottom: none;
+  border: none;
 }
 #header:before, #header:after { display: none; }
+#header-outer, #header-inner { border-bottom: none; border: none; }
 
 /* site title — Fraunces, amber */
 #logo {
@@ -79,13 +81,19 @@
 .main-nav-link {
   font-weight: 300;
   letter-spacing: 1.4px;
-  font-size: 0.8rem;
+  font-size: 1rem;
   text-transform: uppercase;
   color: rgba(233,236,251,.65);
   opacity: 1;
   text-shadow: none;
+  border-radius: 6px;
+  transition: background .15s ease, color .15s ease;
 }
-.main-nav-link:hover { color: #e9ecfb; opacity: 1; }
+.main-nav-link:hover {
+  color: #0d1228;
+  background: #f4b860;
+  opacity: 1;
+}
 
 /* icon buttons (RSS, search) */
 .nav-icon { color: rgba(233,236,251,.5); opacity: 1; text-shadow: none; }
@@ -214,7 +222,7 @@ a.article-title:hover { color: #9cc1ff; }
   font-family: "Space Mono", monospace;
   text-transform: uppercase;
   letter-spacing: .22em;
-  font-size: .72rem;
+  font-size: 1.1rem;
   color: #f4b860;
   margin: 0 0 1rem;
 }
