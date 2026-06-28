@@ -7,6 +7,7 @@ location: [1.3059, 103.7982]
 darkness: 1
 low_horizons: [north]
 dark_regions: [north]
+image: /images/DawsonSkyResidences/Blk31_Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -34,7 +35,9 @@ dark_regions: [north]
 | Blk 33 | N to E, S to W (true W blocked) | blocked |
 | Blk 37 | North-facing | blocked |
 
-<img class="site-panorama" src="/images/DawsonSkyResidences/panorama.jpg" alt="Sky Residences Dawson panorama">
+<img class="site-panorama" src="/images/DawsonSkyResidences/Blk31_Paranoma.jpg" alt="Sky Residences Dawson Blk 31 panorama">
+<img class="site-panorama" src="/images/DawsonSkyResidences/Blk33_Paranoma_NorthFace.jpg" alt="Sky Residences Dawson Blk 33 north-face panorama">
+<img class="site-panorama" src="/images/DawsonSkyResidences/Blk33_Paranoma_SouthFace.jpg" alt="Sky Residences Dawson Blk 33 south-face panorama">
 
 ## Location Information
 

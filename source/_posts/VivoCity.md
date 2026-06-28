@@ -7,6 +7,7 @@ location: [1.2644, 103.8222]
 darkness: 1
 low_horizons: [south]
 dark_regions: []
+image: /images/VivoCity/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: []
 - **Overall darkness:** 1/3
 - **Dark regions:** none
 
-<img class="site-panorama" src="/images/VivoCity/panorama.jpg" alt="VivoCity Rooftop panorama">
+<img class="site-panorama" src="/images/VivoCity/Paranoma.jpg" alt="VivoCity Rooftop panorama">
 
 ## Location Information
 

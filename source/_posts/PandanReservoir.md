@@ -7,6 +7,7 @@ location: [1.3178, 103.7380]
 darkness: 1
 low_horizons: [north, south, east, west]
 dark_regions: [west]
+image: /images/PandanReservoir/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>

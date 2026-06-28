@@ -7,6 +7,7 @@ location: [1.3040, 103.8085]
 darkness: 3
 low_horizons: []
 dark_regions: [north, south, east, west]
+image: /images/DempseyField/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>

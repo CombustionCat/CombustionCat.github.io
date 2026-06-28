@@ -5,6 +5,7 @@ location: [1.3445524400150612, 103.63396206008923]
 darkness: 3
 low_horizons: [north, south, east, west]
 dark_regions: [west]
+image: /images/RafflesMarina/walkway1.jpg
 ---
 
 <div class="site-carousel" data-carousel>

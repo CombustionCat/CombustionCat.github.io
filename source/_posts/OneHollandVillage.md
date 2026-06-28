@@ -7,6 +7,7 @@ location: [1.3116, 103.7965]
 darkness: 1
 low_horizons: [northeast]
 dark_regions: [northeast]
+image: /images/OneHollandVillage/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: [northeast]
 - **Overall darkness:** 1/3
 - **Dark regions:** northeast (lack of buildings); south has HDB lighted buildings on the horizon; some parts of west accessible by moving to other buildings
 
-<img class="site-panorama" src="/images/OneHollandVillage/panorama.jpg" alt="One Holland Village panorama">
+<img class="site-panorama" src="/images/OneHollandVillage/Paranoma.jpg" alt="One Holland Village panorama">
 
 ## Location Information
 

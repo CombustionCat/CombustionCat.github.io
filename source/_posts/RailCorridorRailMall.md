@@ -7,6 +7,7 @@ location: [1.3476, 103.7688]
 darkness: 2
 low_horizons: [east]
 dark_regions: [south]
+image: /images/RailCorridorRailMall/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: [south]
 - **Overall darkness:** 2/3
 - **Dark regions:** south
 
-<img class="site-panorama" src="/images/RailCorridorRailMall/panorama.jpg" alt="Rail Corridor Rail Mall panorama">
+<img class="site-panorama" src="/images/RailCorridorRailMall/Paranoma.jpg" alt="Rail Corridor Rail Mall panorama">
 
 ## Location Information
 

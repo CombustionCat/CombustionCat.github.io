@@ -7,6 +7,7 @@ location: [1.3570, 103.7672]
 darkness: 2
 low_horizons: []
 dark_regions: [north, south]
+image: /images/RailCorridorHillviewBridge/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: [north, south]
 - **Overall darkness:** 2/3
 - **Dark regions:** north–south corridor is kind of dark; east to south-south-west is also available when walking up and down the corridor
 
-<img class="site-panorama" src="/images/RailCorridorHillviewBridge/panorama.jpg" alt="Rail Corridor Hillview Bridge panorama">
+<img class="site-panorama" src="/images/RailCorridorHillviewBridge/Paranoma.jpg" alt="Rail Corridor Hillview Bridge panorama">
 
 ## Location Information
 

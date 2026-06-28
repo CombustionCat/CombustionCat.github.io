@@ -7,6 +7,7 @@ location: [1.2994, 103.8643]
 darkness: 1
 low_horizons: [south, east]
 dark_regions: []
+image: /images/GoldenMileTower/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: []
 - **Overall darkness:** 1/3
 - **Dark regions:** none
 
-<img class="site-panorama" src="/images/GoldenMileTower/panorama.jpg" alt="Golden Mile Tower panorama">
+<img class="site-panorama" src="/images/GoldenMileTower/Paranoma.jpg" alt="Golden Mile Tower panorama">
 
 ## Location Information
 

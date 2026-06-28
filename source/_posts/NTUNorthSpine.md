@@ -7,6 +7,7 @@ location: [1.3491, 103.6843]
 darkness: 2
 low_horizons: [north]
 dark_regions: [north, west]
+image: /images/NTUNorthSpine/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: [north, west]
 - **Overall darkness:** 2/3
 - **Dark regions:** north, west (south and east have lighted buildings on the horizon, with the building in the south shining a spotlight onto the area)
 
-<img class="site-panorama" src="/images/NTUNorthSpine/panorama.jpg" alt="NTU North Spine panorama">
+<img class="site-panorama" src="/images/NTUNorthSpine/Paranoma.jpg" alt="NTU North Spine panorama">
 
 ## Location Information
 

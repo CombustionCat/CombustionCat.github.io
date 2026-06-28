@@ -7,6 +7,7 @@ location: [1.3555, 103.7663]
 darkness: 3
 low_horizons: [north]
 dark_regions: [north, south, east]
+image: /images/RailCorridorHillviewCondo/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: [north, south, east]
 - **Overall darkness:** 3/3
 - **Dark regions:** north, south, and east (west is lighted)
 
-<img class="site-panorama" src="/images/RailCorridorHillviewCondo/panorama.jpg" alt="Rail Corridor Hillview Condo panorama">
+<img class="site-panorama" src="/images/RailCorridorHillviewCondo/Paranoma.jpg" alt="Rail Corridor Hillview Condo panorama">
 
 ## Location Information
 

@@ -8,9 +8,13 @@ var sites = site.posts.sort('-date').toArray()
       lat: Number(p.location[0]),
       lng: Number(p.location[1]),
       image: p.image || null,
-      region: p.region || (p.summary && p.summary.Region) || null,
-      darkness: p.darkness || (p.summary && p.summary.Darkness) || null,
-      summary: (p.summary && typeof p.summary === 'object') ? p.summary : {}
+      darkness: p.darkness ? Number(p.darkness) : null,
+      dark_regions: Array.isArray(p.dark_regions)
+        ? p.dark_regions.map(function(d){ return String(d).toLowerCase(); })
+        : [],
+      low_horizons: Array.isArray(p.low_horizons)
+        ? p.low_horizons.map(function(d){ return String(d).toLowerCase(); })
+        : []
     };
   })
   .filter(function(s){ return isFinite(s.lat) && isFinite(s.lng); });
@@ -78,13 +82,16 @@ var sites = site.posts.sort('-date').toArray()
     var img = s.image
       ? '<a class="pop-img" href="' + s.url + '"><img src="' + esc(s.image) + '" alt="' + esc(s.name) + '" loading="lazy"></a>'
       : '';
-    var rows = '';
-    Object.keys(s.summary || {}).slice(0, 4).forEach(function(k) {
-      rows += '<dt>' + esc(k) + '</dt><dd>' + esc(s.summary[k]) + '</dd>';
-    });
-    var dl = rows ? '<dl class="pop-summary">' + rows + '</dl>' : '';
+    var chips = '';
+    if (s.darkness) chips += '<span class="site-chip site-chip--dark">Darkness ' + s.darkness + '/3</span>';
+    if (s.dark_regions && s.dark_regions.length)
+      chips += '<span class="site-chip">Dark: ' + s.dark_regions.map(function(d){ return d[0].toUpperCase(); }).join(' ') + '</span>';
+    if (s.low_horizons && s.low_horizons.length)
+      chips += '<span class="site-chip">Horizons: ' + s.low_horizons.map(function(d){ return d[0].toUpperCase(); }).join(' ') + '</span>';
+    var chipsHtml = chips ? '<div class="pop-chips">' + chips + '</div>' : '';
     return '<div class="pop">' + img +
-      '<a class="pop-title" href="' + s.url + '">' + esc(s.name) + '</a>' + dl + '</div>';
+      '<a class="pop-title" href="' + s.url + '">' + esc(s.name) + '</a>' +
+      chipsHtml + '</div>';
   }
 
   var pts = [];

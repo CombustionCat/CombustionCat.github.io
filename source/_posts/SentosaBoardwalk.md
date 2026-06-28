@@ -7,6 +7,7 @@ location: [1.2628, 103.8207]
 darkness: 1
 low_horizons: []
 dark_regions: []
+image: /images/SentosaBoardwalk/Paranoma.jpg
 ---
 
 <div class="site-carousel" data-carousel>
@@ -26,7 +27,7 @@ dark_regions: []
 - **Overall darkness:** 1/3
 - **Dark regions:** none
 
-<img class="site-panorama" src="/images/SentosaBoardwalk/panorama.jpg" alt="Sentosa Boardwalk panorama">
+<img class="site-panorama" src="/images/SentosaBoardwalk/Paranoma.jpg" alt="Sentosa Boardwalk panorama">
 
 ## Location Information
 
