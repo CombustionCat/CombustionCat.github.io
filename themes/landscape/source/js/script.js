@@ -89,7 +89,7 @@
   // Caption
   $('.article-entry').each(function(i){
     $(this).find('img').each(function(){
-      if ($(this).parent().hasClass('fancybox') || $(this).parent().is('a')) return;
+      if ($(this).parent().hasClass('fancybox') || $(this).parent().is('a') || $(this).closest('[data-carousel]').length) return;
 
       var alt = this.alt;
 
