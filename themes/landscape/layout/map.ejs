@@ -16,13 +16,13 @@ var sites = site.posts.sort('-date').toArray()
   .filter(function(s){ return isFinite(s.lat) && isFinite(s.lng); });
 %>
 <div class="map-page">
-  <p class="map-eyebrow">A field guide to the city&rsquo;s night skies</p>
+  <p class="map-eyebrow">I'm the Map, I'm the Map</p>
   <div id="sg-map" class="sg-map" role="application" aria-label="Map of stargazing sites in Singapore"></div>
-  <p class="map-hint">Tap a star to see conditions, a photo, and the full write-up.</p>
+  <p class="map-hint">Tap a site to see conditions and link to full information.</p>
 
   <div class="map-contact" id="ask">
     <h2>Ask a question</h2>
-    <p class="map-lede">Spotted an error, know a darker corner, or just curious? Send a note &mdash; it lands straight in the inbox.</p>
+    <p class="map-lede">Want to update a site, recommend a site, or general feedback? Send a message &mdash; I will read, may not reply.</p>
     <form id="ask-form" class="ask-form" novalidate>
       <div class="mf">
         <label for="f-name">Name</label>
