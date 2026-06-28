@@ -26,7 +26,7 @@ dark_regions: [west]
 - **Overall darkness:** 1/3
 - **Dark regions:** west only *(construction light dome at small part — may go away)*
 
-<img class="site-panorama" src="/images/PandanReservoir/panorama.jpg" alt="Pandan Reservoir panorama">
+<img class="site-panorama" src="/images/PandanReservoir/Paranoma.jpg" alt="Pandan Reservoir panorama">
 
 ## Location Information
 
