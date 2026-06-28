@@ -9,11 +9,24 @@ low_horizons: [north]
 dark_regions: [north, west]
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/NTUNorthSpine/img1.jpg" alt="NTU North Spine 1" loading="lazy">
+    <img src="/images/NTUNorthSpine/img2.jpg" alt="NTU North Spine 2" loading="lazy">
+    <img src="/images/NTUNorthSpine/img3.jpg" alt="NTU North Spine 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** north
 - **Overall darkness:** 2/3
 - **Dark regions:** north, west (south and east have lighted buildings on the horizon, with the building in the south shining a spotlight onto the area)
+
+<img class="site-panorama" src="/images/NTUNorthSpine/panorama.jpg" alt="NTU North Spine panorama">
 
 ## Location Information
 

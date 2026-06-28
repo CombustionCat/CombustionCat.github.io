@@ -9,6 +9,17 @@ low_horizons: [north]
 dark_regions: [north]
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/DawsonSkyResidences/img1.jpg" alt="Sky Residences Dawson 1" loading="lazy">
+    <img src="/images/DawsonSkyResidences/img2.jpg" alt="Sky Residences Dawson 2" loading="lazy">
+    <img src="/images/DawsonSkyResidences/img3.jpg" alt="Sky Residences Dawson 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** north (for north-facing view); other horizons too bright or cluttered
@@ -22,6 +33,8 @@ dark_regions: [north]
 | Blk 31 | SW, W, NE to E | visible |
 | Blk 33 | N to E, S to W (true W blocked) | blocked |
 | Blk 37 | North-facing | blocked |
+
+<img class="site-panorama" src="/images/DawsonSkyResidences/panorama.jpg" alt="Sky Residences Dawson panorama">
 
 ## Location Information
 

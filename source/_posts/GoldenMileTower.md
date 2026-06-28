@@ -9,11 +9,24 @@ low_horizons: [south, east]
 dark_regions: []
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/GoldenMileTower/img1.jpg" alt="Golden Mile Tower 1" loading="lazy">
+    <img src="/images/GoldenMileTower/img2.jpg" alt="Golden Mile Tower 2" loading="lazy">
+    <img src="/images/GoldenMileTower/img3.jpg" alt="Golden Mile Tower 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** south, east
 - **Overall darkness:** 1/3
 - **Dark regions:** none
+
+<img class="site-panorama" src="/images/GoldenMileTower/panorama.jpg" alt="Golden Mile Tower panorama">
 
 ## Location Information
 

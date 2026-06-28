@@ -9,11 +9,24 @@ low_horizons: [north]
 dark_regions: [north, south, east]
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/RailCorridorHillviewCondo/img1.jpg" alt="Rail Corridor Hillview Condo 1" loading="lazy">
+    <img src="/images/RailCorridorHillviewCondo/img2.jpg" alt="Rail Corridor Hillview Condo 2" loading="lazy">
+    <img src="/images/RailCorridorHillviewCondo/img3.jpg" alt="Rail Corridor Hillview Condo 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** north
 - **Overall darkness:** 3/3
 - **Dark regions:** north, south, and east (west is lighted)
+
+<img class="site-panorama" src="/images/RailCorridorHillviewCondo/panorama.jpg" alt="Rail Corridor Hillview Condo panorama">
 
 ## Location Information
 

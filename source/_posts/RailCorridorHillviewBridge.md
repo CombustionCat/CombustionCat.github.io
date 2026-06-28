@@ -9,11 +9,24 @@ low_horizons: []
 dark_regions: [north, south]
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/RailCorridorHillviewBridge/img1.jpg" alt="Rail Corridor Hillview Bridge 1" loading="lazy">
+    <img src="/images/RailCorridorHillviewBridge/img2.jpg" alt="Rail Corridor Hillview Bridge 2" loading="lazy">
+    <img src="/images/RailCorridorHillviewBridge/img3.jpg" alt="Rail Corridor Hillview Bridge 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** none
 - **Overall darkness:** 2/3
 - **Dark regions:** north–south corridor is kind of dark; east to south-south-west is also available when walking up and down the corridor
+
+<img class="site-panorama" src="/images/RailCorridorHillviewBridge/panorama.jpg" alt="Rail Corridor Hillview Bridge panorama">
 
 ## Location Information
 

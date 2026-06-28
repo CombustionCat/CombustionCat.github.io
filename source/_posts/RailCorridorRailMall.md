@@ -9,11 +9,24 @@ low_horizons: [east]
 dark_regions: [south]
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/RailCorridorRailMall/img1.jpg" alt="Rail Corridor Rail Mall 1" loading="lazy">
+    <img src="/images/RailCorridorRailMall/img2.jpg" alt="Rail Corridor Rail Mall 2" loading="lazy">
+    <img src="/images/RailCorridorRailMall/img3.jpg" alt="Rail Corridor Rail Mall 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** east (10–15 degrees)
 - **Overall darkness:** 2/3
 - **Dark regions:** south
+
+<img class="site-panorama" src="/images/RailCorridorRailMall/panorama.jpg" alt="Rail Corridor Rail Mall panorama">
 
 ## Location Information
 

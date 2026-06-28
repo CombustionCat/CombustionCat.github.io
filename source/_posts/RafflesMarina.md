@@ -7,7 +7,17 @@ low_horizons: [north, south, east, west]
 dark_regions: [west]
 ---
 
-<img src="/images/RafflesMarina/walkway1.jpg" alt="walkway at Raffles Marina">
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/RafflesMarina/walkway1.jpg" alt="Raffles Marina walkway" loading="lazy">
+    <img src="/images/RafflesMarina/walkway2.jpg" alt="Raffles Marina walkway 2" loading="lazy">
+    <img src="/images/RafflesMarina/causeway.jpg" alt="Raffles Marina causeway" loading="lazy">
+    <img src="/images/RafflesMarina/lighthouse.jpg" alt="Raffles Marina lighthouse" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
 
 ## Sky Conditions
 
@@ -15,7 +25,7 @@ dark_regions: [west]
 - **Overall darkness:** 3/3
 - **Dark regions:** west
 
-<img src="/images/RafflesMarina/paranoma.jpg" alt="panorama from Raffles Marina">
+<img class="site-panorama" src="/images/RafflesMarina/paranoma.jpg" alt="Raffles Marina panorama">
 
 ## Location Information
 

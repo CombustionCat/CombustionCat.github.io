@@ -9,11 +9,24 @@ low_horizons: [northeast]
 dark_regions: [northeast]
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/OneHollandVillage/img1.jpg" alt="One Holland Village 1" loading="lazy">
+    <img src="/images/OneHollandVillage/img2.jpg" alt="One Holland Village 2" loading="lazy">
+    <img src="/images/OneHollandVillage/img3.jpg" alt="One Holland Village 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** northeast (not very low)
 - **Overall darkness:** 1/3
 - **Dark regions:** northeast (lack of buildings); south has HDB lighted buildings on the horizon; some parts of west accessible by moving to other buildings
+
+<img class="site-panorama" src="/images/OneHollandVillage/panorama.jpg" alt="One Holland Village panorama">
 
 ## Location Information
 

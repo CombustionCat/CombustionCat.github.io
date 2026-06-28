@@ -9,11 +9,24 @@ low_horizons: [south]
 dark_regions: []
 ---
 
+<div class="site-carousel" data-carousel>
+  <div class="carousel-track">
+    <img src="/images/VivoCity/img1.jpg" alt="VivoCity Rooftop 1" loading="lazy">
+    <img src="/images/VivoCity/img2.jpg" alt="VivoCity Rooftop 2" loading="lazy">
+    <img src="/images/VivoCity/img3.jpg" alt="VivoCity Rooftop 3" loading="lazy">
+  </div>
+  <button class="carousel-btn carousel-prev" aria-label="Previous">&#8249;</button>
+  <button class="carousel-btn carousel-next" aria-label="Next">&#8250;</button>
+  <div class="carousel-dots"></div>
+</div>
+
 ## Sky Conditions
 
 - **Low horizon:** south
 - **Overall darkness:** 1/3
 - **Dark regions:** none
+
+<img class="site-panorama" src="/images/VivoCity/panorama.jpg" alt="VivoCity Rooftop panorama">
 
 ## Location Information
 
