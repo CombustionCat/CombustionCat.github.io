@@ -51,7 +51,8 @@
         'object-fit:cover', 'display:block', 'margin:0',
         'opacity:' + (i === 0 ? '1' : '0'),
         'transition:opacity .4s ease',
-        'z-index:' + (i === 0 ? '1' : '0')
+        'z-index:' + (i === 0 ? '1' : '0'),
+        'pointer-events:' + (i === 0 ? 'auto' : 'none')
       ].join(';');
     });
 
@@ -73,9 +74,11 @@
     function go(i) {
       imgs[cur].style.opacity = '0';
       imgs[cur].style.zIndex = '0';
+      imgs[cur].style.pointerEvents = 'none';
       cur = ((i % n) + n) % n;
       imgs[cur].style.opacity = '1';
       imgs[cur].style.zIndex = '1';
+      imgs[cur].style.pointerEvents = 'auto';
       Array.prototype.forEach.call(dotsEl.querySelectorAll('.carousel-dot'), function (d, j) {
         d.classList.toggle('active', j === cur);
       });
