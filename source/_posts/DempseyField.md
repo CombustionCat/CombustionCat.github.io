@@ -26,7 +26,7 @@ dark_regions: [north, south, east, west]
 - **Overall darkness:** 3/3
 - **Dark regions:** all directions
 
-<img class="site-panorama" src="/images/DempseyField/panorama.jpg" alt="Dempsey Field panorama">
+<img class="site-panorama" src="/images/DempseyField/Paranoma.jpg" alt="Dempsey Field panorama">
 
 ## Location Information
 
