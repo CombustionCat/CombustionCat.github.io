@@ -536,3 +536,210 @@ a.article-title:hover { color: #9cc1ff; }
   .star-pin .star-dot { animation: none; }
   .site-card { transition: none; }
 }
+
+/* ====================================================
+   Nav dropdown (Stargazing Sites)
+   ==================================================== */
+
+.nav-dropdown-wrap {
+  position: relative;
+  float: left;
+}
+
+.nav-has-dropdown {
+  float: none;
+  display: block;
+}
+
+.nav-caret {
+  font-size: .7em;
+  opacity: .6;
+  margin-left: 2px;
+}
+
+.nav-dropdown {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  background: #0d1228;
+  border: 1px solid rgba(180,195,255,.15);
+  border-radius: 10px;
+  min-width: 210px;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity .15s ease, transform .15s ease;
+  box-shadow: 0 12px 36px rgba(0,0,0,.55);
+}
+
+.nav-dropdown-wrap:hover .nav-dropdown,
+.nav-dropdown-wrap:focus-within .nav-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.nav-dropdown-item {
+  display: block;
+  padding: .7rem 1.1rem;
+  color: rgba(233,236,251,.72);
+  text-decoration: none;
+  font-size: .88rem;
+  font-weight: 300;
+  letter-spacing: .5px;
+  transition: color .1s, background .1s;
+}
+
+.nav-dropdown-item:first-child { border-radius: 10px 10px 0 0; }
+.nav-dropdown-item:last-child  { border-radius: 0 0 10px 10px; }
+
+.nav-dropdown-item:hover {
+  color: #f4b860;
+  background: rgba(180,195,255,.07);
+  text-decoration: none;
+}
+
+.nav-dropdown-item + .nav-dropdown-item {
+  border-top: 1px solid rgba(180,195,255,.08);
+}
+
+/* ====================================================
+   Proximity search page
+   ==================================================== */
+
+.proximity-page { padding: 0; }
+
+.prox-mode-group {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1.2rem;
+}
+
+.prox-mode-btn {
+  padding: .45rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(180,195,255,.18);
+  color: rgba(233,236,251,.55);
+  font-size: .88rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+
+.prox-mode-btn--active {
+  background: rgba(180,195,255,.1);
+  border-color: #9cc1ff;
+  color: #e9ecfb;
+}
+
+.prox-search-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.prox-field-wrap {
+  flex: 1;
+  min-width: 200px;
+}
+
+.prox-input {
+  width: 100%;
+  background: #0f1530;
+  border: 1px solid rgba(180,195,255,.15);
+  border-radius: 8px;
+  color: #e9ecfb;
+  padding: .65rem .8rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.prox-input:focus {
+  outline: none;
+  border-color: #9cc1ff;
+  box-shadow: 0 0 0 3px rgba(156,193,255,.15);
+}
+
+.prox-input--km {
+  width: 72px;
+  flex: none;
+  text-align: center;
+}
+
+.prox-km-label {
+  color: #9aa6cf;
+  font-size: .9rem;
+  white-space: nowrap;
+}
+
+.prox-btn {
+  background: #f4b860;
+  color: #1a1300;
+  border: 0;
+  border-radius: 8px;
+  padding: .65rem 1.3rem;
+  font-weight: 600;
+  font-size: .95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter .15s;
+}
+
+.prox-btn:hover:not(:disabled) { filter: brightness(1.07); }
+.prox-btn:disabled { opacity: .55; cursor: default; }
+
+/* Autocomplete */
+.prox-ac-wrap { position: relative; }
+
+.prox-ac-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #0d1228;
+  border: 1px solid rgba(180,195,255,.15);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5);
+  list-style: none;
+  margin: 0;
+  padding: .3rem 0;
+  z-index: 10001;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.prox-ac-item {
+  padding: .55rem 1rem;
+  font-size: .85rem;
+  color: rgba(233,236,251,.8);
+  cursor: pointer;
+  line-height: 1.35;
+  transition: background .1s, color .1s;
+}
+
+.prox-ac-item:hover {
+  background: rgba(180,195,255,.08);
+  color: #e9ecfb;
+}
+
+.prox-status {
+  font-size: .9rem;
+  color: #9aa6cf;
+  margin: .3rem 0 1rem;
+  min-height: 1.2em;
+}
+
+.site-chip--dist {
+  color: #f4b860;
+  border-color: rgba(244,184,96,.35);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .prox-search-row { flex-direction: column; align-items: stretch; }
+  .prox-input--km  { width: 100%; }
+}
