@@ -130,6 +130,7 @@
 
   var ctx = canvas.getContext('2d');
   var drawing = false;
+  var paused = false;
   var hasMoved = false;
   var lastX = 0, lastY = 0;
 
@@ -180,12 +181,17 @@
     ctx.restore();
   }
 
-  function isInteractive(el) {
+  function elClass(el) {
+    if (!el || !el.className) return '';
+    return typeof el.className === 'string' ? el.className : (el.className.baseVal || '');
+  }
+
+  function isBlocked(el) {
     while (el && el.nodeType === 1) {
       var tag = el.tagName.toLowerCase();
       if (['a','button','input','textarea','select','label'].indexOf(tag) !== -1) return true;
       var id = el.id || '';
-      var cls = (el.className && typeof el.className === 'string') ? el.className : '';
+      var cls = elClass(el);
       if (id === 'header' || id === 'sidebar' || id === 'footer' || id === 'page-nav') return true;
       if (id === 'sg-map' || cls.indexOf('sg-map') !== -1 || cls.indexOf('leaflet') !== -1) return true;
       if (cls.indexOf('map-contact') !== -1 || id === 'ask' || id === 'ask-form') return true;
@@ -194,10 +200,18 @@
     return false;
   }
 
+  function stopDraw() {
+    if (!paused && hasMoved) drawStar(lastX, lastY);
+    drawing = false;
+    paused = false;
+    hasMoved = false;
+  }
+
   /* ── Mouse ── */
   document.addEventListener('mousedown', function (e) {
-    if (e.button !== 0 || isInteractive(e.target)) return;
+    if (e.button !== 0 || isBlocked(e.target)) return;
     drawing = true;
+    paused = false;
     hasMoved = false;
     lastX = e.pageX;
     lastY = e.pageY;
@@ -206,26 +220,42 @@
 
   document.addEventListener('mousemove', function (e) {
     if (!drawing) return;
-    hasMoved = true;
-    drawSegment(lastX, lastY, e.pageX, e.pageY);
-    lastX = e.pageX;
-    lastY = e.pageY;
+    var blocked = isBlocked(e.target);
+    if (blocked) {
+      if (!paused) {
+        if (hasMoved) drawStar(lastX, lastY);
+        paused = true;
+      }
+    } else if (paused) {
+      lastX = e.pageX;
+      lastY = e.pageY;
+      drawStar(lastX, lastY);
+      paused = false;
+      hasMoved = false;
+    } else {
+      drawSegment(lastX, lastY, e.pageX, e.pageY);
+      lastX = e.pageX;
+      lastY = e.pageY;
+      hasMoved = true;
+    }
   });
 
-  function endDraw(x, y) {
+  document.addEventListener('mouseup', function (e) {
     if (!drawing) return;
+    if (!paused && hasMoved) drawStar(e.pageX, e.pageY);
     drawing = false;
-    if (hasMoved) drawStar(x, y);
-  }
+    paused = false;
+    hasMoved = false;
+  });
 
-  document.addEventListener('mouseup', function (e) { endDraw(e.pageX, e.pageY); });
-  window.addEventListener('blur', function () { endDraw(lastX, lastY); });
+  window.addEventListener('blur', function () { if (drawing) stopDraw(); });
 
   /* ── Touch ── */
   document.addEventListener('touchstart', function (e) {
-    if (isInteractive(e.target)) return;
+    if (isBlocked(e.target)) return;
     var t = e.touches[0];
     drawing = true;
+    paused = false;
     hasMoved = false;
     lastX = t.pageX;
     lastY = t.pageY;
@@ -235,15 +265,34 @@
   document.addEventListener('touchmove', function (e) {
     if (!drawing) return;
     var t = e.touches[0];
-    hasMoved = true;
-    drawSegment(lastX, lastY, t.pageX, t.pageY);
-    lastX = t.pageX;
-    lastY = t.pageY;
+    var elUnder = document.elementFromPoint(t.clientX, t.clientY);
+    var blocked = isBlocked(elUnder);
+    if (blocked) {
+      if (!paused) {
+        if (hasMoved) drawStar(lastX, lastY);
+        paused = true;
+      }
+    } else if (paused) {
+      lastX = t.pageX;
+      lastY = t.pageY;
+      drawStar(lastX, lastY);
+      paused = false;
+      hasMoved = false;
+    } else {
+      drawSegment(lastX, lastY, t.pageX, t.pageY);
+      lastX = t.pageX;
+      lastY = t.pageY;
+      hasMoved = true;
+    }
   }, { passive: true });
 
   document.addEventListener('touchend', function (e) {
+    if (!drawing) return;
     var t = e.changedTouches[0];
-    endDraw(t.pageX, t.pageY);
+    if (!paused && hasMoved) drawStar(t.pageX, t.pageY);
+    drawing = false;
+    paused = false;
+    hasMoved = false;
   });
 })();
 </script>
