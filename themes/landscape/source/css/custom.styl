@@ -743,3 +743,76 @@ a.article-title:hover { color: #9cc1ff; }
   .prox-search-row { flex-direction: column; align-items: stretch; }
   .prox-input--km  { width: 100%; }
 }
+
+/* ====================================================
+   Mobile / Responsive improvements
+   ==================================================== */
+
+/* ── Tablet & below (≤767px): hamburger nav, map height cap ── */
+@media (max-width: 767px) {
+  .main-nav-link,
+  .nav-dropdown-wrap {
+    display: none !important;
+  }
+  #main-nav-toggle {
+    display: block !important;
+  }
+  #mobile-nav {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100%;
+    background: #0d1228;
+    border-right: 1px solid rgba(180,195,255,.15);
+  }
+  .mobile-nav-link {
+    display: block;
+    color: #9aa6cf;
+    text-decoration: none;
+    padding: 14px 20px;
+    font-size: .9rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(180,195,255,.08);
+  }
+  .mobile-nav-link:hover {
+    color: #f4b860;
+    background: rgba(180,195,255,.05);
+    text-decoration: none;
+  }
+  .mobile-nav-sub {
+    padding-left: 36px;
+    font-size: .8rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: rgba(154,166,207,.75);
+  }
+  .mobile-nav-sub:hover {
+    color: #f4b860;
+  }
+  .sg-map {
+    height: min(600px, 75vh);
+  }
+}
+
+/* ── Small phones (≤479px): font & spacing tweaks ── */
+@media (max-width: 479px) {
+  .sites-heading {
+    font-size: 1.5rem;
+  }
+  .map-eyebrow {
+    font-size: .9rem;
+  }
+  .map-contact h2 {
+    font-size: 1.2rem;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .prox-field-wrap {
+    min-width: 0;
+  }
+}
