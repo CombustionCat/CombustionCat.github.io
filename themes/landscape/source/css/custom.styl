@@ -745,16 +745,41 @@ a.article-title:hover { color: #9cc1ff; }
 }
 
 /* ====================================================
-   Desktop nav offset — push links clear of the logo
+   Desktop header — flex row so logo never collides with tabs
    ==================================================== */
 
-/* #header-title is position:absolute at left:0 of #header-outer.
-   #main-nav normally starts at left:−15px inside #header-inner (which
-   begins at left:20px of the outer), so links collide with the logo text.
-   This margin pushes nav content to start well past "Light Sky Sites". */
+/* Convert #header-outer to a flex row on desktop.
+   #header-title becomes a normal in-flow item on the left;
+   #header-inner (containing the tabs + icons) fills the rest. */
 @media (min-width: 768px) {
+  #header-outer {
+    display: flex;
+    align-items: center;
+  }
+  #header-title {
+    position: static;
+    top: auto;
+    left: auto;
+    width: auto;
+    flex: 0 0 auto;
+    height: 48px;
+    text-align: left;
+    margin-right: 6px;
+  }
+  #header-inner {
+    flex: 1 1 auto;
+    float: none;
+    width: auto;
+    overflow: visible;
+    position: relative;
+  }
   #main-nav {
-    margin-left: 180px;
+    float: left;
+    margin-left: 0;
+  }
+  #sub-nav {
+    float: right;
+    margin-right: -15px;
   }
 }
 
