@@ -748,8 +748,9 @@ a.article-title:hover { color: #9cc1ff; }
    Mobile / Responsive improvements
    ==================================================== */
 
-/* ── Tablet & below (≤767px): hamburger nav, map height cap ── */
+/* ── Tablet & below (≤767px): hamburger nav, header layout, map height ── */
 @media (max-width: 767px) {
+  /* Hide desktop nav links, show hamburger */
   .main-nav-link,
   .nav-dropdown-wrap {
     display: none !important;
@@ -757,6 +758,25 @@ a.article-title:hover { color: #9cc1ff; }
   #main-nav-toggle {
     display: block !important;
   }
+  /* Remove negative margin so hamburger sits flush with the left edge */
+  #main-nav {
+    margin-left: 0;
+  }
+  /* Center the site title across the full header width so it doesn't
+     collide with the hamburger icon or the right-side icons */
+  #header-title {
+    width: 100%;
+    pointer-events: none;
+  }
+  #logo-wrap a {
+    pointer-events: auto;
+  }
+  #logo {
+    font-size: 1.1rem;
+    letter-spacing: .1px;
+  }
+  /* Mobile nav drawer styles for tablet range (≤479px already has these
+     from the theme; extend them up to 767px) */
   #mobile-nav {
     position: absolute;
     top: 0;
@@ -793,8 +813,10 @@ a.article-title:hover { color: #9cc1ff; }
   .mobile-nav-sub:hover {
     color: #f4b860;
   }
+  /* Map: keep well under 3/4 of the viewport height */
   .sg-map {
-    height: min(600px, 75vh);
+    height: 360px;
+    max-height: 70vh;
   }
 }
 
@@ -814,5 +836,10 @@ a.article-title:hover { color: #9cc1ff; }
   }
   .prox-field-wrap {
     min-width: 0;
+  }
+  /* Further reduce map on very small phones */
+  .sg-map {
+    height: 300px;
+    max-height: 65vh;
   }
 }
