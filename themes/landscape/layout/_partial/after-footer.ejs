@@ -101,22 +101,25 @@
 
 <script>
 (function () {
-  var sites = null;
   var input = document.querySelector('.search-form-input');
   var list = document.getElementById('nav-ac-list');
   if (!input || !list) return;
 
-  function load(cb) {
-    if (sites) { cb(); return; }
-    fetch('/sites-data.json')
-      .then(function (r) { return r.json(); })
-      .then(function (d) { sites = d; cb(); })
-      .catch(function () { sites = []; });
+  // Use inline SITES global (present on map/sites pages) or fetch the JSON.
+  function getSites(cb) {
+    if (typeof window.SITES !== 'undefined' && window.SITES.length) {
+      cb(window.SITES);
+    } else {
+      fetch('/sites-data.json')
+        .then(function (r) { return r.json(); })
+        .then(cb)
+        .catch(function () { cb([]); });
+    }
   }
 
-  function render(term) {
+  function render(sites, term) {
     var q = term.toLowerCase();
-    var matches = (sites || []).filter(function (s) {
+    var matches = sites.filter(function (s) {
       return s.name.toLowerCase().indexOf(q) !== -1;
     }).slice(0, 8);
     if (!matches.length) { list.hidden = true; return; }
@@ -126,10 +129,15 @@
     list.hidden = false;
   }
 
+  var cachedSites = null;
   input.addEventListener('input', function () {
     var term = input.value.trim();
     if (!term) { list.hidden = true; return; }
-    load(function () { render(term); });
+    if (cachedSites) { render(cachedSites, term); return; }
+    getSites(function (data) {
+      cachedSites = data;
+      render(cachedSites, term);
+    });
   });
 
   list.addEventListener('mousedown', function (e) {
