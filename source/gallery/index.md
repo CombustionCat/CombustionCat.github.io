@@ -2,6 +2,14 @@
 layout: gallery
 title: Gallery
 photos:
+  - src: /gallery/img/M42.jpg
+    title: M42 Orion Nebula
+    object: Messier 42 (Orion Nebula)
+    ota: Astrophysics Stowaway 92
+    camera: Samsung Galaxy S25
+    location: Singapore
+    date: "2026-02-07"
+
   - src: /gallery/img/Jupiter.jpg
     title: Jupiter
     object: Jupiter
