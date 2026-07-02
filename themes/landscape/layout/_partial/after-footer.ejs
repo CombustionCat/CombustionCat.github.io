@@ -105,19 +105,9 @@
   var list = document.getElementById('nav-ac-list');
   if (!input || !list) return;
 
-  // Use inline SITES global (present on map/sites pages) or fetch the JSON.
-  function getSites(cb) {
-    if (typeof window.SITES !== 'undefined' && window.SITES.length) {
-      cb(window.SITES);
-    } else {
-      fetch('/sites-data.json')
-        .then(function (r) { return r.json(); })
-        .then(cb)
-        .catch(function () { cb([]); });
-    }
-  }
+  var sites = window._SITES || [];
 
-  function render(sites, term) {
+  function render(term) {
     var q = term.toLowerCase();
     var matches = sites.filter(function (s) {
       return s.name.toLowerCase().indexOf(q) !== -1;
@@ -129,15 +119,10 @@
     list.hidden = false;
   }
 
-  var cachedSites = null;
   input.addEventListener('input', function () {
     var term = input.value.trim();
     if (!term) { list.hidden = true; return; }
-    if (cachedSites) { render(cachedSites, term); return; }
-    getSites(function (data) {
-      cachedSites = data;
-      render(cachedSites, term);
-    });
+    render(term);
   });
 
   list.addEventListener('mousedown', function (e) {

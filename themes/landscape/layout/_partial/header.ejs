@@ -1,3 +1,9 @@
+<%
+var _sitesForSearch = site.posts.sort('-date').toArray()
+  .filter(function(p){ return Array.isArray(p.location) && p.location.length === 2; })
+  .map(function(p){ return { name: p.title || 'Untitled site', url: encodeURI('/' + p.path) }; });
+%>
+<script>window._SITES = <%- JSON.stringify(_sitesForSearch) %>;</script>
 <header id="header">
   <div id="banner"></div>
   <div id="header-outer" class="outer">

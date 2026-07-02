@@ -196,10 +196,22 @@ a.article-title:hover { color: #9cc1ff; }
 #search-form-wrap {
   overflow: visible;
   width: 200px;
+  pointer-events: none;
 }
 
 #search-form-wrap.on {
   width: 200px;
+  pointer-events: auto;
+}
+
+/* Make the search icon fill the full header height so it's easy to click */
+.nav-search-btn {
+  height: 48px !important;
+  line-height: 48px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center;
 }
 
 .nav-ac-list {
