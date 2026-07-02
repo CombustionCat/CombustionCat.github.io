@@ -204,14 +204,19 @@ a.article-title:hover { color: #9cc1ff; }
   pointer-events: auto;
 }
 
-/* Make the search icon fill the full header height so it's easy to click */
+/* Search button — large, unambiguous hit target */
 .nav-search-btn {
+  float: left !important;
+  display: block !important;
+  width: 46px !important;
   height: 48px !important;
+  padding: 0 !important;
+  margin: 0 !important;
   line-height: 48px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  display: flex !important;
-  align-items: center;
+  text-align: center !important;
+  font-size: 16px !important;
+  position: relative;
+  z-index: 10;
 }
 
 .nav-ac-list {
