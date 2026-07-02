@@ -1,0 +1,186 @@
+<div class="cal-page">
+
+  <div class="cal-hdr">
+    <button class="cal-nav" id="cal-prev">&#8249;</button>
+    <h2 class="cal-month-lbl" id="cal-month-lbl"></h2>
+    <button class="cal-nav" id="cal-next">&#8250;</button>
+    <button class="cal-today-btn" id="cal-today-btn">Today</button>
+  </div>
+
+  <div class="cal-grid" id="cal-grid"></div>
+
+  <div class="cal-moon-legend">
+    <span>🌑 New Moon</span>
+    <span>🌒 Waxing Crescent</span>
+    <span>🌓 First Quarter</span>
+    <span>🌔 Waxing Gibbous</span>
+    <span>🌕 Full Moon</span>
+    <span>🌖 Waning Gibbous</span>
+    <span>🌗 Last Quarter</span>
+    <span>🌘 Waning Crescent</span>
+  </div>
+
+  <div class="cal-showers-wrap">
+    <h3 class="cal-section-title">Meteor Showers This Month</h3>
+    <div id="cal-showers"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+
+  /* ── Moon phase ───────────────────────────────────────────── */
+  var KNOWN_NEW_MOON = Date.UTC(2024, 0, 11, 11, 57); // Jan 11 2024
+  var SYNODIC_MS    = 29.53059 * 24 * 3600 * 1000;
+
+  function moonAge(date) {
+    var ms = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - KNOWN_NEW_MOON;
+    return ((ms % SYNODIC_MS) + SYNODIC_MS) % SYNODIC_MS / (24 * 3600 * 1000);
+  }
+
+  var PHASES = [
+    { emoji: '🌑', name: 'New Moon' },
+    { emoji: '🌒', name: 'Waxing Crescent' },
+    { emoji: '🌓', name: 'First Quarter' },
+    { emoji: '🌔', name: 'Waxing Gibbous' },
+    { emoji: '🌕', name: 'Full Moon' },
+    { emoji: '🌖', name: 'Waning Gibbous' },
+    { emoji: '🌗', name: 'Last Quarter' },
+    { emoji: '🌘', name: 'Waning Crescent' },
+  ];
+
+  function getPhase(age) {
+    return PHASES[Math.round(age / 29.53059 * 8) % 8];
+  }
+
+  function moonIllum(age) {
+    return Math.round((1 - Math.cos(2 * Math.PI * age / 29.53059)) / 2 * 100);
+  }
+
+  /* ── Meteor showers (month/day 1-indexed) ─────────────────── */
+  var SHOWERS = [
+    { name: 'Quadrantids',     start:[1,1],   end:[1,6],   peak:[1,3],   zhr:120, color:'#f4b860' },
+    { name: 'Lyrids',          start:[4,16],  end:[4,25],  peak:[4,22],  zhr:18,  color:'#9cc1ff' },
+    { name: 'Eta Aquariids',   start:[4,19],  end:[5,28],  peak:[5,6],   zhr:50,  color:'#86e0b0' },
+    { name: 'Delta Aquariids', start:[7,12],  end:[8,23],  peak:[7,28],  zhr:25,  color:'#c9a0ff' },
+    { name: 'Perseids',        start:[7,17],  end:[8,24],  peak:[8,12],  zhr:100, color:'#ff9c9c' },
+    { name: 'Orionids',        start:[10,2],  end:[11,7],  peak:[10,21], zhr:20,  color:'#f4d860' },
+    { name: 'Leonids',         start:[11,6],  end:[11,30], peak:[11,17], zhr:15,  color:'#aec3ff' },
+    { name: 'Geminids',        start:[12,4],  end:[12,17], peak:[12,13], zhr:150, color:'#ff9c9c' },
+    { name: 'Ursids',          start:[12,17], end:[12,26], peak:[12,22], zhr:10,  color:'#86e0b0' },
+  ];
+
+  function md(m, d) { return m * 1000 + d; }
+
+  function activeOn(month, day) {
+    return SHOWERS.filter(function(s) {
+      return md(month,day) >= md(s.start[0],s.start[1]) &&
+             md(month,day) <= md(s.end[0],s.end[1]);
+    });
+  }
+
+  function isPeak(s, month, day) {
+    return s.peak[0] === month && s.peak[1] === day;
+  }
+
+  function showersInMonth(year, month) {
+    var m = month + 1;
+    var days = new Date(year, month + 1, 0).getDate();
+    var seen = {}, result = [];
+    for (var d = 1; d <= days; d++) {
+      activeOn(m, d).forEach(function(s) {
+        if (!seen[s.name]) { seen[s.name] = true; result.push(s); }
+      });
+    }
+    return result;
+  }
+
+  /* ── Render ───────────────────────────────────────────────── */
+  var MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+  var DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  var today    = new Date();
+  var curYear  = today.getFullYear();
+  var curMonth = today.getMonth();
+
+  function render() {
+    document.getElementById('cal-month-lbl').textContent =
+      MONTH_NAMES[curMonth] + ' ' + curYear;
+
+    /* calendar grid */
+    var daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+    var firstDay    = new Date(curYear, curMonth, 1).getDay();
+    var isCurMonth  = today.getFullYear() === curYear && today.getMonth() === curMonth;
+    var m           = curMonth + 1;
+
+    var html = DAY_NAMES.map(function(d) {
+      return '<div class="cal-dh">' + d + '</div>';
+    }).join('');
+
+    for (var e = 0; e < firstDay; e++) {
+      html += '<div class="cal-cell cal-empty"></div>';
+    }
+
+    for (var d = 1; d <= daysInMonth; d++) {
+      var age    = moonAge(new Date(curYear, curMonth, d));
+      var phase  = getPhase(age);
+      var illum  = moonIllum(age);
+      var active = activeOn(m, d);
+      var isToday = isCurMonth && d === today.getDate();
+
+      var dots = active.map(function(s) {
+        var pk = isPeak(s, m, d);
+        return '<span class="cal-dot' + (pk ? ' cal-dot-peak' : '') +
+               '" style="background:' + s.color + '" title="' +
+               s.name + (pk ? ' — PEAK' : '') + '"></span>';
+      }).join('');
+
+      html += '<div class="cal-cell' + (isToday ? ' cal-cell-today' : '') + '">' +
+        '<span class="cal-dn">' + d + '</span>' +
+        '<span class="cal-moon" title="' + phase.name + ' · ' + illum + '% illuminated">' +
+          phase.emoji +
+        '</span>' +
+        (dots ? '<div class="cal-dots">' + dots + '</div>' : '') +
+        '</div>';
+    }
+
+    document.getElementById('cal-grid').innerHTML = html;
+
+    /* showers panel */
+    var list = showersInMonth(curYear, curMonth);
+    var shtml = list.length === 0
+      ? '<p class="cal-no-showers">No major meteor showers this month.</p>'
+      : list.map(function(s) {
+          var sm = MONTH_NAMES[s.start[0]-1].slice(0,3) + ' ' + s.start[1];
+          var em = MONTH_NAMES[s.end[0]-1].slice(0,3)   + ' ' + s.end[1];
+          var pm = MONTH_NAMES[s.peak[0]-1].slice(0,3)  + ' ' + s.peak[1];
+          return '<div class="shower-card">' +
+            '<span class="shower-swatch" style="background:' + s.color + '"></span>' +
+            '<div class="shower-info">' +
+              '<span class="shower-name">' + s.name + '</span>' +
+              '<span class="shower-dates">Active ' + sm + ' – ' + em +
+                ' &nbsp;·&nbsp; Peak ' + pm +
+                ' &nbsp;·&nbsp; ZHR ~' + s.zhr + '</span>' +
+            '</div></div>';
+        }).join('');
+
+    document.getElementById('cal-showers').innerHTML = shtml;
+  }
+
+  document.getElementById('cal-prev').addEventListener('click', function() {
+    if (--curMonth < 0)  { curMonth = 11; curYear--; }
+    render();
+  });
+  document.getElementById('cal-next').addEventListener('click', function() {
+    if (++curMonth > 11) { curMonth = 0;  curYear++; }
+    render();
+  });
+  document.getElementById('cal-today-btn').addEventListener('click', function() {
+    curYear = today.getFullYear(); curMonth = today.getMonth(); render();
+  });
+
+  render();
+})();
+</script>
