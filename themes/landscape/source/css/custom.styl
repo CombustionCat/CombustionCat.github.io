@@ -1164,6 +1164,7 @@ a.article-title:hover { color: #9cc1ff; }
 }
 .cal-today-btn:hover { color: #e9ecfb; border-color: #9cc1ff; }
 
+/* ── Grid ── */
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1185,12 +1186,12 @@ a.article-title:hover { color: #9cc1ff; }
   background: #0f1530;
   border: 1px solid rgba(180,195,255,.07);
   border-radius: 6px;
-  padding: .35rem .3rem .3rem;
-  min-height: 72px;
+  padding: .3rem .3rem .25rem;
+  min-height: 82px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: .1rem;
+  align-items: stretch;
+  gap: 2px;
 }
 
 .cal-empty {
@@ -1203,27 +1204,28 @@ a.article-title:hover { color: #9cc1ff; }
   background: rgba(244,184,96,.07) !important;
 }
 
+/* moon SVG + day number row — moon left of number, both right-aligned */
+.cal-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
 .cal-dn {
-  font-size: .75rem;
+  font-size: .78rem;
   color: #9aa6cf;
   font-weight: 500;
-  align-self: flex-end;
   line-height: 1;
 }
 .cal-cell-today .cal-dn { color: #f4b860; font-weight: 700; }
 
-.cal-moon {
-  font-size: 1.35rem;
-  line-height: 1;
-  cursor: default;
-}
-
+/* shower dots */
 .cal-dots {
   display: flex;
   gap: 2px;
   flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 3px;
+  padding-left: 1px;
 }
 
 .cal-dot {
@@ -1237,71 +1239,111 @@ a.article-title:hover { color: #9cc1ff; }
 .cal-dot-peak {
   width: 7px;
   height: 7px;
-  box-shadow: 0 0 5px currentColor;
+  box-shadow: 0 0 4px currentColor;
 }
 
-.cal-moon-legend {
+/* planet event symbols */
+.cal-evts {
   display: flex;
   flex-wrap: wrap;
-  gap: .4rem 1rem;
-  font-size: .78rem;
-  color: #9aa6cf;
-  margin-bottom: 1.8rem;
-  padding: .75rem 1rem;
-  background: #0f1530;
-  border: 1px solid rgba(180,195,255,.08);
-  border-radius: 10px;
+  gap: 1px;
+  padding-left: 1px;
 }
-.cal-moon-legend span { white-space: nowrap; }
 
-.cal-showers-wrap { margin-top: .5rem; }
+.cal-pevt {
+  font-size: .78rem;
+  line-height: 1.2;
+  cursor: default;
+}
+
+/* ── Bottom panels ── */
+.cal-bottom {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 1.2rem;
+  margin-top: .5rem;
+}
+
+.cal-panel { min-width: 0; }
 
 .cal-section-title {
-  font-size: .85rem;
+  font-size: .78rem;
   font-weight: 600;
   color: #9aa6cf;
   text-transform: uppercase;
   letter-spacing: .1em;
-  margin: 0 0 .75rem;
+  margin: 0 0 .6rem;
 }
 
-.shower-card {
+/* moon phase legend */
+.cal-moon-legend {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.cal-leg-item {
   display: flex;
   align-items: center;
-  gap: .9rem;
-  padding: .65rem .9rem;
+  gap: .45rem;
+  font-size: .78rem;
+  color: #9aa6cf;
+  white-space: nowrap;
+}
+
+/* shared card style for showers + planet events */
+.info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  padding: .5rem .7rem;
   background: #0f1530;
   border: 1px solid rgba(180,195,255,.08);
-  border-radius: 10px;
-  margin-bottom: .45rem;
+  border-radius: 9px;
+  margin-bottom: .4rem;
 }
 
-.shower-swatch {
+.info-swatch {
   flex-shrink: 0;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  box-shadow: 0 0 6px currentColor;
+  margin-top: 3px;
+  box-shadow: 0 0 5px currentColor;
 }
 
-.shower-info { display: flex; flex-direction: column; gap: .2rem; }
+.info-sym {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+  margin-top: 1px;
+}
 
-.shower-name {
+.info-name {
+  display: block;
   font-weight: 600;
   color: #e9ecfb;
-  font-size: .92rem;
+  font-size: .88rem;
 }
 
-.shower-dates {
-  font-size: .8rem;
+.info-sub {
+  display: block;
+  font-size: .77rem;
   color: #9aa6cf;
+  margin-top: .15rem;
 }
 
-.cal-no-showers { color: #9aa6cf; font-size: .88rem; margin: 0; }
+.cal-none { color: #9aa6cf; font-size: .85rem; margin: 0; }
 
-@media (max-width: 600px) {
-  .cal-moon { font-size: 1.05rem; }
-  .cal-cell { min-height: 58px; padding: .25rem .2rem; }
-  .cal-moon-legend { gap: .3rem .7rem; font-size: .72rem; }
-  .shower-dates { font-size: .75rem; }
+@media (max-width: 900px) {
+  .cal-bottom { grid-template-columns: 1fr 1fr; }
+  .cal-panel:first-child { grid-column: 1 / -1; }
+  .cal-moon-legend { flex-direction: row; flex-wrap: wrap; gap: .3rem .8rem; }
+  .cal-leg-item { font-size: .72rem; }
+}
+
+@media (max-width: 560px) {
+  .cal-bottom { grid-template-columns: 1fr; }
+  .cal-panel:first-child { grid-column: auto; }
+  .cal-cell { min-height: 64px; }
 }
