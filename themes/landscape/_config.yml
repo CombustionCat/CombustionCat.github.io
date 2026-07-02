@@ -3,7 +3,9 @@
 # ===============
 # Navigation menu
 menu:
-  Home: /
+  About: /about
+  Stargazing Sites: /sites
+  Gallery: /gallery
   Archives: /archives
 # RSS link
 rss: /atom.xml

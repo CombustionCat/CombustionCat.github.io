@@ -3,11 +3,10 @@
 # ===============
 # Navigation menu
 menu:
-  Home: /
-  Archives: /archives
   About: /about
-  Gallery: /gallery
   Stargazing Sites: /sites
+  Gallery: /gallery
+  Archives: /archives
 
 # RSS link
 rss: /atom.xml
