@@ -189,8 +189,42 @@ a.article-title:hover { color: #9cc1ff; }
 .search-form {
   background: #0f1530;
   box-shadow: 0 0 12px rgba(0,0,0,.5);
+  overflow: visible;
 }
 .search-form-input { color: #e9ecfb; }
+
+#search-form-wrap { overflow: visible; }
+
+.nav-ac-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #0d1228;
+  border: 1px solid rgba(180,195,255,.15);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.55);
+  list-style: none;
+  margin: 0;
+  padding: .3rem 0;
+  z-index: 10002;
+  max-height: 220px;
+  overflow-y: auto;
+  min-width: 220px;
+}
+
+.nav-ac-item {
+  padding: .55rem 1rem;
+  font-size: .85rem;
+  color: rgba(233,236,251,.8);
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+
+.nav-ac-item:hover {
+  background: rgba(180,195,255,.08);
+  color: #f4b860;
+}
 
 /* sidebar */
 .widget {

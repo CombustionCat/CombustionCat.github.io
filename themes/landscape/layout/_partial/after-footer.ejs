@@ -99,6 +99,60 @@
 })();
 </script>
 
+<script>
+(function () {
+  var sites = null;
+  var input = document.querySelector('.search-form-input');
+  var list = document.getElementById('nav-ac-list');
+  if (!input || !list) return;
+
+  function load(cb) {
+    if (sites) { cb(); return; }
+    fetch('/sites-data.json')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { sites = d; cb(); })
+      .catch(function () { sites = []; });
+  }
+
+  function render(term) {
+    var q = term.toLowerCase();
+    var matches = (sites || []).filter(function (s) {
+      return s.name.toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 8);
+    if (!matches.length) { list.hidden = true; return; }
+    list.innerHTML = matches.map(function (s) {
+      return '<li class="nav-ac-item" data-url="' + s.url + '">' + s.name + '</li>';
+    }).join('');
+    list.hidden = false;
+  }
+
+  input.addEventListener('input', function () {
+    var term = input.value.trim();
+    if (!term) { list.hidden = true; return; }
+    load(function () { render(term); });
+  });
+
+  list.addEventListener('mousedown', function (e) {
+    var item = e.target.closest ? e.target.closest('.nav-ac-item') : e.target;
+    if (!item || !item.dataset || !item.dataset.url) return;
+    e.preventDefault();
+    window.location.href = item.dataset.url;
+  });
+
+  input.addEventListener('blur', function () {
+    setTimeout(function () { list.hidden = true; }, 200);
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { list.hidden = true; input.blur(); }
+    if (e.key === 'Enter') {
+      var first = list.querySelector('.nav-ac-item');
+      if (first) window.location.href = first.dataset.url;
+    }
+  });
+})();
+</script>
+
 <% if(theme.valine.enable && theme.valine.appId && theme.valine.appKey){ %>
   <%- js('https://cdn.jsdelivr.net/npm/valine@1.3.10/dist/Valine.min.js') %>
 <script>
