@@ -1160,6 +1160,52 @@ a.article-title:hover { color: #9cc1ff; }
   text-align: center;
 }
 
+/* clickable month / year spans */
+.cal-pick-trigger {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: background .12s, color .12s;
+  display: inline-block;
+}
+.cal-pick-trigger:hover { background: rgba(180,195,255,.12); color: #f4b860; }
+
+/* fast-select dropdown */
+.cal-hdr { position: relative; }
+.cal-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0d1228;
+  border: 1px solid rgba(180,195,255,.18);
+  border-radius: 12px;
+  padding: .5rem;
+  z-index: 200;
+  box-shadow: 0 14px 40px rgba(0,0,0,.6);
+  min-width: 220px;
+}
+.cal-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .3rem;
+}
+.cal-picker-grid--2col { grid-template-columns: repeat(4, 1fr); }
+.cal-picker-item {
+  padding: .45rem .4rem;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: rgba(233,236,251,.65);
+  cursor: pointer;
+  font-size: .85rem;
+  font-family: inherit;
+  text-align: center;
+  transition: background .1s, color .1s;
+}
+.cal-picker-item:hover { background: rgba(180,195,255,.09); color: #e9ecfb; }
+.cal-picker-item--active { background: rgba(244,184,96,.15); color: #f4b860; font-weight: 600; }
+
 .cal-nav {
   background: #0f1530;
   border: 1px solid rgba(180,195,255,.15);

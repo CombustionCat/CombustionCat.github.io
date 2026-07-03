@@ -1,10 +1,17 @@
 <div class="cal-page">
 
-  <div class="cal-hdr">
+  <div class="cal-hdr" id="cal-hdr">
     <button class="cal-nav" id="cal-prev">&#8249;</button>
-    <h2 class="cal-month-lbl" id="cal-month-lbl"></h2>
+    <h2 class="cal-month-lbl" id="cal-month-lbl">
+      <span class="cal-pick-trigger" id="cal-pick-month"></span>
+      <span class="cal-pick-sep">&nbsp;</span>
+      <span class="cal-pick-trigger" id="cal-pick-year"></span>
+    </h2>
     <button class="cal-nav" id="cal-next">&#8250;</button>
     <button class="cal-today-btn" id="cal-today-btn">Today</button>
+
+    <div class="cal-picker" id="cal-month-picker" hidden></div>
+    <div class="cal-picker" id="cal-year-picker" hidden></div>
   </div>
 
   <div class="cal-grid" id="cal-grid"></div>
@@ -68,12 +75,10 @@
     var out = '<svg width="' + sz + '" height="' + sz +
               '" viewBox="0 0 ' + sz + ' ' + sz +
               '" style="display:inline-block;vertical-align:middle;flex-shrink:0">';
-    /* near-black background with gold border */
     out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r +
            '" fill="#080c1e" stroke="rgba(244,184,96,0.4)" stroke-width="0.8"/>';
 
     if (illum > 0.98) {
-      /* full moon — solid gold (or blood red on eclipse) */
       out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + litCol + '"/>';
     } else if (illum > 0.02) {
       var xOff, sw, rx, d;
@@ -132,40 +137,44 @@
   /* ── Planetary & astronomical events ───────────────────────── */
   var PLANET_EVENTS = [
     /* 2025 */
-    { y:2025,m:1, d:16, sym:'♂', label:'Mars at opposition',                               color:'#ff8888', type:'opp'           },
-    { y:2025,m:3, d:20, sym:'☀', label:'March Equinox',                                    color:'#86e0b0', type:'solar'          },
-    { y:2025,m:6, d:21, sym:'☀', label:'June Solstice',                                    color:'#f4b860', type:'solar'          },
-    { y:2025,m:9, d:7,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                 color:'#cc4444', type:'eclipse-lunar',
+    { y:2025,m:1, d:16, sym:'♂', label:'Mars at opposition',                                   color:'#ff8888', type:'opp'              },
+    { y:2025,m:3, d:20, sym:'☀', label:'March Equinox',                                        color:'#86e0b0', type:'solar'             },
+    { y:2025,m:6, d:21, sym:'☀', label:'June Solstice',                                        color:'#f4b860', type:'solar'             },
+    { y:2025,m:9, d:7,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                     color:'#cc4444', type:'eclipse-lunar',
       note:'Visible Singapore · 00:30–05:00 SGT (Sep 8)' },
-    { y:2025,m:9, d:21, sym:'♄', label:'Saturn at opposition',                             color:'#e8d87c', type:'opp'           },
-    { y:2025,m:9, d:23, sym:'♆', label:'Neptune at opposition',                            color:'#5b8cff', type:'opp'           },
-    { y:2025,m:9, d:22, sym:'☀', label:'September Equinox',                                color:'#86e0b0', type:'solar'          },
-    { y:2025,m:11,d:21, sym:'♅', label:'Uranus at opposition',                             color:'#7fdbff', type:'opp'           },
-    { y:2025,m:12,d:21, sym:'☀', label:'December Solstice',                                color:'#9cc1ff', type:'solar'          },
+    { y:2025,m:9, d:21, sym:'♄', label:'Saturn at opposition',                                 color:'#e8d87c', type:'opp'              },
+    { y:2025,m:9, d:22, sym:'☀', label:'September Equinox',                                    color:'#86e0b0', type:'solar'             },
+    { y:2025,m:9, d:23, sym:'♆', label:'Neptune at opposition',                                color:'#5b8cff', type:'opp'              },
+    { y:2025,m:11,d:21, sym:'♅', label:'Uranus at opposition',                                 color:'#7fdbff', type:'opp'              },
+    { y:2025,m:12,d:21, sym:'☀', label:'December Solstice',                                    color:'#9cc1ff', type:'solar'             },
     /* 2026 */
-    { y:2026,m:1, d:10, sym:'♃', label:'Jupiter at opposition',                            color:'#f4b860', type:'opp'           },
-    { y:2026,m:3, d:3,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                 color:'#cc4444', type:'eclipse-lunar',
+    { y:2026,m:1, d:10, sym:'♃', label:'Jupiter at opposition',                                color:'#f4b860', type:'opp'              },
+    { y:2026,m:3, d:3,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                     color:'#cc4444', type:'eclipse-lunar',
       note:'Partially visible Singapore · Moon low in west near sunrise' },
-    { y:2026,m:3, d:20, sym:'☀', label:'March Equinox',                                    color:'#86e0b0', type:'solar'          },
-    { y:2026,m:6, d:21, sym:'☀', label:'June Solstice',                                    color:'#f4b860', type:'solar'          },
-    { y:2026,m:9, d:22, sym:'☀', label:'September Equinox',                                color:'#86e0b0', type:'solar'          },
-    { y:2026,m:9, d:27, sym:'♆', label:'Neptune at opposition',                            color:'#5b8cff', type:'opp'           },
-    { y:2026,m:10,d:3,  sym:'♄', label:'Saturn at opposition',                             color:'#e8d87c', type:'opp'           },
-    { y:2026,m:12,d:4,  sym:'♅', label:'Uranus at opposition',                             color:'#7fdbff', type:'opp'           },
-    { y:2026,m:12,d:21, sym:'☀', label:'December Solstice',                                color:'#9cc1ff', type:'solar'          },
+    { y:2026,m:3, d:20, sym:'☀', label:'March Equinox',                                        color:'#86e0b0', type:'solar'             },
+    { y:2026,m:6, d:21, sym:'☀', label:'June Solstice',                                        color:'#f4b860', type:'solar'             },
+    { y:2026,m:9, d:22, sym:'☀', label:'September Equinox',                                    color:'#86e0b0', type:'solar'             },
+    { y:2026,m:9, d:27, sym:'♆', label:'Neptune at opposition',                                color:'#5b8cff', type:'opp'              },
+    { y:2026,m:10,d:3,  sym:'♄', label:'Saturn at opposition',                                 color:'#e8d87c', type:'opp'              },
+    { y:2026,m:12,d:4,  sym:'♅', label:'Uranus at opposition',                                 color:'#7fdbff', type:'opp'              },
+    { y:2026,m:12,d:21, sym:'☀', label:'December Solstice',                                    color:'#9cc1ff', type:'solar'             },
     /* 2027 */
-    { y:2027,m:2, d:5,  sym:'♂', label:'Mars at opposition',                               color:'#ff8888', type:'opp'           },
-    { y:2027,m:2, d:9,  sym:'♃', label:'Jupiter at opposition',                            color:'#f4b860', type:'opp'           },
-    { y:2027,m:3, d:20, sym:'☀', label:'March Equinox',                                    color:'#86e0b0', type:'solar'          },
-    { y:2027,m:6, d:21, sym:'☀', label:'June Solstice',                                    color:'#f4b860', type:'solar'          },
-    { y:2027,m:8, d:2,  sym:'⊙', label:'Total Solar Eclipse (partial ~15% from Singapore)',color:'#f4d060', type:'eclipse-solar',
+    { y:2027,m:2, d:5,  sym:'♂', label:'Mars at opposition',                                   color:'#ff8888', type:'opp'              },
+    { y:2027,m:2, d:9,  sym:'♃', label:'Jupiter at opposition',                                color:'#f4b860', type:'opp'              },
+    { y:2027,m:2, d:20, sym:'◎', label:'Penumbral Lunar Eclipse',                              color:'#9aa6cf', type:'eclipse-penumbral',
+      note:'Visible Singapore · subtle shading only' },
+    { y:2027,m:3, d:20, sym:'☀', label:'March Equinox',                                        color:'#86e0b0', type:'solar'             },
+    { y:2027,m:6, d:21, sym:'☀', label:'June Solstice',                                        color:'#f4b860', type:'solar'             },
+    { y:2027,m:8, d:2,  sym:'⊙', label:'Total Solar Eclipse (partial ~15% from Singapore)',    color:'#f4d060', type:'eclipse-solar',
       note:'Partial phase ~14:00–16:30 SGT' },
-    { y:2027,m:9, d:22, sym:'☀', label:'September Equinox',                                color:'#86e0b0', type:'solar'          },
-    { y:2027,m:10,d:17, sym:'♄', label:'Saturn at opposition',                             color:'#e8d87c', type:'opp'           },
-    { y:2027,m:12,d:21, sym:'☀', label:'December Solstice',                                color:'#9cc1ff', type:'solar'          },
+    { y:2027,m:9, d:22, sym:'☀', label:'September Equinox',                                    color:'#86e0b0', type:'solar'             },
+    { y:2027,m:10,d:17, sym:'♄', label:'Saturn at opposition',                                 color:'#e8d87c', type:'opp'              },
+    { y:2027,m:12,d:21, sym:'☀', label:'December Solstice',                                    color:'#9cc1ff', type:'solar'             },
     /* 2028 */
-    { y:2028,m:7, d:22, sym:'⊙', label:'Total Solar Eclipse (partial ~35% from Singapore)',color:'#f4d060', type:'eclipse-solar',
+    { y:2028,m:7, d:22, sym:'⊙', label:'Total Solar Eclipse (partial ~35% from Singapore)',    color:'#f4d060', type:'eclipse-solar',
       note:'Partial phase visible from Singapore' },
+    { y:2028,m:12,d:31, sym:'●', label:'Total Lunar Eclipse — Blood Moon',                     color:'#cc4444', type:'eclipse-lunar',
+      note:'Visible Singapore · New Year\'s Eve ~23:00 SGT' },
   ];
 
   function eventsOn(year, month, day) {
@@ -191,21 +200,19 @@
   var curMonth = today.getMonth();
 
   function render() {
-    document.getElementById('cal-month-lbl').textContent =
-      MONTH_NAMES[curMonth] + ' ' + curYear;
+    document.getElementById('cal-pick-month').textContent = MONTH_NAMES[curMonth];
+    document.getElementById('cal-pick-year').textContent  = curYear;
 
     var daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
     var firstDay    = new Date(curYear, curMonth, 1).getDay();
     var isCurMonth  = today.getFullYear()===curYear && today.getMonth()===curMonth;
     var m           = curMonth + 1;
 
-    /* grid */
     var html = DAY_NAMES.map(function(d){ return '<div class="cal-dh">'+d+'</div>'; }).join('');
     for(var e=0; e<firstDay; e++) html += '<div class="cal-cell cal-empty"></div>';
 
     for(var d=1; d<=daysInMonth; d++) {
       var age          = moonAge(new Date(curYear, curMonth, d));
-      var illum        = moonIllum(age);
       var pname        = moonPhaseName(age);
       var active       = activeOn(m, d);
       var pevents      = eventsOn(curYear, m, d);
@@ -254,14 +261,14 @@
             '<span class="info-sub">'+sm+' – '+em+' &nbsp;·&nbsp; Peak '+pm+' &nbsp;·&nbsp; ZHR ~'+s.zhr+'</span></div></div>';
         }).join('');
 
-    /* astronomical events (planets + eclipses) */
+    /* astronomical events */
     var mevents = eventsInMonth(curYear, curMonth);
     document.getElementById('cal-planets').innerHTML = mevents.length===0
       ? '<p class="cal-none">No notable astronomical events this month.</p>'
       : mevents.map(function(ev){
-          var isEclipse = ev.type==='eclipse-lunar' || ev.type==='eclipse-solar';
+          var isEclipse = ev.type==='eclipse-lunar' || ev.type==='eclipse-solar' || ev.type==='eclipse-penumbral';
           var cardExtra = isEclipse
-            ? ' style="border-color:' + (ev.type==='eclipse-lunar' ? 'rgba(201,64,64,0.4)' : 'rgba(244,208,96,0.4)') + '"'
+            ? ' style="border-color:' + (ev.type==='eclipse-lunar' ? 'rgba(201,64,64,0.4)' : ev.type==='eclipse-penumbral' ? 'rgba(154,166,207,0.3)' : 'rgba(244,208,96,0.4)') + '"'
             : '';
           var sub = MONTH_NAMES[ev.m-1]+' '+ev.d+', '+ev.y;
           if (ev.note) sub += ' &nbsp;·&nbsp; ' + ev.note;
@@ -271,15 +278,78 @@
         }).join('');
   }
 
+  /* ── Navigation ─────────────────────────────────────────────── */
+
   document.getElementById('cal-prev').addEventListener('click', function(){
-    if(--curMonth<0){curMonth=11;curYear--;} render();
+    if(--curMonth<0){curMonth=11;curYear--;} closePickers(); render();
   });
   document.getElementById('cal-next').addEventListener('click', function(){
-    if(++curMonth>11){curMonth=0;curYear++;} render();
+    if(++curMonth>11){curMonth=0;curYear++;} closePickers(); render();
   });
   document.getElementById('cal-today-btn').addEventListener('click', function(){
-    curYear=today.getFullYear(); curMonth=today.getMonth(); render();
+    curYear=today.getFullYear(); curMonth=today.getMonth(); closePickers(); render();
   });
+
+  /* ── Month / Year fast-select pickers ───────────────────────── */
+
+  function closePickers() {
+    document.getElementById('cal-month-picker').hidden = true;
+    document.getElementById('cal-year-picker').hidden  = true;
+  }
+
+  function openMonthPicker() {
+    var mp = document.getElementById('cal-month-picker');
+    document.getElementById('cal-year-picker').hidden = true;
+    mp.innerHTML = '<div class="cal-picker-grid">' +
+      MONTH_NAMES.map(function(n, i) {
+        return '<button class="cal-picker-item'+(i===curMonth?' cal-picker-item--active':'')+'" data-m="'+i+'">'+n.slice(0,3)+'</button>';
+      }).join('') + '</div>';
+    mp.hidden = false;
+  }
+
+  function openYearPicker() {
+    var yp = document.getElementById('cal-year-picker');
+    document.getElementById('cal-month-picker').hidden = true;
+    var start = curYear - 3;
+    var years = [];
+    for (var y = start; y < start + 8; y++) years.push(y);
+    yp.innerHTML = '<div class="cal-picker-grid cal-picker-grid--2col">' +
+      years.map(function(y) {
+        return '<button class="cal-picker-item'+(y===curYear?' cal-picker-item--active':'')+'" data-y="'+y+'">'+y+'</button>';
+      }).join('') + '</div>';
+    yp.hidden = false;
+  }
+
+  document.getElementById('cal-pick-month').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.getElementById('cal-month-picker').hidden ? openMonthPicker() : closePickers();
+  });
+
+  document.getElementById('cal-pick-year').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.getElementById('cal-year-picker').hidden ? openYearPicker() : closePickers();
+  });
+
+  document.getElementById('cal-month-picker').addEventListener('click', function(e) {
+    e.stopPropagation();
+    var btn = e.target.closest('[data-m]');
+    if (!btn) return;
+    curMonth = Number(btn.dataset.m);
+    closePickers();
+    render();
+  });
+
+  document.getElementById('cal-year-picker').addEventListener('click', function(e) {
+    e.stopPropagation();
+    var btn = e.target.closest('[data-y]');
+    if (!btn) return;
+    curYear = Number(btn.dataset.y);
+    closePickers();
+    render();
+  });
+
+  document.addEventListener('click', closePickers);
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closePickers(); });
 
   render();
 })();
