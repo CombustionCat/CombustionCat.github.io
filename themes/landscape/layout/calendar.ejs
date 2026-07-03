@@ -19,7 +19,7 @@
       <div id="cal-showers"></div>
     </div>
     <div class="cal-panel">
-      <h3 class="cal-section-title">Planetary Events This Month</h3>
+      <h3 class="cal-section-title">Astronomical Events This Month</h3>
       <div id="cal-planets"></div>
     </div>
   </div>
@@ -54,10 +54,8 @@
     return wax ? 'Waxing Gibbous' : 'Waning Gibbous';
   }
 
-  /* B&W SVG moon: dark circle + white illuminated portion.
-     Algorithm: terminator is an ellipse whose x-radius varies 0 (at quarter)
-     to r (at new/full). Waxing = right limb lit; waning = left limb lit. */
-  function moonSVG(age, sz) {
+  /* Black-and-gold SVG moon. lunarEclipse=true → blood-red illumination. */
+  function moonSVG(age, sz, lunarEclipse) {
     sz = sz || 22;
     var r  = sz / 2 - 1;
     var cx = sz / 2, cy = sz / 2;
@@ -65,37 +63,36 @@
     var phase = age / 29.53059;
     var illum = (1 - Math.cos(2 * Math.PI * phase)) / 2;
     var wax   = phase < 0.5;
+    var litCol = lunarEclipse ? '#c94040' : '#f4c030';
 
     var out = '<svg width="' + sz + '" height="' + sz +
               '" viewBox="0 0 ' + sz + ' ' + sz +
               '" style="display:inline-block;vertical-align:middle;flex-shrink:0">';
-    /* dark background */
+    /* near-black background with gold border */
     out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r +
-           '" fill="#0d1228" stroke="rgba(180,195,255,0.22)" stroke-width="0.6"/>';
+           '" fill="#080c1e" stroke="rgba(244,184,96,0.4)" stroke-width="0.8"/>';
 
     if (illum > 0.98) {
-      /* full moon */
-      out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#dde3f0"/>';
+      /* full moon — solid gold (or blood red on eclipse) */
+      out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + litCol + '"/>';
     } else if (illum > 0.02) {
       var xOff, sw, rx, d;
       if (wax) {
-        /* right limb lit */
-        xOff = r * (1 - 2 * illum);   /* + = crescent, − = gibbous */
+        xOff = r * (1 - 2 * illum);
         sw   = xOff >= 0 ? 1 : 0;
         rx   = Math.abs(xOff);
         d = 'M' + cx + ',' + T +
-            ' A' + r  + ',' + r  + ' 0 0,1 ' + cx + ',' + B +  /* right semi CW */
+            ' A' + r  + ',' + r  + ' 0 0,1 ' + cx + ',' + B +
             ' A' + rx + ',' + r  + ' 0 0,' + sw + ' ' + cx + ',' + T;
       } else {
-        /* left limb lit */
-        xOff = r * (2 * illum - 1);   /* + = gibbous, − = crescent */
+        xOff = r * (2 * illum - 1);
         sw   = xOff >= 0 ? 1 : 0;
         rx   = Math.abs(xOff);
         d = 'M' + cx + ',' + T +
-            ' A' + r  + ',' + r  + ' 0 0,0 ' + cx + ',' + B +  /* left semi CCW */
+            ' A' + r  + ',' + r  + ' 0 0,0 ' + cx + ',' + B +
             ' A' + rx + ',' + r  + ' 0 0,' + sw + ' ' + cx + ',' + T;
       }
-      out += '<path d="' + d + '" fill="#dde3f0"/>';
+      out += '<path d="' + d + '" fill="' + litCol + '"/>';
     }
 
     out += '</svg>';
@@ -132,38 +129,43 @@
     return res;
   }
 
-  /* ── Planetary events ───────────────────────────────────────── */
-  /* Oppositions: planet is opposite the Sun — brightest & closest.
-     Solstices/equinoxes: affect night length.
-     Dates sourced from astronomical almanacs; outer-planet oppositions
-     accurate to ±2 days. */
+  /* ── Planetary & astronomical events ───────────────────────── */
   var PLANET_EVENTS = [
     /* 2025 */
-    { y:2025,m:1, d:16, sym:'♂', label:'Mars at opposition',       color:'#ff8888', type:'opp'   },
-    { y:2025,m:3, d:20, sym:'☀', label:'March Equinox',            color:'#86e0b0', type:'solar'  },
-    { y:2025,m:6, d:21, sym:'☀', label:'June Solstice',            color:'#f4b860', type:'solar'  },
-    { y:2025,m:9, d:21, sym:'♄', label:'Saturn at opposition',     color:'#e8d87c', type:'opp'   },
-    { y:2025,m:9, d:23, sym:'♆', label:'Neptune at opposition',    color:'#5b8cff', type:'opp'   },
-    { y:2025,m:9, d:22, sym:'☀', label:'September Equinox',        color:'#86e0b0', type:'solar'  },
-    { y:2025,m:11,d:21, sym:'♅', label:'Uranus at opposition',     color:'#7fdbff', type:'opp'   },
-    { y:2025,m:12,d:21, sym:'☀', label:'December Solstice',        color:'#9cc1ff', type:'solar'  },
+    { y:2025,m:1, d:16, sym:'♂', label:'Mars at opposition',                               color:'#ff8888', type:'opp'           },
+    { y:2025,m:3, d:20, sym:'☀', label:'March Equinox',                                    color:'#86e0b0', type:'solar'          },
+    { y:2025,m:6, d:21, sym:'☀', label:'June Solstice',                                    color:'#f4b860', type:'solar'          },
+    { y:2025,m:9, d:7,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                 color:'#cc4444', type:'eclipse-lunar',
+      note:'Visible Singapore · 00:30–05:00 SGT (Sep 8)' },
+    { y:2025,m:9, d:21, sym:'♄', label:'Saturn at opposition',                             color:'#e8d87c', type:'opp'           },
+    { y:2025,m:9, d:23, sym:'♆', label:'Neptune at opposition',                            color:'#5b8cff', type:'opp'           },
+    { y:2025,m:9, d:22, sym:'☀', label:'September Equinox',                                color:'#86e0b0', type:'solar'          },
+    { y:2025,m:11,d:21, sym:'♅', label:'Uranus at opposition',                             color:'#7fdbff', type:'opp'           },
+    { y:2025,m:12,d:21, sym:'☀', label:'December Solstice',                                color:'#9cc1ff', type:'solar'          },
     /* 2026 */
-    { y:2026,m:1, d:10, sym:'♃', label:'Jupiter at opposition',    color:'#f4b860', type:'opp'   },
-    { y:2026,m:3, d:20, sym:'☀', label:'March Equinox',            color:'#86e0b0', type:'solar'  },
-    { y:2026,m:6, d:21, sym:'☀', label:'June Solstice',            color:'#f4b860', type:'solar'  },
-    { y:2026,m:9, d:22, sym:'☀', label:'September Equinox',        color:'#86e0b0', type:'solar'  },
-    { y:2026,m:9, d:27, sym:'♆', label:'Neptune at opposition',    color:'#5b8cff', type:'opp'   },
-    { y:2026,m:10,d:3,  sym:'♄', label:'Saturn at opposition',     color:'#e8d87c', type:'opp'   },
-    { y:2026,m:12,d:4,  sym:'♅', label:'Uranus at opposition',     color:'#7fdbff', type:'opp'   },
-    { y:2026,m:12,d:21, sym:'☀', label:'December Solstice',        color:'#9cc1ff', type:'solar'  },
+    { y:2026,m:1, d:10, sym:'♃', label:'Jupiter at opposition',                            color:'#f4b860', type:'opp'           },
+    { y:2026,m:3, d:3,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                 color:'#cc4444', type:'eclipse-lunar',
+      note:'Partially visible Singapore · Moon low in west near sunrise' },
+    { y:2026,m:3, d:20, sym:'☀', label:'March Equinox',                                    color:'#86e0b0', type:'solar'          },
+    { y:2026,m:6, d:21, sym:'☀', label:'June Solstice',                                    color:'#f4b860', type:'solar'          },
+    { y:2026,m:9, d:22, sym:'☀', label:'September Equinox',                                color:'#86e0b0', type:'solar'          },
+    { y:2026,m:9, d:27, sym:'♆', label:'Neptune at opposition',                            color:'#5b8cff', type:'opp'           },
+    { y:2026,m:10,d:3,  sym:'♄', label:'Saturn at opposition',                             color:'#e8d87c', type:'opp'           },
+    { y:2026,m:12,d:4,  sym:'♅', label:'Uranus at opposition',                             color:'#7fdbff', type:'opp'           },
+    { y:2026,m:12,d:21, sym:'☀', label:'December Solstice',                                color:'#9cc1ff', type:'solar'          },
     /* 2027 */
-    { y:2027,m:2, d:5,  sym:'♂', label:'Mars at opposition',       color:'#ff8888', type:'opp'   },
-    { y:2027,m:2, d:9,  sym:'♃', label:'Jupiter at opposition',    color:'#f4b860', type:'opp'   },
-    { y:2027,m:3, d:20, sym:'☀', label:'March Equinox',            color:'#86e0b0', type:'solar'  },
-    { y:2027,m:6, d:21, sym:'☀', label:'June Solstice',            color:'#f4b860', type:'solar'  },
-    { y:2027,m:9, d:22, sym:'☀', label:'September Equinox',        color:'#86e0b0', type:'solar'  },
-    { y:2027,m:10,d:17, sym:'♄', label:'Saturn at opposition',     color:'#e8d87c', type:'opp'   },
-    { y:2027,m:12,d:21, sym:'☀', label:'December Solstice',        color:'#9cc1ff', type:'solar'  },
+    { y:2027,m:2, d:5,  sym:'♂', label:'Mars at opposition',                               color:'#ff8888', type:'opp'           },
+    { y:2027,m:2, d:9,  sym:'♃', label:'Jupiter at opposition',                            color:'#f4b860', type:'opp'           },
+    { y:2027,m:3, d:20, sym:'☀', label:'March Equinox',                                    color:'#86e0b0', type:'solar'          },
+    { y:2027,m:6, d:21, sym:'☀', label:'June Solstice',                                    color:'#f4b860', type:'solar'          },
+    { y:2027,m:8, d:2,  sym:'⊙', label:'Total Solar Eclipse (partial ~15% from Singapore)',color:'#f4d060', type:'eclipse-solar',
+      note:'Partial phase ~14:00–16:30 SGT' },
+    { y:2027,m:9, d:22, sym:'☀', label:'September Equinox',                                color:'#86e0b0', type:'solar'          },
+    { y:2027,m:10,d:17, sym:'♄', label:'Saturn at opposition',                             color:'#e8d87c', type:'opp'           },
+    { y:2027,m:12,d:21, sym:'☀', label:'December Solstice',                                color:'#9cc1ff', type:'solar'          },
+    /* 2028 */
+    { y:2028,m:7, d:22, sym:'⊙', label:'Total Solar Eclipse (partial ~35% from Singapore)',color:'#f4d060', type:'eclipse-solar',
+      note:'Partial phase visible from Singapore' },
   ];
 
   function eventsOn(year, month, day) {
@@ -171,6 +173,11 @@
   }
   function eventsInMonth(year, month) {
     return PLANET_EVENTS.filter(function(e){ return e.y===year&&e.m===month+1; });
+  }
+  function isLunarEclipseOn(year, month, day) {
+    return PLANET_EVENTS.some(function(e){
+      return e.type==='eclipse-lunar' && e.y===year && e.m===month && e.d===day;
+    });
   }
 
   /* ── Calendar rendering ─────────────────────────────────────── */
@@ -197,12 +204,13 @@
     for(var e=0; e<firstDay; e++) html += '<div class="cal-cell cal-empty"></div>';
 
     for(var d=1; d<=daysInMonth; d++) {
-      var age     = moonAge(new Date(curYear, curMonth, d));
-      var illum   = moonIllum(age);
-      var pname   = moonPhaseName(age);
-      var active  = activeOn(m, d);
-      var pevents = eventsOn(curYear, m, d);
-      var isToday = isCurMonth && d===today.getDate();
+      var age          = moonAge(new Date(curYear, curMonth, d));
+      var illum        = moonIllum(age);
+      var pname        = moonPhaseName(age);
+      var active       = activeOn(m, d);
+      var pevents      = eventsOn(curYear, m, d);
+      var isToday      = isCurMonth && d===today.getDate();
+      var lunarEclipse = isLunarEclipseOn(curYear, m, d);
 
       var dots = active.map(function(s){
         var pk = isPeak(s,m,d);
@@ -215,7 +223,7 @@
 
       html += '<div class="cal-cell'+(isToday?' cal-cell-today':'')+'">' +
         '<div class="cal-top">' +
-          moonSVG(age, 20) +
+          moonSVG(age, 20, lunarEclipse) +
           '<span class="cal-dn">'+d+'</span>' +
         '</div>' +
         (dots ? '<div class="cal-dots">'+dots+'</div>' : '') +
@@ -230,7 +238,8 @@
                    'Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'];
     document.getElementById('cal-moon-legend').innerHTML = phases.map(function(a,i){
       return '<span class="cal-leg-item">'+moonSVG(a,18)+'<span>'+pnames[i]+'</span></span>';
-    }).join('');
+    }).join('') +
+    '<span class="cal-leg-item">'+moonSVG(14.77,18,true)+'<span>Lunar Eclipse</span></span>';
 
     /* showers */
     var mshowers = showersInMonth(curYear, curMonth);
@@ -245,15 +254,20 @@
             '<span class="info-sub">'+sm+' – '+em+' &nbsp;·&nbsp; Peak '+pm+' &nbsp;·&nbsp; ZHR ~'+s.zhr+'</span></div></div>';
         }).join('');
 
-    /* planet events */
+    /* astronomical events (planets + eclipses) */
     var mevents = eventsInMonth(curYear, curMonth);
     document.getElementById('cal-planets').innerHTML = mevents.length===0
-      ? '<p class="cal-none">No notable planetary events this month.</p>'
+      ? '<p class="cal-none">No notable astronomical events this month.</p>'
       : mevents.map(function(ev){
-          var typeLabel = ev.type==='opp' ? 'Opposition' : ev.type==='conj' ? 'Conjunction' : 'Solar event';
-          return '<div class="info-card"><span class="info-sym" style="color:'+ev.color+'">'+ev.sym+'</span>' +
+          var isEclipse = ev.type==='eclipse-lunar' || ev.type==='eclipse-solar';
+          var cardExtra = isEclipse
+            ? ' style="border-color:' + (ev.type==='eclipse-lunar' ? 'rgba(201,64,64,0.4)' : 'rgba(244,208,96,0.4)') + '"'
+            : '';
+          var sub = MONTH_NAMES[ev.m-1]+' '+ev.d+', '+ev.y;
+          if (ev.note) sub += ' &nbsp;·&nbsp; ' + ev.note;
+          return '<div class="info-card"' + cardExtra + '><span class="info-sym" style="color:'+ev.color+'">'+ev.sym+'</span>' +
             '<div><span class="info-name">'+ev.label+'</span>' +
-            '<span class="info-sub">'+MONTH_NAMES[ev.m-1]+' '+ev.d+', '+ev.y+'</span></div></div>';
+            '<span class="info-sub">'+sub+'</span></div></div>';
         }).join('');
   }
 
