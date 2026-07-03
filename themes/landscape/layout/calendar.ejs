@@ -9,9 +9,6 @@
     </h2>
     <button class="cal-nav" id="cal-next">&#8250;</button>
     <button class="cal-today-btn" id="cal-today-btn">Today</button>
-
-    <div class="cal-picker" id="cal-month-picker" hidden></div>
-    <div class="cal-picker" id="cal-year-picker" hidden></div>
   </div>
 
   <div class="cal-grid" id="cal-grid"></div>
@@ -291,46 +288,66 @@
   });
 
   /* ── Month / Year fast-select pickers ───────────────────────── */
+  /* Pickers live on <body> (position:fixed) to avoid any overflow:hidden clipping */
 
-  function closePickers() {
-    document.getElementById('cal-month-picker').hidden = true;
-    document.getElementById('cal-year-picker').hidden  = true;
+  var monthPicker = document.createElement('div');
+  monthPicker.className = 'cal-picker';
+  monthPicker.hidden = true;
+  document.body.appendChild(monthPicker);
+
+  var yearPicker = document.createElement('div');
+  yearPicker.className = 'cal-picker';
+  yearPicker.hidden = true;
+  document.body.appendChild(yearPicker);
+
+  function positionPicker(picker, trigger) {
+    var rect = trigger.getBoundingClientRect();
+    var w = 224;
+    var left = rect.left + rect.width / 2 - w / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    picker.style.top  = (rect.bottom + 6) + 'px';
+    picker.style.left = left + 'px';
+    picker.style.width = w + 'px';
   }
 
-  function openMonthPicker() {
-    var mp = document.getElementById('cal-month-picker');
-    document.getElementById('cal-year-picker').hidden = true;
-    mp.innerHTML = '<div class="cal-picker-grid">' +
+  function closePickers() {
+    monthPicker.hidden = true;
+    yearPicker.hidden  = true;
+  }
+
+  function openMonthPicker(trigger) {
+    yearPicker.hidden = true;
+    monthPicker.innerHTML = '<div class="cal-picker-grid">' +
       MONTH_NAMES.map(function(n, i) {
         return '<button class="cal-picker-item'+(i===curMonth?' cal-picker-item--active':'')+'" data-m="'+i+'">'+n.slice(0,3)+'</button>';
       }).join('') + '</div>';
-    mp.hidden = false;
+    positionPicker(monthPicker, trigger);
+    monthPicker.hidden = false;
   }
 
-  function openYearPicker() {
-    var yp = document.getElementById('cal-year-picker');
-    document.getElementById('cal-month-picker').hidden = true;
+  function openYearPicker(trigger) {
+    monthPicker.hidden = true;
     var start = curYear - 3;
-    var years = [];
-    for (var y = start; y < start + 8; y++) years.push(y);
-    yp.innerHTML = '<div class="cal-picker-grid cal-picker-grid--2col">' +
-      years.map(function(y) {
-        return '<button class="cal-picker-item'+(y===curYear?' cal-picker-item--active':'')+'" data-y="'+y+'">'+y+'</button>';
-      }).join('') + '</div>';
-    yp.hidden = false;
+    var rows = '';
+    for (var y = start; y < start + 8; y++) {
+      rows += '<button class="cal-picker-item'+(y===curYear?' cal-picker-item--active':'')+'" data-y="'+y+'">'+y+'</button>';
+    }
+    yearPicker.innerHTML = '<div class="cal-picker-grid cal-picker-grid--2col">' + rows + '</div>';
+    positionPicker(yearPicker, trigger);
+    yearPicker.hidden = false;
   }
 
   document.getElementById('cal-pick-month').addEventListener('click', function(e) {
     e.stopPropagation();
-    document.getElementById('cal-month-picker').hidden ? openMonthPicker() : closePickers();
+    monthPicker.hidden ? openMonthPicker(this) : closePickers();
   });
 
   document.getElementById('cal-pick-year').addEventListener('click', function(e) {
     e.stopPropagation();
-    document.getElementById('cal-year-picker').hidden ? openYearPicker() : closePickers();
+    yearPicker.hidden ? openYearPicker(this) : closePickers();
   });
 
-  document.getElementById('cal-month-picker').addEventListener('click', function(e) {
+  monthPicker.addEventListener('click', function(e) {
     e.stopPropagation();
     var btn = e.target.closest('[data-m]');
     if (!btn) return;
@@ -339,7 +356,7 @@
     render();
   });
 
-  document.getElementById('cal-year-picker').addEventListener('click', function(e) {
+  yearPicker.addEventListener('click', function(e) {
     e.stopPropagation();
     var btn = e.target.closest('[data-y]');
     if (!btn) return;
