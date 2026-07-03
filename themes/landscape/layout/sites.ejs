@@ -7,13 +7,15 @@ var sites = site.posts.sort('-date').toArray()
       url: encodeURI('/' + p.path),
       lat: Number(p.location[0]),
       lng: Number(p.location[1]),
+      image: p.image || null,
       darkness: p.darkness ? Number(p.darkness) : null,
       low_horizons: Array.isArray(p.low_horizons)
         ? p.low_horizons.map(function(d){ return String(d).toLowerCase(); })
         : [],
       dark_regions: Array.isArray(p.dark_regions)
         ? p.dark_regions.map(function(d){ return String(d).toLowerCase(); })
-        : []
+        : [],
+      summary: (p.summary && typeof p.summary === 'object') ? p.summary : {}
     };
   })
   .filter(function(s){ return isFinite(s.lat) && isFinite(s.lng); });
@@ -22,7 +24,19 @@ var sites = site.posts.sort('-date').toArray()
   <h1 class="sites-heading">Every site</h1>
   <p class="sites-lede">Filter by darkness, horizons, or dark regions.</p>
 
-  <input id="q" class="site-search" type="search" placeholder="Search sites&hellip;" aria-label="Search sites" style="margin-bottom:1rem">
+  <div class="sites-controls">
+    <input id="q" class="site-search" type="search" placeholder="Search sites&hellip;" aria-label="Search sites">
+    <div class="view-toggle">
+      <button class="view-btn view-btn--active" id="btn-card" type="button">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Cards
+      </button>
+      <button class="view-btn" id="btn-list" type="button">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+        List
+      </button>
+    </div>
+  </div>
 
   <div class="filter-groups">
     <div class="filter-group">
@@ -48,7 +62,9 @@ var sites = site.posts.sort('-date').toArray()
     <button id="reset" class="site-reset" type="button">Clear</button>
   </div>
 
-  <table class="sites-list" id="list">
+  <div class="sites-grid" id="grid"></div>
+
+  <table class="sites-list" id="list" hidden>
     <thead>
       <tr>
         <th class="sortable" data-col="name">Site <span class="sort-icon"></span></th>
@@ -66,10 +82,15 @@ var sites = site.posts.sort('-date').toArray()
 <script>var SITES = <%- JSON.stringify(sites) %>;</script>
 <script>
 (function () {
+  var grid = document.getElementById('grid');
+  var list = document.getElementById('list');
   var listBody = document.getElementById('list-body');
   var empty = document.getElementById('empty');
   var q = document.getElementById('q');
   var reset = document.getElementById('reset');
+  var btnCard = document.getElementById('btn-card');
+  var btnList = document.getElementById('btn-list');
+  var viewMode = 'card';
   var sortCol = null;
   var sortDir = 'asc';
 
@@ -82,6 +103,27 @@ var sites = site.posts.sort('-date').toArray()
     var d = document.createElement('div');
     d.textContent = (t == null) ? '' : String(t);
     return d.innerHTML;
+  }
+
+  function card(s) {
+    var thumb = s.image
+      ? '<a class="site-card-img" href="' + s.url + '"><img src="' + esc(s.image) + '" alt="' + esc(s.name) + '" loading="lazy"></a>'
+      : '<a class="site-card-img site-card-img--none" href="' + s.url + '"><span>No photo yet</span></a>';
+    var chips = '';
+    if (s.darkness) chips += '<span class="site-chip site-chip--dark">Darkness ' + esc(s.darkness) + '</span>';
+    if (s.low_horizons && s.low_horizons.length)
+      chips += '<span class="site-chip">Horizons: ' + s.low_horizons.map(function(d){ return d[0].toUpperCase(); }).join(' ') + '</span>';
+    if (s.dark_regions && s.dark_regions.length)
+      chips += '<span class="site-chip">Dark: ' + s.dark_regions.map(function(d){ return d[0].toUpperCase(); }).join(' ') + '</span>';
+    var extra = Object.keys(s.summary || {}).slice(0, 2)
+      .map(function(k){ return '<li><b>' + esc(k) + '</b> ' + esc(s.summary[k]) + '</li>'; })
+      .join('');
+    return '<article class="site-card">' + thumb +
+      '<div class="site-card-body">' +
+        '<h2><a href="' + s.url + '">' + esc(s.name) + '</a></h2>' +
+        (chips ? '<div class="site-chips">' + chips + '</div>' : '') +
+        (extra ? '<ul class="site-card-meta">' + extra + '</ul>' : '') +
+      '</div></article>';
   }
 
   function row(s) {
@@ -153,7 +195,15 @@ var sites = site.posts.sort('-date').toArray()
       return true;
     });
 
-    listBody.innerHTML = sortedShown(shown).map(row).join('');
+    if (viewMode === 'card') {
+      grid.innerHTML = shown.map(card).join('');
+      grid.hidden = false;
+      list.hidden = true;
+    } else {
+      listBody.innerHTML = sortedShown(shown).map(row).join('');
+      list.hidden = false;
+      grid.hidden = true;
+    }
     empty.hidden = shown.length !== 0;
   }
 
@@ -168,6 +218,20 @@ var sites = site.posts.sort('-date').toArray()
       sortDir = 'asc';
     }
     updateSortHeaders();
+    apply();
+  });
+
+  btnCard.addEventListener('click', function() {
+    viewMode = 'card';
+    btnCard.classList.add('view-btn--active');
+    btnList.classList.remove('view-btn--active');
+    apply();
+  });
+
+  btnList.addEventListener('click', function() {
+    viewMode = 'list';
+    btnList.classList.add('view-btn--active');
+    btnCard.classList.remove('view-btn--active');
     apply();
   });
 
