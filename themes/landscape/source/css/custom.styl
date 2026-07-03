@@ -1106,8 +1106,9 @@ a.article-title:hover { color: #9cc1ff; }
 .gal-next { right: 1rem; }
 
 @media (max-width: 767px) {
-  .gal-modal-inner { flex-direction: column; max-width: 96vw; }
-  .gal-modal-img-wrap { max-width: 100%; }
+  .gal-modal-inner { flex-direction: column; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
+  .gal-modal-img-wrap { max-width: 100%; max-height: 50vh; flex-shrink: 0; }
+  .gal-modal-img-wrap img { max-height: 50vh; }
   .gal-modal-info { flex: 0 0 auto; border-left: none; border-top: 1px solid rgba(180,195,255,.1); padding: 1.2rem; }
 }
 

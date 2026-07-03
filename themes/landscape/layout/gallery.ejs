@@ -74,13 +74,14 @@ function isVideo(src) {
     title.textContent = p.title || '';
 
     var fields = [
-      ['Object',    p.object    || p.title],
-      ['OTA',       p.ota],
-      ['Telescope', p.telescope],
-      ['Camera',    p.camera],
-      ['Location',  p.location],
-      ['Date',      p.date],
-      ['Notes',     p.notes]
+      ['Object',       p.object    || p.title],
+      ['OTA',          p.ota],
+      ['Telescope',    p.telescope],
+      ['Camera',       p.camera],
+      ['Location',     p.location],
+      ['Date',         p.date],
+      ['Photographer', p.photographer],
+      ['Notes',        p.notes]
     ];
     dl.innerHTML = fields
       .filter(function(f){ return f[1]; })

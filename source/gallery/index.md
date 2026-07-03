@@ -9,6 +9,7 @@ photos:
     camera: Samsung Galaxy S25
     location: Singapore
     date: "2026-02-07"
+    photographer: spacecat
 
   - src: /gallery/img/Jupiter.jpg
     title: Jupiter
@@ -17,6 +18,7 @@ photos:
     camera: Samsung Galaxy S25
     location: Singapore
     date: "2026-02-07"
+    photographer: spacecat
 
   - src: /gallery/img/ScienceCenterClouds.mp4
     title: Clouds over Science Centre
@@ -24,6 +26,7 @@ photos:
     camera: Samsung Galaxy S25
     location: Science Centre, Singapore
     date: "2026-06-19"
+    photographer: spacecat
 
   - src: /gallery/img/20240509_191149.jpg
     title: Clouds over Singapore
@@ -31,4 +34,5 @@ photos:
     camera: Samsung Galaxy S23
     location: Singapore
     date: "2024-05-09"
+    photographer: spacecat
 ---
