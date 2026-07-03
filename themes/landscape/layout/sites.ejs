@@ -50,7 +50,31 @@ var sites = site.posts.sort('-date').toArray()
     <button id="reset" class="site-reset" type="button">Clear</button>
   </div>
 
+  <div class="view-toggle" id="view-toggle">
+    <button class="view-btn view-btn--active" id="btn-card" type="button" title="Card view">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      Cards
+    </button>
+    <button class="view-btn" id="btn-list" type="button" title="List view">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+      List
+    </button>
+  </div>
+
   <div class="sites-grid" id="grid"></div>
+
+  <table class="sites-list" id="list" hidden>
+    <thead>
+      <tr>
+        <th>Site</th>
+        <th>Darkness</th>
+        <th>Low Horizons</th>
+        <th>Dark Regions</th>
+      </tr>
+    </thead>
+    <tbody id="list-body"></tbody>
+  </table>
+
   <p class="sites-empty" id="empty" hidden>No sites match those filters yet.</p>
 </div>
 
@@ -58,9 +82,14 @@ var sites = site.posts.sort('-date').toArray()
 <script>
 (function () {
   var grid = document.getElementById('grid');
+  var list = document.getElementById('list');
+  var listBody = document.getElementById('list-body');
   var empty = document.getElementById('empty');
   var q = document.getElementById('q');
   var reset = document.getElementById('reset');
+  var btnCard = document.getElementById('btn-card');
+  var btnList = document.getElementById('btn-list');
+  var viewMode = 'card';
 
   function checked(cls) {
     return Array.prototype.slice.call(document.querySelectorAll('.' + cls + ':checked'))
@@ -94,6 +123,22 @@ var sites = site.posts.sort('-date').toArray()
       '</div></article>';
   }
 
+  function row(s) {
+    var dark = s.darkness ? '<span class="site-chip site-chip--dark">Darkness ' + esc(s.darkness) + '</span>' : '—';
+    var horiz = s.low_horizons && s.low_horizons.length
+      ? s.low_horizons.map(function(d){ return d[0].toUpperCase(); }).join(' ')
+      : '—';
+    var regions = s.dark_regions && s.dark_regions.length
+      ? s.dark_regions.map(function(d){ return d[0].toUpperCase(); }).join(' ')
+      : '—';
+    return '<tr>' +
+      '<td><a href="' + s.url + '">' + esc(s.name) + '</a></td>' +
+      '<td>' + dark + '</td>' +
+      '<td>' + esc(horiz) + '</td>' +
+      '<td>' + esc(regions) + '</td>' +
+      '</tr>';
+  }
+
   function apply() {
     var term = q.value.trim().toLowerCase();
     var darkVals = checked('f-dark').map(Number);
@@ -107,9 +152,31 @@ var sites = site.posts.sort('-date').toArray()
       if (regionVals.length && !regionVals.some(function(d){ return (s.dark_regions || []).indexOf(d) !== -1; })) return false;
       return true;
     });
-    grid.innerHTML = shown.map(card).join('');
+
+    if (viewMode === 'card') {
+      grid.innerHTML = shown.map(card).join('');
+      grid.hidden = false;
+      list.hidden = true;
+    } else {
+      listBody.innerHTML = shown.map(row).join('');
+      list.hidden = false;
+      grid.hidden = true;
+    }
     empty.hidden = shown.length !== 0;
   }
+
+  btnCard.addEventListener('click', function() {
+    viewMode = 'card';
+    btnCard.classList.add('view-btn--active');
+    btnList.classList.remove('view-btn--active');
+    apply();
+  });
+  btnList.addEventListener('click', function() {
+    viewMode = 'list';
+    btnList.classList.add('view-btn--active');
+    btnCard.classList.remove('view-btn--active');
+    apply();
+  });
 
   document.addEventListener('change', function(e){
     if (e.target.matches('.f-dark, .f-horizon, .f-region, #q')) apply();
