@@ -80,6 +80,19 @@
 #logo-wrap { margin: 0; }
 #header-title { top: 0; margin-top: 0; height: 48px; }
 
+.logo-tagline {
+  font-family: 'Caveat', cursive;
+  font-size: 0.95rem;
+  color: #ffffff;
+  font-weight: 400;
+  margin-left: 0.5rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 48px;
+  display: inline;
+}
+
 /* nav links — compact padding to match 48px bar height */
 .main-nav-link {
   font-weight: 300;
@@ -278,6 +291,17 @@ a.article-title:hover { color: #9cc1ff; }
 
 /* footer */
 #footer { border-color: rgba(180,195,255,.1); }
+
+.footer-quote {
+  font-family: 'Pinyon Script', cursive;
+  font-size: 1.5rem;
+  color: #e9ecfb;
+  text-align: center;
+  margin: 0 auto 0.5rem;
+  line-height: 1.6;
+  opacity: 0.7;
+  max-width: 520px;
+}
 
 /* ====================================================
    Map page
@@ -920,6 +944,7 @@ a.article-title:hover { color: #9cc1ff; }
 
 /* ── Small phones (≤479px): font & spacing tweaks ── */
 @media (max-width: 479px) {
+  .logo-tagline { display: none; }
   .sites-heading {
     font-size: 1.5rem;
   }
