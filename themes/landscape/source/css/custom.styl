@@ -591,22 +591,31 @@ a.article-title:hover { color: #9cc1ff; }
 
 .sites-empty { text-align: center; color: #9aa6cf; padding: 2rem; }
 
-/* view toggle */
+/* search + view toggle row */
+.sites-controls {
+  display: flex; align-items: center; gap: .75rem;
+  margin-bottom: 1.2rem; flex-wrap: wrap;
+}
+.sites-controls .site-search { flex: 1; min-width: 180px; margin-bottom: 0; }
+
 .view-toggle {
-  display: flex; gap: .35rem; margin-bottom: 1.2rem;
+  display: flex; gap: 0;
+  background: #0f1530; border: 1px solid rgba(180,195,255,.2);
+  border-radius: 9px; overflow: hidden; flex-shrink: 0;
 }
 .view-btn {
   display: flex; align-items: center; gap: .4rem;
-  background: transparent; border: 1px solid rgba(180,195,255,.15);
-  color: #9aa6cf; border-radius: 8px; padding: .45rem .85rem;
+  background: transparent; border: none; border-right: 1px solid rgba(180,195,255,.2);
+  color: #9aa6cf; padding: .5rem 1rem;
   cursor: pointer; font: inherit; font-size: .88rem;
-  transition: color .15s, border-color .15s;
+  transition: color .15s, background .15s;
 }
-.view-btn:hover { color: #e9ecfb; border-color: #9cc1ff; }
+.view-btn:last-child { border-right: none; }
+.view-btn:hover { color: #e9ecfb; background: rgba(156,193,255,.07); }
 .view-btn--active {
-  color: #f4b860; border-color: rgba(244,184,96,.5);
-  background: rgba(244,184,96,.07);
+  color: #f4b860; background: rgba(244,184,96,.1);
 }
+.view-btn--active svg { opacity: 1; }
 
 /* list / table view */
 .sites-list {
@@ -618,6 +627,12 @@ a.article-title:hover { color: #9cc1ff; }
   letter-spacing: .06em; color: #9aa6cf; font-weight: 500;
   padding: .5rem .75rem; border-bottom: 1px solid rgba(180,195,255,.15);
 }
+.sites-list th.sortable {
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+.sites-list th.sortable:hover { color: #e9ecfb; }
+.sites-list th.sorted { color: #f4b860; }
+.sort-icon { font-size: .7rem; opacity: .8; }
 .sites-list td {
   padding: .6rem .75rem; border-bottom: 1px solid rgba(180,195,255,.07);
   vertical-align: middle;
