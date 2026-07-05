@@ -568,6 +568,7 @@ a.article-title:hover { color: #9cc1ff; }
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   margin-bottom: 1rem;
 }
+.sites-grid[hidden] { display: none; }
 .site-card {
   background: #0f1530; border: 1px solid rgba(180,195,255,.12);
   border-radius: 14px; overflow: hidden;
@@ -679,7 +680,7 @@ a.article-title:hover { color: #9cc1ff; }
   opacity: 0;
   pointer-events: none;
   transform: translateY(-6px);
-  transition: opacity .15s ease, transform .15s ease;
+  transition: opacity .15s ease .4s, transform .15s ease .4s;
   box-shadow: 0 12px 36px rgba(0,0,0,.55);
 }
 
@@ -688,6 +689,7 @@ a.article-title:hover { color: #9cc1ff; }
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+  transition: opacity .15s ease, transform .15s ease;
 }
 
 .nav-dropdown-item {
