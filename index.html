@@ -2260,6 +2260,18 @@ document.addEventListener('click',e=>{
   if(_fabOpen&&fab&&!fab.contains(e.target))closeFab();
 });
 
+// Auto-login on refresh if passphrase was already set on this device
+(function(){
+  if(localStorage.getItem('rf_auth')){
+    const tok=localStorage.getItem('rf_gist_token');
+    const gid=localStorage.getItem('rf_gist_id');
+    bootApp(tok&&gid?'pull':null);
+  } else {
+    // Show login starfield while on login screen
+    initStarfield();
+  }
+})();
+
 </script>
 </body>
 </html>
