@@ -59,7 +59,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #topbar .right{display:flex;align-items:center;gap:6px;}
 
 /* ── BODY ── */
-#body{display:flex;flex:1;overflow:hidden;}
+#body{display:flex;flex:1;overflow:hidden;position:relative;}
 
 /* ── SIDEBAR ── */
 #sidebar{width:210px;background:var(--panel2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;backdrop-filter:blur(16px);}
@@ -87,10 +87,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #main{flex:1;position:relative;overflow:hidden;}
 .view{position:absolute;inset:0;display:none;}
 .view.on{display:block;}
-#top-view svg{width:100%;height:100%;}
+/* ── CONSTELLATION VIEW LAYERS ── */
+#top-view{background:#020210;}
+#tcanvas{position:absolute;inset:0;pointer-events:none;z-index:0;}
+#tsvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:1;}
+#top-hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:11px;color:rgba(200,216,255,0.22);pointer-events:none;z-index:2;white-space:nowrap;letter-spacing:.5px;}
 
 /* ── DETAIL PANEL ── */
-#panel{width:320px;flex-shrink:0;background:var(--panel2);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(320px);transition:transform .28s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(16px);}
+#panel{position:absolute;right:0;top:0;bottom:0;width:320px;background:var(--panel2);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(320px);transition:transform .28s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(16px);z-index:20;}
 #panel.on{transform:translateX(0);}
 .ph{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}
 .ph h3{flex:1;font-size:13px;color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -186,6 +190,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .ref-picker{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:7px;}
 .ref-chip{display:inline-block;background:rgba(74,144,255,0.1);border:1px solid rgba(74,144,255,0.22);border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer;margin:2px 3px;transition:background .15s;color:var(--accent2);}
 .ref-chip:hover{background:rgba(74,144,255,0.22);}
+.ref-chip-sel{background:rgba(74,144,255,0.28);border-color:var(--accent);color:#c8dcff;}
+.ref-chip-sel:hover{background:rgba(74,144,255,0.4);}
+.ref-chip-sm{display:inline-block;background:rgba(74,144,255,0.1);border:1px solid rgba(74,144,255,0.2);color:var(--accent2);border-radius:4px;padding:1px 6px;font-size:10px;margin:1px 2px;}
+sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;}
+.tref-item{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:8px;padding-left:32px;text-indent:-32px;}
 </style>
 </head>
 <body>
@@ -199,7 +208,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <h1>✦ RESEARCH FOREST ✦</h1>
     <p>Your private PhD research navigator.<br>Set a passphrase on first visit.</p>
     <input id="pw" type="password" placeholder="Passphrase..." autocomplete="current-password" />
-    <button class="btn" style="width:100%;" onclick="doLogin()">Enter the Forest</button>
+    <button class="btn" style="width:100%;margin-bottom:12px;" onclick="doLogin()">Enter the Forest</button>
+    <div style="border-top:1px solid var(--border);padding-top:12px;">
+      <button class="btn btn-ghost btn-sm" id="login-nd-btn" style="width:100%;justify-content:center;font-size:11px;" onclick="toggleLoginNewDevice()">New device? Load from GitHub Gist ▾</button>
+      <div id="login-nd-sec" style="display:none;margin-top:10px;">
+        <p style="color:var(--dim);font-size:11px;margin-bottom:8px;text-align:left;line-height:1.5;">Pull your existing forest onto this device — enter your GitHub token and Gist ID, then click Enter above:</p>
+        <input id="login-gist-tok" type="password" placeholder="GitHub token (ghp_…)" autocomplete="off"
+          style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;outline:none;margin-bottom:7px;" />
+        <input id="login-gist-id" placeholder="Gist ID (e.g. 4a3b2c1d…)" autocomplete="off"
+          style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;outline:none;" />
+      </div>
+    </div>
     <div id="login-msg"></div>
   </div>
 </div>
@@ -221,6 +240,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <button class="btn btn-ghost btn-sm" onclick="doExport()">Export</button>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp').click()">Import</button>
       <input id="imp" type="file" accept=".json" style="display:none" onchange="doImport(event)">
+      <button class="btn btn-ghost btn-sm" id="sync-btn" onclick="showGistModal()">☁ Sync</button>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
     </div>
   </div>
@@ -246,7 +266,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
       <!-- TOP / CONSTELLATION VIEW -->
       <div id="top-view" class="view on">
+        <canvas id="tcanvas"></canvas>
         <svg id="tsvg"></svg>
+        <div id="top-hint">Scroll to zoom · Drag background to pan · Click star to select</div>
       </div>
 
       <!-- FRONT / FIRST-PERSON VIEW -->
@@ -326,12 +348,18 @@ async function doLogin(){
   if(!pw){msg.textContent='Enter a passphrase.';return;}
   const h = await sha256(pw);
   const stored = localStorage.getItem('rf_auth');
+  const loginTok=(document.getElementById('login-gist-tok')?.value||'').trim();
+  const loginGid=(document.getElementById('login-gist-id')?.value||'').trim();
   if(!stored){
     if(pw.length<4){msg.textContent='At least 4 characters please.';return;}
     localStorage.setItem('rf_auth',h);
-    bootApp();
+    if(loginTok)localStorage.setItem('rf_gist_token',loginTok);
+    if(loginGid)localStorage.setItem('rf_gist_id',loginGid);
+    bootApp(loginTok&&loginGid?'pull':'new');
   } else if(stored===h){
-    bootApp();
+    if(loginTok)localStorage.setItem('rf_gist_token',loginTok);
+    if(loginGid)localStorage.setItem('rf_gist_id',loginGid);
+    bootApp(loginTok&&loginGid?'pull':null);
   } else {
     msg.textContent='Wrong passphrase.';
     document.getElementById('pw').value='';
@@ -347,6 +375,19 @@ function doLogout(){
 }
 
 document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+function toggleLoginNewDevice(){
+  const sec=document.getElementById('login-nd-sec');
+  const btn=document.getElementById('login-nd-btn');
+  const open=sec.style.display==='none';
+  sec.style.display=open?'block':'none';
+  btn.textContent=open?'New device? Load from GitHub Gist ▴':'New device? Load from GitHub Gist ▾';
+  if(open){
+    const savedGid=localStorage.getItem('rf_gist_id');
+    const gidEl=document.getElementById('login-gist-id');
+    if(savedGid&&gidEl&&!gidEl.value)gidEl.value=savedGid;
+  }
+}
 
 // ── STORAGE ────────────────────────────────────
 function load(){
@@ -368,14 +409,167 @@ function doImport(ev){
 }
 function today(){return new Date().toISOString().slice(0,10);}
 
+// ── GIST SYNC ──────────────────────────────────
+const GIST_HEADERS = tok => ({
+  'Authorization': `Bearer ${tok}`,
+  'Accept': 'application/vnd.github+json',
+  'Content-Type': 'application/json'
+});
+
+function showGistModal(){
+  const tok = localStorage.getItem('rf_gist_token');
+  const gid = localStorage.getItem('rf_gist_id');
+  const last = localStorage.getItem('rf_gist_last');
+  const lastStr = last ? `Last synced: ${new Date(last).toLocaleString()}` : 'Never synced';
+  if(tok && gid){
+    showModal(`<h3>☁ GitHub Gist Sync</h3>
+      <p style="color:var(--dim);font-size:12px;margin-bottom:6px;">Token: ●●●●${tok.slice(-4)} &nbsp;|&nbsp; Gist: ${gid.slice(0,8)}…</p>
+      <p style="color:var(--dim);font-size:11px;margin-bottom:18px;">${lastStr}</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-sm" style="flex:1;justify-content:center;" onclick="gistPush()">↑ Push to Gist</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;" onclick="gistPull()">↓ Pull from Gist</button>
+      </div>
+      <div class="modal-footer" style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="gistReconfigure()">Reconfigure</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
+      </div>`);
+  } else {
+    gistReconfigure();
+  }
+}
+
+function gistReconfigure(){
+  const gid = localStorage.getItem('rf_gist_id')||'';
+  showModal(`<h3>☁ GitHub Gist Sync</h3>
+    <p style="color:var(--dim);font-size:12px;margin-bottom:14px;line-height:1.6;">
+      Generate a token with <strong>gist</strong> scope at<br>
+      github.com/settings/tokens → "New token (classic)"
+    </p>
+    <label style="font-size:12px;color:var(--dim);">GitHub Personal Access Token</label>
+    <input id="gist-tok" type="password" placeholder="ghp_xxxxxxxxxxxx"
+      style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;margin:6px 0 12px;">
+    <label style="font-size:12px;color:var(--dim);">Gist ID <span style="opacity:.6;">(leave blank on first push — it will be created for you)</span></label>
+    <input id="gist-id" type="text" placeholder="e.g. 4a3b2c1d…" value="${gid}"
+      style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;margin:6px 0 0;">
+    <div id="gist-msg" style="min-height:18px;font-size:12px;color:var(--red);margin-top:8px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-ghost btn-sm" onclick="gistSaveAndPull()">Save & Pull</button>
+      <button class="btn btn-sm" onclick="gistSaveAndPush()">Save & Push</button>
+    </div>`);
+}
+
+function _gistCredentials(){
+  const tok = (document.getElementById('gist-tok')||{value:''}).value.trim()
+              || localStorage.getItem('rf_gist_token');
+  const gid = (document.getElementById('gist-id')||{value:''}).value.trim()
+              || localStorage.getItem('rf_gist_id');
+  return {tok, gid};
+}
+
+async function gistSaveAndPush(){
+  const tok = document.getElementById('gist-tok').value.trim();
+  const gid = document.getElementById('gist-id').value.trim();
+  const msg = document.getElementById('gist-msg');
+  if(!tok){msg.textContent='Enter your GitHub token.';return;}
+  localStorage.setItem('rf_gist_token', tok);
+  if(gid) localStorage.setItem('rf_gist_id', gid);
+  await gistPush();
+}
+
+async function gistSaveAndPull(){
+  const tok = document.getElementById('gist-tok').value.trim();
+  const gid = document.getElementById('gist-id').value.trim();
+  const msg = document.getElementById('gist-msg');
+  if(!tok){msg.textContent='Enter your GitHub token.';return;}
+  if(!gid){msg.textContent='Enter the Gist ID to pull from.';return;}
+  localStorage.setItem('rf_gist_token', tok);
+  localStorage.setItem('rf_gist_id', gid);
+  await gistPull();
+}
+
+async function gistPush(){
+  const tok = localStorage.getItem('rf_gist_token');
+  const gid = localStorage.getItem('rf_gist_id');
+  if(!tok){showGistModal();return;}
+  const syncBtn = document.getElementById('sync-btn');
+  if(syncBtn) syncBtn.textContent = '☁ Syncing…';
+  try{
+    const payload = {description:'Research Forest Data',public:false,
+      files:{'rf_data.json':{content:JSON.stringify(DB,null,2)}}};
+    const url = gid ? `https://api.github.com/gists/${gid}` : 'https://api.github.com/gists';
+    const method = gid ? 'PATCH' : 'POST';
+    const res = await fetch(url,{method,headers:GIST_HEADERS(tok),body:JSON.stringify(payload)});
+    if(!res.ok) throw new Error(`GitHub API error ${res.status}`);
+    const data = await res.json();
+    localStorage.setItem('rf_gist_id', data.id);
+    localStorage.setItem('rf_gist_last', new Date().toISOString());
+    showModal(`<h3>☁ Pushed!</h3>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:10px;">Data saved to GitHub Gist.</p>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:4px;">Gist ID (copy this for other devices):</p>
+      <input readonly value="${data.id}" onclick="this.select()"
+        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--accent2);font-size:12px;font-family:monospace;outline:none;cursor:pointer;">
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Done</button></div>`);
+  }catch(e){
+    showModal(`<h3>Sync Failed</h3><p style="color:var(--red);font-size:13px;">${e.message}</p>
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">OK</button></div>`);
+  }finally{
+    if(syncBtn) syncBtn.textContent = '☁ Sync';
+  }
+}
+
+async function gistPull(){
+  const tok = localStorage.getItem('rf_gist_token');
+  const gid = localStorage.getItem('rf_gist_id');
+  if(!tok||!gid){showGistModal();return;}
+  const syncBtn = document.getElementById('sync-btn');
+  if(syncBtn) syncBtn.textContent = '☁ Syncing…';
+  try{
+    const res = await fetch(`https://api.github.com/gists/${gid}`,{headers:GIST_HEADERS(tok)});
+    if(!res.ok) throw new Error(`GitHub API error ${res.status}`);
+    const data = await res.json();
+    const content = data.files['rf_data.json']?.content;
+    if(!content) throw new Error('rf_data.json not found in Gist');
+    DB = JSON.parse(content);
+    save(); render();
+    localStorage.setItem('rf_gist_last', new Date().toISOString());
+    showModal(`<h3>☁ Pulled!</h3>
+      <p style="color:var(--dim);font-size:13px;">Data loaded from GitHub Gist.</p>
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Done</button></div>`);
+  }catch(e){
+    showModal(`<h3>Sync Failed</h3><p style="color:var(--red);font-size:13px;">${e.message}</p>
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">OK</button></div>`);
+  }finally{
+    if(syncBtn) syncBtn.textContent = '☁ Sync';
+  }
+}
+
 // ── BOOT ───────────────────────────────────────
-function bootApp(){
+function bootApp(mode){
   load();
   document.getElementById('login').style.display='none';
   document.getElementById('app').classList.add('on');
   initStarfield();
   initTopView();
   render();
+  if(mode==='pull'){
+    setTimeout(gistPull,500);
+  } else if(mode==='new'||!Object.keys(DB.nodes).length){
+    setTimeout(_showNewDevicePrompt,450);
+  }
+}
+
+function _showNewDevicePrompt(){
+  showModal(`<h3>✦ No data found</h3>
+    <p style="color:var(--dim);font-size:13px;margin-bottom:18px;line-height:1.6;">
+      This device has no Research Forest data.<br>
+      If you have data on another device, sync it now — otherwise start fresh below.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;">
+      <button class="btn btn-sm" style="justify-content:center;" onclick="closeModal();showGistModal()">☁ Pull from GitHub Gist</button>
+      <button class="btn btn-ghost btn-sm" style="justify-content:center;" onclick="closeModal();document.getElementById('imp').click()">↑ Import JSON file</button>
+      <button class="btn btn-ghost btn-sm" style="justify-content:center;" onclick="closeModal()">Start fresh</button>
+    </div>`);
 }
 
 function render(){
@@ -393,9 +587,9 @@ function switchView(v){
     document.getElementById(x+'-view').classList.toggle('on',x===v);
     document.getElementById('vtab-'+x).classList.toggle('on',x===v);
   });
-  if(v==='top') renderTopView();
-  if(v==='front') renderFrontView();
-  if(v==='thesis') renderThesisView();
+  if(v==='top'){renderTopView();initConstellationCanvas();}
+  if(v==='front'){cancelAnimationFrame(tCanvasFrame);renderFrontView();}
+  if(v==='thesis'){cancelAnimationFrame(tCanvasFrame);}
 }
 
 // ── UTILS ──────────────────────────────────────
@@ -466,21 +660,54 @@ function deleteTask(id){
   });
   delete DB.tasks[id];save();renderPanel();
 }
+function updateTask(id,patch){if(DB.tasks[id])Object.assign(DB.tasks[id],patch);save();renderPanel();}
+function _editTaskType(id){
+  const t=DB.tasks[id];if(!t)return;
+  const types=['theory','literature','cfd','coding','analysis','writing','other'];
+  showModal(`<h3>Change Task Type</h3>
+    <div class="fg"><select id="ett">
+      ${types.map(tp=>`<option value="${tp}"${t.type===tp?' selected':''}>${tp[0].toUpperCase()+tp.slice(1)}</option>`).join('')}
+    </select></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_saveTaskType('${id}')">Save</button>
+    </div>`);
+}
+function _saveTaskType(id){
+  const tp=document.getElementById('ett')?.value;
+  if(tp)updateTask(id,{type:tp});
+  closeModal();
+}
+function _editTaskName(id){
+  const t=DB.tasks[id];if(!t)return;
+  showModal(`<h3>Rename Task</h3>
+    <div class="fg"><input id="etn" value="${esc(t.name)}"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_saveTaskName('${id}')">Save</button>
+    </div>`);
+  setTimeout(()=>{const el=document.getElementById('etn');if(el){el.focus();el.select();}},60);
+}
+function _saveTaskName(id){
+  const name=document.getElementById('etn')?.value.trim();
+  if(name)updateTask(id,{name});
+  closeModal();
+}
 
 // ── PARAGRAPHS ─────────────────────────────────
-function addPara(nodeId,content,refs){
+function addPara(nodeId,content,refKeys){
   const n=DB.nodes[nodeId];if(!n)return;
   n.paragraphs=n.paragraphs||[];
-  n.paragraphs.push({id:uid(),content,refs:refs||'',at:new Date().toISOString()});
+  n.paragraphs.push({id:uid(),content,refKeys:refKeys||[],at:new Date().toISOString()});
   save();renderPanel();
 }
 function deletePara(nodeId,paraId){
   const n=DB.nodes[nodeId];if(!n)return;
   n.paragraphs=(n.paragraphs||[]).filter(p=>p.id!==paraId);save();renderPanel();
 }
-function updatePara(nodeId,paraId,content,refs){
+function updatePara(nodeId,paraId,content,refKeys){
   const n=DB.nodes[nodeId];if(!n)return;
-  const p=n.paragraphs?.find(p=>p.id===paraId);if(p){p.content=content;p.refs=refs;}
+  const p=n.paragraphs?.find(p=>p.id===paraId);if(p){p.content=content;p.refKeys=refKeys||[];}
   save();renderPanel();
 }
 
@@ -516,6 +743,7 @@ function closePanel(){
 
 function switchTab(t){
   curTab=t;
+  if(t==='notes')_pendingRefKeys=[];
   ['info','tasks','notes','paths'].forEach(x=>document.getElementById('pt-'+x).classList.toggle('on',x===t));
   renderPanel();
 }
@@ -553,8 +781,8 @@ function renderPanel(){
           <input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTask('${t.id}')">
           <div class="task-body">
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-              <span class="tbadge t-${t.type}">${t.type}</span>
-              <span class="task-name">${esc(t.name)}</span>
+              <span class="tbadge t-${t.type}" onclick="_editTaskType('${t.id}')" style="cursor:pointer;" title="Click to change type">${t.type}</span>
+              <span class="task-name" ondblclick="_editTaskName('${t.id}')" title="Double-click to rename">${esc(t.name)}</span>
               ${t.zoteroData?`<span class="zot-badge">Z</span>`:''}
             </div>
             ${t.zoteroData?.journal?`<div class="task-desc">${esc(t.zoteroData.journal)}${t.zoteroData.year?' · '+t.zoteroData.year:''}</div>`:''}
@@ -581,6 +809,7 @@ function renderPanel(){
 
   else if(curTab==='notes'){
     const paras=n.paragraphs||[];
+    const gRefMap=_buildGlobalRefMap();
     c.innerHTML=`
       ${paras.length?paras.map((p,i)=>`
         <div class="para">
@@ -592,7 +821,7 @@ function renderPanel(){
             </div>
           </div>
           <div class="para-text">${esc(p.content)}</div>
-          ${p.refs?`<div class="para-refs">${esc(p.refs)}</div>`:''}
+          ${(p.refKeys||[]).length?`<div class="para-refs">${p.refKeys.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm">${esc(m?m.citation:k)}</span>`;}).join('')}</div>`:''}
         </div>`).join(''):'<div class="empty">No notes yet.<br>Write paragraphs for your thesis here.</div>'}
       <div class="tadd" style="margin-top:10px;">
         <div class="tadd-title">Add Note / Paragraph</div>
@@ -602,10 +831,10 @@ function renderPanel(){
         <div style="margin-bottom:7px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
             <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;">References</label>
-            <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10px;" onclick="_toggleRefPicker()">Pick from tasks ▾</button>
+            <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10px;" onclick="_toggleRefPicker()">Add reference ▾</button>
           </div>
           <div class="ref-picker" id="ref-picker" style="display:none;"></div>
-          <input id="prefs" placeholder="e.g. Smith (2020); Jones et al. (2022)…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+          <div id="selected-refs" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
         </div>
         <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_submitPara()">Add Paragraph</button>
       </div>`;
@@ -650,23 +879,53 @@ function _submitTask(){
 function _submitPara(){
   const txt=document.getElementById('ptext')?.value.trim();
   if(!txt)return;
-  const refs=document.getElementById('prefs')?.value.trim()||'';
-  addPara(selNode,txt,refs);
+  addPara(selNode,txt,[..._pendingRefKeys]);
+  _pendingRefKeys=[];
 }
 function _editPara(nodeId,paraId){
   const n=DB.nodes[nodeId];const p=n?.paragraphs?.find(x=>x.id===paraId);if(!p)return;
+  _pendingRefKeys=[...(p.refKeys||[])];
+  // Collect unique Zotero references from all tasks on this node
+  const seen=new Set();_editRefTasks=[];
+  (n?.taskIds||[]).forEach(tid=>{
+    const t=DB.tasks[tid];
+    if(t&&t.zoteroData&&!seen.has(t.zoteroData.key)){seen.add(t.zoteroData.key);_editRefTasks.push(t);}
+  });
   showModal(`<h3>Edit Paragraph</h3>
-    <div class="fg"><label>Content</label><textarea id="ep" style="min-height:110px;">${esc(p.content)}</textarea></div>
-    <div class="fg"><label>References</label><input id="er" value="${esc(p.refs)}"></div>
+    <div class="fg"><label>Content</label>
+      <textarea id="ep" style="min-height:110px;">${esc(p.content)}</textarea></div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:6px;">References</label>
+      ${_editRefTasks.length
+        ?`<div id="edit-ref-picker" style="display:flex;flex-wrap:wrap;gap:4px;"></div>`
+        :`<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">No Zotero references on this node.</div>`}
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
       <button class="btn btn-sm" onclick="_saveEditPara('${nodeId}','${paraId}')">Save</button>
     </div>`);
+  if(_editRefTasks.length)_renderEditRefPicker();
+}
+function _editToggleRef(idx){
+  const t=_editRefTasks[idx];if(!t||!t.zoteroData)return;
+  const key=t.zoteroData.key;
+  const i=_pendingRefKeys.indexOf(key);
+  if(i>-1)_pendingRefKeys.splice(i,1);else _pendingRefKeys.push(key);
+  _renderEditRefPicker();
+}
+function _renderEditRefPicker(){
+  const el=document.getElementById('edit-ref-picker');if(!el)return;
+  el.innerHTML=_editRefTasks.map((t,i)=>{
+    const sel=_pendingRefKeys.includes(t.zoteroData.key);
+    return`<span class="ref-chip${sel?' ref-chip-sel':''}" onclick="_editToggleRef(${i})">
+      ${esc(t.zoteroData.citation)}<span class="zot-badge" style="margin-left:3px;">Z</span>
+    </span>`;
+  }).join('');
 }
 function _saveEditPara(nodeId,paraId){
-  const c=document.getElementById('ep')?.value.trim();
-  const r=document.getElementById('er')?.value.trim()||'';
-  updatePara(nodeId,paraId,c,r);closeModal();
+  const c=document.getElementById('ep')?.value.trim();if(!c)return;
+  updatePara(nodeId,paraId,c,[..._pendingRefKeys]);
+  _pendingRefKeys=[];_editRefTasks=[];closeModal();
 }
 
 function gotoFront(id){frontNode=id;switchView('front');}
@@ -786,11 +1045,14 @@ function initStarfield(){
 }
 
 // ── TOP VIEW (D3 Constellation) ─────────────────
-let tSvg, tG, linkRefs={};
+let tSvg, tG, linkRefs={}, tCanvasFrame=null;
 
 function initTopView(){
+  initConstellationCanvas();
+
   tSvg=d3.select('#tsvg');
   tSvg.selectAll('*').remove();
+  tSvg.style('overflow','visible');
 
   // SVG defs — glow filters
   const defs=tSvg.append('defs');
@@ -801,7 +1063,7 @@ function initTopView(){
   });
 
   // Zoom
-  const zoom=d3.zoom().scaleExtent([0.15,4]).on('zoom',e=>tG?.attr('transform',e.transform));
+  const zoom=d3.zoom().scaleExtent([0.1,8]).on('zoom',e=>tG?.attr('transform',e.transform));
   tSvg.call(zoom);
 
   // Dismiss click
@@ -809,6 +1071,42 @@ function initTopView(){
 
   tG=tSvg.append('g');
   renderTopView();
+}
+
+function initConstellationCanvas(){
+  cancelAnimationFrame(tCanvasFrame);
+  const cv=document.getElementById('tcanvas');
+  if(!cv)return;
+  const cx=cv.getContext('2d');
+  const wrap=document.getElementById('top-view');
+
+  const resize=()=>{
+    cv.width=wrap.clientWidth||window.innerWidth;
+    cv.height=wrap.clientHeight||window.innerHeight;
+  };
+  resize();
+
+  // Three layers of stars: distant (tiny, dim), mid, bright
+  const stars=Array.from({length:420},(_,i)=>{
+    const bright=i<40;const mid=i<140;
+    return{
+      x:Math.random()*cv.width, y:Math.random()*cv.height,
+      r:bright?(Math.random()*.9+.6):mid?(Math.random()*.6+.3):(Math.random()*.35+.1),
+      a:bright?(Math.random()*.55+.3):mid?(Math.random()*.45+.15):(Math.random()*.3+.08),
+      da:(Math.random()*.008+.002)*(Math.random()>.5?1:-1)
+    };
+  });
+
+  function draw(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    stars.forEach(s=>{
+      s.a+=s.da;if(s.a>.92||s.a<.06)s.da*=-1;
+      cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      cx.fillStyle=`rgba(190,212,255,${s.a})`;cx.fill();
+    });
+    tCanvasFrame=requestAnimationFrame(draw);
+  }
+  draw();
 }
 
 function renderTopView(){
@@ -1097,6 +1395,34 @@ function renderThesisView(){
     return;
   }
 
+  // Build citation registry
+  const gRefMap=_buildGlobalRefMap();
+  const orderedKeys=[];
+  nodes.forEach(n=>(n.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
+    if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
+  })));
+  const citNum={};
+  orderedKeys.forEach((k,i)=>citNum[k]=i+1);
+
+  const renderCites=p=>{
+    const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
+    return nums.length?`<sup class="cite">${nums.join('')}</sup>`:'';
+  };
+
+  const ieeeRef=(k,num)=>{
+    const m=gRefMap[k];if(!m)return'';
+    const au=m.ieeeAuthors||m.authors||'Unknown';
+    let s=`[${num}] ${esc(au)}, "${esc(m.title)}"`;
+    if(m.journal)s+=`, <em>${esc(m.journal)}</em>`;
+    if(m.volume)s+=`, vol. ${esc(m.volume)}`;
+    if(m.issue)s+=`, no. ${esc(m.issue)}`;
+    if(m.pages)s+=`, pp. ${esc(m.pages)}`;
+    if(m.year)s+=`, ${m.year}`;
+    s+='.';
+    if(m.doi)s+=` <a href="https://doi.org/${esc(m.doi)}" target="_blank" style="color:var(--accent);">${esc(m.doi)}</a>`;
+    return`<div class="tref-item">${s}</div>`;
+  };
+
   doc.innerHTML=`
     <h1>PhD Research Thesis</h1>
     <div class="tdoc-meta">${nodes.length} nodes · ${paths.length} paths · ${done}/${allTasks.length} tasks complete · Last saved ${new Date().toLocaleDateString()}</div>
@@ -1110,10 +1436,14 @@ function renderThesisView(){
           <span style="font-size:11px;font-weight:400;color:var(--dim);margin-left:8px;">${n.status} · ${ndone}/${tasks.length} tasks</span>
         </h2>
         ${n.description?`<p style="color:var(--dim);font-style:italic;">${esc(n.description)}</p>`:''}
-        ${paras.length?paras.map(p=>`<p>${esc(p.content)}</p>${p.refs?`<div class="tref">[${esc(p.refs)}]</div>`:''}`).join('')
+        ${paras.length?paras.map(p=>`<p>${esc(p.content)}${renderCites(p)}</p>`).join('')
           :'<p style="color:var(--dim);font-style:italic;font-size:12px;">No paragraphs written yet for this node.</p>'}
       </div>`;
     }).join('')}
+    ${orderedKeys.length?`<div class="tsec">
+      <h2>References</h2>
+      ${orderedKeys.map((k,i)=>ieeeRef(k,i+1)).join('')}
+    </div>`:''}
     <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="exportThesis()">Export as Text</button>
     </div>`;
@@ -1121,13 +1451,39 @@ function renderThesisView(){
 
 function exportThesis(){
   const nodes=Object.values(DB.nodes);
+  const gRefMap=_buildGlobalRefMap();
+  const orderedKeys=[];
+  nodes.forEach(n=>(n.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
+    if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
+  })));
+  const citNum={};
+  orderedKeys.forEach((k,i)=>citNum[k]=i+1);
+
   let t='PhD RESEARCH THESIS\n'+'═'.repeat(40)+'\n\n';
   nodes.forEach(n=>{
     t+=`## ${n.name} [${n.status}]\n\n`;
     if(n.description)t+=n.description+'\n\n';
-    (n.paragraphs||[]).forEach(p=>{t+=p.content+'\n';if(p.refs)t+=`[${p.refs}]\n`;t+='\n';});
-    t+='\n';
+    (n.paragraphs||[]).forEach(p=>{
+      const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
+      t+=p.content+(nums.length?' '+nums.join(''):'')+'\n\n';
+    });
   });
+  if(orderedKeys.length){
+    t+='REFERENCES\n'+'─'.repeat(40)+'\n\n';
+    orderedKeys.forEach((k,i)=>{
+      const m=gRefMap[k];if(!m)return;
+      const au=m.ieeeAuthors||m.authors||'Unknown';
+      let s=`[${i+1}] ${au}, "${m.title}"`;
+      if(m.journal)s+=`, ${m.journal}`;
+      if(m.volume)s+=`, vol. ${m.volume}`;
+      if(m.issue)s+=`, no. ${m.issue}`;
+      if(m.pages)s+=`, pp. ${m.pages}`;
+      if(m.year)s+=`, ${m.year}`;
+      s+='.';
+      if(m.doi)s+=` doi:${m.doi}`;
+      t+=s+'\n\n';
+    });
+  }
   const b=new Blob([t],{type:'text/plain'});
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:`thesis-${today()}.txt`});
   a.click();
@@ -1144,6 +1500,7 @@ function hideTip(){document.getElementById('tip').style.display='none';}
 // ── RESIZE ─────────────────────────────────────
 window.addEventListener('resize',()=>{
   if(curView==='front')renderFrontView();
+  if(curView==='top')initConstellationCanvas();
 });
 
 // ═══════════════════════════════════════════════
@@ -1214,13 +1571,27 @@ function _zotMeta(item){
   const citation=year
     ?(n>2?`${last} et al. (${year})`:(n===2?`${authors[0]?.lastName||''} & ${authors[1]?.lastName||''} (${year})`:`${last} (${year})`))
     :last;
-  return{key:item.key,title,authors:allAuthors,year,journal,citation};
+  // IEEE author format: "A. B. Last"
+  const _ieeeFmt=a=>{
+    if(!a.firstName&&!a.lastName)return a.name||'Unknown';
+    const init=(a.firstName||'').split(/\s+/).map(p=>p[0]?p[0]+'.':'').filter(Boolean).join(' ');
+    return init?`${init} ${a.lastName}`:(a.lastName||a.name||'?');
+  };
+  const ieeeAuthors=n===0?'Unknown'
+    :n===1?_ieeeFmt(authors[0])
+    :n===2?`${_ieeeFmt(authors[0])} and ${_ieeeFmt(authors[1])}`
+    :authors.slice(0,-1).map(_ieeeFmt).join(', ')+', and '+_ieeeFmt(authors[n-1]);
+  return{key:item.key,title,authors:allAuthors,ieeeAuthors,year,journal,
+    volume:d.volume||'',issue:d.issue||'',pages:d.pages||'',doi:d.DOI||'',citation};
 }
 
 // ── AUTOCOMPLETE STATE ─────────────────────────
 let _zotTimer=null;
 let _zotResults=[];
 let _pendingZotItem=null;
+let _pendingRefKeys=[];   // keys selected in the add-para picker
+let _refPickerTasks=[];   // cache of lit tasks for the panel picker
+let _editRefTasks=[];     // cache of lit tasks for the edit-para modal
 
 function _onTaskTypeChange(){
   _pendingZotItem=null;
@@ -1300,46 +1671,72 @@ document.addEventListener('click',e=>{
 });
 
 // ── REFERENCE PICKER ───────────────────────────
-function _toggleRefPicker(){
-  const picker=document.getElementById('ref-picker');
-  if(!picker)return;
-  if(picker.style.display==='block'){picker.style.display='none';return;}
-
-  const node=DB.nodes[selNode];
-  const litTasks=(node?.taskIds||[])
-    .map(tid=>DB.tasks[tid])
-    .filter(t=>t&&t.type==='literature');
-
-  if(!litTasks.length){
-    picker.innerHTML='<div style="font-size:12px;color:var(--dim);">No literature tasks on this node yet.<br>Add some in the Tasks tab first.</div>';
-  } else {
-    // Show all lit tasks — Zotero-linked ones first, then manual ones
-    const zotLinked=litTasks.filter(t=>t.zoteroData);
-    const manual=litTasks.filter(t=>!t.zoteroData);
-    let html='';
-    if(zotLinked.length){
-      html+=`<div style="font-size:10px;color:var(--dim);margin-bottom:5px;letter-spacing:.5px;">FROM ZOTERO</div>`;
-      html+=zotLinked.map(t=>{
-        const label=t.zoteroData.citation;
-        return`<span class="ref-chip" onclick="_appendRef('${label.replace(/'/g,"\\'")}')">
-          ${esc(label)} <span class="zot-badge">Z</span>
-        </span>`;
-      }).join('');
-    }
-    if(manual.length){
-      if(zotLinked.length)html+=`<div style="font-size:10px;color:var(--dim);margin:8px 0 5px;letter-spacing:.5px;">MANUAL TASKS</div>`;
-      html+=manual.map(t=>`<span class="ref-chip" onclick="_appendRef('${t.name.replace(/'/g,"\\'")}')">${esc(t.name)}</span>`).join('');
-    }
-    picker.innerHTML=html;
-  }
-  picker.style.display='block';
+function _buildGlobalRefMap(){
+  const map={};
+  Object.values(DB.tasks).forEach(t=>{
+    if(t.type!=='literature')return;
+    if(t.zoteroData?.key)map[t.zoteroData.key]=t.zoteroData;
+    else map['task:'+t.id]={key:'task:'+t.id,title:t.name,citation:t.name,authors:'',ieeeAuthors:'',year:'',journal:'',volume:'',issue:'',pages:'',doi:''};
+  });
+  return map;
 }
 
-function _appendRef(citation){
-  const inp=document.getElementById('prefs');if(!inp)return;
-  const cur=inp.value.trim();
-  inp.value=cur?cur+'; '+citation:citation;
-  inp.focus();
+function _toggleRefPicker(){
+  const picker=document.getElementById('ref-picker');if(!picker)return;
+  if(picker.style.display==='block'){picker.style.display='none';return;}
+  picker.style.display='block';
+  _renderRefPicker();
+}
+
+function _renderRefPicker(){
+  const picker=document.getElementById('ref-picker');
+  if(!picker||picker.style.display==='none')return;
+  const node=DB.nodes[selNode];
+  // Collect unique Zotero references from all tasks on this node
+  const seen=new Set();
+  _refPickerTasks=[];
+  (node?.taskIds||[]).forEach(tid=>{
+    const t=DB.tasks[tid];
+    if(t&&t.zoteroData&&!seen.has(t.zoteroData.key)){
+      seen.add(t.zoteroData.key);
+      _refPickerTasks.push(t);
+    }
+  });
+  if(!_refPickerTasks.length){
+    picker.innerHTML='<div style="font-size:12px;color:var(--dim);">No Zotero references on this node yet.<br>Add literature tasks with Zotero links in the Tasks tab.</div>';
+    return;
+  }
+  picker.innerHTML=_refPickerTasks.map((t,i)=>{
+    const sel=_pendingRefKeys.includes(t.zoteroData.key);
+    return`<span class="ref-chip${sel?' ref-chip-sel':''}" onclick="_toggleRefKey(${i})">
+      ${esc(t.zoteroData.citation)}<span class="zot-badge" style="margin-left:3px;">Z</span>
+    </span>`;
+  }).join('');
+}
+
+function _toggleRefKey(pickerIdx){
+  const t=_refPickerTasks[pickerIdx];if(!t||!t.zoteroData)return;
+  _toggleRefKeyByKey(t.zoteroData.key);
+}
+
+function _toggleRefKeyByKey(key){
+  const i=_pendingRefKeys.indexOf(key);
+  if(i>-1)_pendingRefKeys.splice(i,1);else _pendingRefKeys.push(key);
+  _renderRefPicker();
+  _renderSelectedRefs();
+}
+
+function _renderSelectedRefs(){
+  const el=document.getElementById('selected-refs');if(!el)return;
+  const gRefMap=_buildGlobalRefMap();
+  el.innerHTML=_pendingRefKeys.map(k=>{
+    const m=gRefMap[k];
+    const label=m?m.citation:k;
+    const safeKey=k.replace(/'/g,"\\'");
+    return`<span class="ref-chip ref-chip-sel" onclick="_toggleRefKeyByKey('${safeKey}')">
+      ${esc(label)} ×
+    </span>`;
+  }).join('');
 }
 
 </script>
