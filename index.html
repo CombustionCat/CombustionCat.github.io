@@ -71,6 +71,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .nname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .nbadge{font-size:9px;padding:2px 5px;border-radius:3px;flex-shrink:0;letter-spacing:.3px;}
 .sb-footer{padding:9px 11px;border-top:1px solid var(--border);}
+.sb-cat{border-bottom:1px solid rgba(255,255,255,0.04);}
+.sb-cat-hd{display:flex;align-items:center;gap:5px;padding:6px 11px;font-size:10px;letter-spacing:.7px;color:var(--dim);text-transform:uppercase;cursor:pointer;transition:background .13s;user-select:none;}
+.sb-cat-hd:hover{background:rgba(255,255,255,0.04);}
+.sb-cat-arrow{font-size:8px;width:10px;flex-shrink:0;opacity:.6;}
+.sb-cat-label{flex:1;}
+.sb-cat-count{font-size:9px;color:rgba(120,150,200,0.45);background:rgba(74,144,255,0.08);padding:1px 5px;border-radius:3px;}
+.sb-cat-body{padding:2px 0;}
 /* Status colours */
 .s-active .ndot,.dot-active{background:#4a90ff;box-shadow:0 0 5px #4a90ff;}
 .s-exploring .ndot,.dot-exploring{background:#ffaa44;box-shadow:0 0 5px #ffaa44;}
@@ -867,17 +874,60 @@ function updatePara(nodeId,paraId,content,refKeys){
 }
 
 // ── SIDEBAR ────────────────────────────────────
+const _sbOpen = {}; // category key -> bool (true = expanded)
+
+function _sbNodeItem(n){
+  return`<div class="n-item s-${n.status}${n.id===selNode?' sel':''}" onclick="selectNode('${n.id}')">
+    <div class="ndot"></div>
+    <span class="nname">${esc(n.name)}</span>
+    <span class="nbadge bg-${n.status}">${n.status.slice(0,4)}</span>
+  </div>`;
+}
+
+function _toggleSbCat(key){
+  _sbOpen[key] = !(_sbOpen[key] ?? (key==='__all__' ? false : true));
+  renderSidebar();
+}
+
 function renderSidebar(){
   const list=document.getElementById('node-list');
   const nodes=Object.values(DB.nodes);
   if(!nodes.length){list.innerHTML='<div class="empty">No nodes yet.<br>Add your first research direction.</div>';return;}
-  list.innerHTML=nodes.map(n=>`
-    <div class="n-item s-${n.status}${n.id===selNode?' sel':''}" onclick="selectNode('${n.id}')">
-      <div class="ndot"></div>
-      <span class="nname">${esc(n.name)}</span>
-      <span class="nbadge bg-${n.status}">${n.status.slice(0,4)}</span>
+
+  // Group by category
+  const cats={};
+  nodes.forEach(n=>{const c=(n.category||'').trim();(cats[c]=cats[c]||[]).push(n);});
+  const catKeys=Object.keys(cats).sort((a,b)=>!a&&b?-1:a&&!b?1:a.localeCompare(b));
+
+  // All Nodes dropdown (collapsed by default)
+  const allOpen=_sbOpen['__all__']??false;
+  const sortedAll=[...nodes].sort((a,b)=>a.name.localeCompare(b.name));
+
+  let html=`<div class="sb-cat">
+    <div class="sb-cat-hd" onclick="_toggleSbCat('__all__')">
+      <span class="sb-cat-arrow">${allOpen?'▾':'▸'}</span>
+      <span class="sb-cat-label">All Nodes</span>
+      <span class="sb-cat-count">${nodes.length}</span>
     </div>
-  `).join('');
+    ${allOpen?`<div class="sb-cat-body">${sortedAll.map(_sbNodeItem).join('')}</div>`:''}
+  </div>`;
+
+  // Per-category sections (open by default)
+  catKeys.forEach(cat=>{
+    const key=cat||'__none__';
+    const open=_sbOpen[key]??true;
+    const label=cat||'Uncategorised';
+    html+=`<div class="sb-cat">
+      <div class="sb-cat-hd" onclick="_toggleSbCat('${esc(key)}')">
+        <span class="sb-cat-arrow">${open?'▾':'▸'}</span>
+        <span class="sb-cat-label">${esc(label)}</span>
+        <span class="sb-cat-count">${cats[cat].length}</span>
+      </div>
+      ${open?`<div class="sb-cat-body">${cats[cat].map(_sbNodeItem).join('')}</div>`:''}
+    </div>`;
+  });
+
+  list.innerHTML=html;
 }
 
 // ── SELECT NODE ────────────────────────────────
@@ -920,6 +970,8 @@ function renderPanel(){
             `<option value="${s}"${n.status===s?' selected':''}>${s[0].toUpperCase()+s.slice(1)}</option>`
           ).join('')}
         </select></div>
+      <div class="fg"><label>Category</label>
+        <input value="${esc(n.category||'')}" placeholder="e.g. CFD, Literature, Methods…" onblur="updateNode('${n.id}',{category:this.value.trim()})"></div>
       <div class="fg"><label>Description</label>
         <textarea oninput="updateNode('${n.id}',{description:this.value})">${esc(n.description)}</textarea></div>
       <div style="display:flex;gap:7px;margin-top:4px;flex-wrap:wrap;">
@@ -1419,12 +1471,23 @@ function renderFrontView(){
     const n2=connPaths.length;
     const angleOffset=n2===1?0:(i/(n2-1)-.5)*spread;
     const baseAngle=-Math.PI/2+angleOffset;
-    const dist=H*0.42+Math.random()*H*.05;
     const targX=W/2+Math.sin(baseAngle)*W*.32;
     const targY=H*.18+Math.abs(Math.cos(baseAngle*.8))*H*.1;
     const othId=p.source===nid?p.target:p.source;
     return{p,othId,targX,targY};
   });
+
+  // Pre-compute sparkles per path (persists across frames)
+  const pathSparkles=destPositions.map(()=>
+    Array.from({length:32},()=>({
+      t:Math.random(),
+      dt:0.0025+Math.random()*0.004,
+      off:(Math.random()-.5)*22,
+      size:0.4+Math.random()*1.6,
+      a:Math.random(),
+      da:(0.022+Math.random()*0.035)*(Math.random()>.5?1:-1)
+    }))
+  );
 
   fHitAreas=[];
 
@@ -1445,49 +1508,103 @@ function renderFrontView(){
 
     fHitAreas=[];
 
-    // Draw paths + destination nodes
     const sx=W/2, sy=H-70;
-    destPositions.forEach(({p,othId,targX,targY})=>{
+    destPositions.forEach(({p,othId,targX,targY},pi)=>{
       const other=DB.nodes[othId];if(!other)return;
-      const col=statusColor(other.status);
       const aban=p.status==='abandoned';
+      const beamR=aban?255:255, beamG=aban?80:255, beamB=aban?80:255;
 
-      // Beam (translucent trapezoid)
+      // Beam direction & perpendicular
+      const dx=targX-sx, dy=targY-sy;
+      const len=Math.hypot(dx,dy);
+      const nx=-dy/len, ny=dx/len;
+      const bw=16; // base half-width
+
+      // Main beam trapezoid
       const beamGrad=fCtx.createLinearGradient(sx,sy,targX,targY);
-      beamGrad.addColorStop(0,aban?'rgba(255,68,85,0.35)':col.replace('#','rgba(').replace(/(.{2})(.{2})(.{2})/,(_,r,g,b)=>`${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)},0.3)`)||'rgba(74,144,255,0.3)');
-      beamGrad.addColorStop(1,'rgba(0,0,0,0)');
+      beamGrad.addColorStop(0,`rgba(${beamR},${beamG},${beamB},0.18)`);
+      beamGrad.addColorStop(0.7,`rgba(${beamR},${beamG},${beamB},0.06)`);
+      beamGrad.addColorStop(1,`rgba(${beamR},${beamG},${beamB},0)`);
       fCtx.beginPath();
-      fCtx.moveTo(sx-12,sy);fCtx.lineTo(targX-1.5,targY);
-      fCtx.lineTo(targX+1.5,targY);fCtx.lineTo(sx+12,sy);
+      fCtx.moveTo(sx+nx*bw, sy+ny*bw);
+      fCtx.lineTo(sx-nx*bw, sy-ny*bw);
+      fCtx.lineTo(targX-nx*2, targY-ny*2);
+      fCtx.lineTo(targX+nx*2, targY+ny*2);
       fCtx.closePath();fCtx.fillStyle=beamGrad;fCtx.fill();
 
-      // Beam centre line
-      fCtx.beginPath();fCtx.moveTo(sx,sy);fCtx.lineTo(targX,targY);
-      fCtx.strokeStyle=aban?'rgba(255,68,85,0.4)':hexAlpha(col,0.5);
-      fCtx.lineWidth=1;
-      if(aban)fCtx.setLineDash([8,8]);
-      fCtx.stroke();fCtx.setLineDash([]);
+      // Lane lines (rainbow-road style, converging)
+      for(let lane=-2;lane<=2;lane++){
+        const lo=lane*5.5;
+        const la=0.13-Math.abs(lane)*0.022;
+        const lg=fCtx.createLinearGradient(sx,sy,targX,targY);
+        lg.addColorStop(0,`rgba(${beamR},${beamG},${beamB},${la})`);
+        lg.addColorStop(0.75,`rgba(${beamR},${beamG},${beamB},${la*.4})`);
+        lg.addColorStop(1,`rgba(${beamR},${beamG},${beamB},0)`);
+        fCtx.beginPath();
+        fCtx.moveTo(sx+nx*lo, sy+ny*lo);
+        fCtx.lineTo(targX+nx*lo*0.12, targY+ny*lo*0.12);
+        fCtx.strokeStyle=lg;
+        if(aban){fCtx.setLineDash([7,7]);}
+        fCtx.lineWidth=1.2;fCtx.stroke();fCtx.setLineDash([]);
+      }
 
-      // Destination glow ring
-      fCtx.beginPath();fCtx.arc(targX,targY,22,0,Math.PI*2);
-      fCtx.fillStyle=hexAlpha(col,0.12);fCtx.fill();
+      // Sparkle particles drifting along beam
+      pathSparkles[pi].forEach(sp=>{
+        sp.t=(sp.t+sp.dt)%1;
+        sp.a+=sp.da;if(sp.a>.88||sp.a<.08)sp.da*=-1;
+        const taper=sp.off*(1-sp.t*.88);
+        const px=sx+dx*sp.t+nx*taper;
+        const py=sy+dy*sp.t+ny*taper;
+        // soft glow
+        const sg=fCtx.createRadialGradient(px,py,0,px,py,sp.size*3.5);
+        sg.addColorStop(0,`rgba(${beamR},${beamG},${beamB},${sp.a*.55})`);
+        sg.addColorStop(1,`rgba(${beamR},${beamG},${beamB},0)`);
+        fCtx.beginPath();fCtx.arc(px,py,sp.size*3.5,0,Math.PI*2);
+        fCtx.fillStyle=sg;fCtx.fill();
+        // bright core
+        fCtx.beginPath();fCtx.arc(px,py,sp.size,0,Math.PI*2);
+        fCtx.fillStyle=`rgba(${beamR},${beamG},${beamB},${sp.a})`;fCtx.fill();
+      });
 
-      // Destination star
+      // Destination halo
+      const hg=fCtx.createRadialGradient(targX,targY,0,targX,targY,38);
+      hg.addColorStop(0,'rgba(255,255,255,0.12)');hg.addColorStop(1,'rgba(255,255,255,0)');
+      fCtx.beginPath();fCtx.arc(targX,targY,38,0,Math.PI*2);fCtx.fillStyle=hg;fCtx.fill();
+
+      // Destination star rings
+      fCtx.beginPath();fCtx.arc(targX,targY,18,0,Math.PI*2);
+      fCtx.strokeStyle=`rgba(${beamR},${beamG},${beamB},0.25)`;fCtx.lineWidth=1.5;fCtx.stroke();
       fCtx.beginPath();fCtx.arc(targX,targY,10,0,Math.PI*2);
-      fCtx.fillStyle=hexAlpha(col,0.75);fCtx.fill();
-      fCtx.beginPath();fCtx.arc(targX,targY,4,0,Math.PI*2);
+      fCtx.fillStyle=`rgba(${beamR},${beamG},${beamB},0.55)`;fCtx.fill();
+      fCtx.beginPath();fCtx.arc(targX,targY,4.5,0,Math.PI*2);
       fCtx.fillStyle='#fff';fCtx.fill();
 
-      // Node name
-      fCtx.font='bold 12px Segoe UI, sans-serif';
-      fCtx.fillStyle='rgba(200,220,255,0.92)';fCtx.textAlign='center';
-      fCtx.fillText(other.name,targX,targY-22);
+      // Node name label
+      const col=statusColor(other.status);
+      fCtx.font='bold 13px Segoe UI, sans-serif';
+      fCtx.textAlign='center';
+      const nm=other.name;
+      const tw=fCtx.measureText(nm).width;
+      // label pill background
+      fCtx.fillStyle='rgba(5,8,28,0.72)';
+      fCtx.beginPath();
+      fCtx.roundRect?fCtx.roundRect(targX-tw/2-8,targY-40,tw+16,20,5):null;
+      fCtx.fill();
+      fCtx.fillStyle='rgba(230,240,255,0.96)';
+      fCtx.fillText(nm,targX,targY-25);
 
-      // Path name
+      // Status dot + name of connected node
+      fCtx.beginPath();fCtx.arc(targX,targY+18,3.5,0,Math.PI*2);
+      fCtx.fillStyle=col;fCtx.fill();
+      fCtx.font='10px Segoe UI, sans-serif';
+      fCtx.fillStyle='rgba(180,200,255,0.5)';
+      fCtx.fillText(other.status,targX+8,targY+21);
+
+      // Path name along beam
       if(p.name){
         fCtx.font='10px Segoe UI, sans-serif';
-        fCtx.fillStyle='rgba(180,200,255,0.4)';
-        fCtx.fillText(p.name,(sx+targX)/2,(sy+targY)/2-8);
+        fCtx.fillStyle='rgba(200,220,255,0.28)';
+        fCtx.fillText(p.name,(sx+targX)/2-10,(sy+targY)/2-12);
       }
 
       // Task progress
@@ -1495,11 +1612,11 @@ function renderFrontView(){
       if(tasks.length){
         const done=tasks.filter(t=>t.status==='done').length;
         fCtx.font='10px Segoe UI, sans-serif';
-        fCtx.fillStyle='rgba(180,200,255,0.45)';
-        fCtx.fillText(`${done}/${tasks.length} tasks`,targX,targY+24);
+        fCtx.fillStyle='rgba(180,200,255,0.38)';
+        fCtx.fillText(`${done}/${tasks.length} tasks`,targX,targY+32);
       }
 
-      fHitAreas.push({x:targX,y:targY,r:20,nodeId:othId});
+      fHitAreas.push({x:targX,y:targY,r:22,nodeId:othId});
     });
 
     // Current node (standing position)
