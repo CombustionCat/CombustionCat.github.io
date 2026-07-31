@@ -1,0 +1,373 @@
+<div class="cal-page">
+
+  <div class="cal-hdr" id="cal-hdr">
+    <button class="cal-nav" id="cal-prev">&#8249;</button>
+    <h2 class="cal-month-lbl" id="cal-month-lbl">
+      <span class="cal-pick-trigger" id="cal-pick-month"></span>
+      <span class="cal-pick-sep">&nbsp;</span>
+      <span class="cal-pick-trigger" id="cal-pick-year"></span>
+    </h2>
+    <button class="cal-nav" id="cal-next">&#8250;</button>
+    <button class="cal-today-btn" id="cal-today-btn">Today</button>
+  </div>
+
+  <div class="cal-grid" id="cal-grid"></div>
+
+  <div class="cal-bottom">
+    <div class="cal-panel">
+      <h3 class="cal-section-title">Moon Phase Legend</h3>
+      <div class="cal-moon-legend" id="cal-moon-legend"></div>
+    </div>
+    <div class="cal-panel">
+      <h3 class="cal-section-title">Meteor Showers This Month</h3>
+      <div id="cal-showers"></div>
+    </div>
+    <div class="cal-panel">
+      <h3 class="cal-section-title">Astronomical Events This Month</h3>
+      <div id="cal-planets"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+
+  /* ── Moon phase SVG ─────────────────────────────────────────── */
+
+  var KNOWN_NEW_MOON = Date.UTC(2024, 0, 11, 11, 57);
+  var SYNODIC_MS    = 29.53059 * 24 * 3600 * 1000;
+
+  function moonAge(date) {
+    var ms = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - KNOWN_NEW_MOON;
+    return ((ms % SYNODIC_MS) + SYNODIC_MS) % SYNODIC_MS / (24 * 3600 * 1000);
+  }
+
+  function moonIllum(age) {
+    return Math.round((1 - Math.cos(2 * Math.PI * age / 29.53059)) / 2 * 100);
+  }
+
+  function moonPhaseName(age) {
+    var phase = age / 29.53059;
+    var illum = (1 - Math.cos(2 * Math.PI * phase)) / 2;
+    var wax   = phase < 0.5;
+    if (illum < 0.03)  return 'New Moon';
+    if (illum > 0.97)  return 'Full Moon';
+    if (illum < 0.47)  return wax ? 'Waxing Crescent' : 'Waning Crescent';
+    if (illum < 0.53)  return wax ? 'First Quarter'   : 'Last Quarter';
+    return wax ? 'Waxing Gibbous' : 'Waning Gibbous';
+  }
+
+  /* Black-and-gold SVG moon. lunarEclipse=true → blood-red illumination. */
+  function moonSVG(age, sz, lunarEclipse) {
+    sz = sz || 22;
+    var r  = sz / 2 - 1;
+    var cx = sz / 2, cy = sz / 2;
+    var T  = cy - r, B = cy + r;
+    var phase = age / 29.53059;
+    var illum = (1 - Math.cos(2 * Math.PI * phase)) / 2;
+    var wax   = phase < 0.5;
+    var litCol = lunarEclipse ? '#c94040' : '#f4c030';
+
+    var out = '<svg width="' + sz + '" height="' + sz +
+              '" viewBox="0 0 ' + sz + ' ' + sz +
+              '" style="display:inline-block;vertical-align:middle;flex-shrink:0">';
+    out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r +
+           '" fill="#080c1e" stroke="rgba(244,184,96,0.4)" stroke-width="0.8"/>';
+
+    if (illum > 0.98) {
+      out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + litCol + '"/>';
+    } else if (illum > 0.02) {
+      var xOff, sw, rx, d;
+      if (wax) {
+        xOff = r * (1 - 2 * illum);
+        sw   = xOff >= 0 ? 1 : 0;
+        rx   = Math.abs(xOff);
+        d = 'M' + cx + ',' + T +
+            ' A' + r  + ',' + r  + ' 0 0,1 ' + cx + ',' + B +
+            ' A' + rx + ',' + r  + ' 0 0,' + sw + ' ' + cx + ',' + T;
+      } else {
+        xOff = r * (2 * illum - 1);
+        sw   = xOff >= 0 ? 1 : 0;
+        rx   = Math.abs(xOff);
+        d = 'M' + cx + ',' + T +
+            ' A' + r  + ',' + r  + ' 0 0,0 ' + cx + ',' + B +
+            ' A' + rx + ',' + r  + ' 0 0,' + sw + ' ' + cx + ',' + T;
+      }
+      out += '<path d="' + d + '" fill="' + litCol + '"/>';
+    }
+
+    out += '</svg>';
+    return out;
+  }
+
+  /* ── Meteor showers ─────────────────────────────────────────── */
+
+  var SHOWERS = [
+    { name:'Quadrantids',     start:[1,1],   end:[1,6],   peak:[1,3],   zhr:120, color:'#f4b860' },
+    { name:'Lyrids',          start:[4,16],  end:[4,25],  peak:[4,22],  zhr:18,  color:'#9cc1ff' },
+    { name:'Eta Aquariids',   start:[4,19],  end:[5,28],  peak:[5,6],   zhr:50,  color:'#86e0b0' },
+    { name:'Delta Aquariids', start:[7,12],  end:[8,23],  peak:[7,28],  zhr:25,  color:'#c9a0ff' },
+    { name:'Perseids',        start:[7,17],  end:[8,24],  peak:[8,12],  zhr:100, color:'#ff9c9c' },
+    { name:'Orionids',        start:[10,2],  end:[11,7],  peak:[10,21], zhr:20,  color:'#f4d860' },
+    { name:'Leonids',         start:[11,6],  end:[11,30], peak:[11,17], zhr:15,  color:'#aec3ff' },
+    { name:'Geminids',        start:[12,4],  end:[12,17], peak:[12,13], zhr:150, color:'#ff9c9c' },
+    { name:'Ursids',          start:[12,17], end:[12,26], peak:[12,22], zhr:10,  color:'#86e0b0' },
+  ];
+
+  function md(m, d) { return m * 1000 + d; }
+
+  function activeOn(month, day) {
+    return SHOWERS.filter(function(s) {
+      return md(month,day) >= md(s.start[0],s.start[1]) &&
+             md(month,day) <= md(s.end[0],s.end[1]);
+    });
+  }
+  function isPeak(s, m, d) { return s.peak[0]===m && s.peak[1]===d; }
+
+  function showersInMonth(year, month) {
+    var m=month+1, days=new Date(year,month+1,0).getDate(), seen={}, res=[];
+    for(var d=1;d<=days;d++) activeOn(m,d).forEach(function(s){ if(!seen[s.name]){seen[s.name]=true;res.push(s);} });
+    return res;
+  }
+
+  /* ── Planetary & astronomical events ───────────────────────── */
+  var PLANET_EVENTS = [
+    /* 2025 */
+    { y:2025,m:1, d:16, sym:'♂', label:'Mars at opposition',                                   color:'#ff8888', type:'opp'              },
+    { y:2025,m:3, d:20, sym:'☀', label:'March Equinox',                                        color:'#86e0b0', type:'solar'             },
+    { y:2025,m:6, d:21, sym:'☀', label:'June Solstice',                                        color:'#f4b860', type:'solar'             },
+    { y:2025,m:9, d:7,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                     color:'#cc4444', type:'eclipse-lunar',
+      note:'Visible Singapore · 00:30–05:00 SGT (Sep 8)' },
+    { y:2025,m:9, d:21, sym:'♄', label:'Saturn at opposition',                                 color:'#e8d87c', type:'opp'              },
+    { y:2025,m:9, d:22, sym:'☀', label:'September Equinox',                                    color:'#86e0b0', type:'solar'             },
+    { y:2025,m:9, d:23, sym:'♆', label:'Neptune at opposition',                                color:'#5b8cff', type:'opp'              },
+    { y:2025,m:11,d:21, sym:'♅', label:'Uranus at opposition',                                 color:'#7fdbff', type:'opp'              },
+    { y:2025,m:12,d:21, sym:'☀', label:'December Solstice',                                    color:'#9cc1ff', type:'solar'             },
+    /* 2026 */
+    { y:2026,m:1, d:10, sym:'♃', label:'Jupiter at opposition',                                color:'#f4b860', type:'opp'              },
+    { y:2026,m:3, d:3,  sym:'●', label:'Total Lunar Eclipse — Blood Moon',                     color:'#cc4444', type:'eclipse-lunar',
+      note:'Partially visible Singapore · Moon low in west near sunrise' },
+    { y:2026,m:3, d:20, sym:'☀', label:'March Equinox',                                        color:'#86e0b0', type:'solar'             },
+    { y:2026,m:6, d:21, sym:'☀', label:'June Solstice',                                        color:'#f4b860', type:'solar'             },
+    { y:2026,m:9, d:22, sym:'☀', label:'September Equinox',                                    color:'#86e0b0', type:'solar'             },
+    { y:2026,m:9, d:27, sym:'♆', label:'Neptune at opposition',                                color:'#5b8cff', type:'opp'              },
+    { y:2026,m:10,d:3,  sym:'♄', label:'Saturn at opposition',                                 color:'#e8d87c', type:'opp'              },
+    { y:2026,m:12,d:4,  sym:'♅', label:'Uranus at opposition',                                 color:'#7fdbff', type:'opp'              },
+    { y:2026,m:12,d:21, sym:'☀', label:'December Solstice',                                    color:'#9cc1ff', type:'solar'             },
+    /* 2027 */
+    { y:2027,m:2, d:5,  sym:'♂', label:'Mars at opposition',                                   color:'#ff8888', type:'opp'              },
+    { y:2027,m:2, d:9,  sym:'♃', label:'Jupiter at opposition',                                color:'#f4b860', type:'opp'              },
+    { y:2027,m:2, d:20, sym:'◎', label:'Penumbral Lunar Eclipse',                              color:'#9aa6cf', type:'eclipse-penumbral',
+      note:'Visible Singapore · subtle shading only' },
+    { y:2027,m:3, d:20, sym:'☀', label:'March Equinox',                                        color:'#86e0b0', type:'solar'             },
+    { y:2027,m:6, d:21, sym:'☀', label:'June Solstice',                                        color:'#f4b860', type:'solar'             },
+    { y:2027,m:8, d:2,  sym:'⊙', label:'Total Solar Eclipse (partial ~15% from Singapore)',    color:'#f4d060', type:'eclipse-solar',
+      note:'Partial phase ~14:00–16:30 SGT' },
+    { y:2027,m:9, d:22, sym:'☀', label:'September Equinox',                                    color:'#86e0b0', type:'solar'             },
+    { y:2027,m:10,d:17, sym:'♄', label:'Saturn at opposition',                                 color:'#e8d87c', type:'opp'              },
+    { y:2027,m:12,d:21, sym:'☀', label:'December Solstice',                                    color:'#9cc1ff', type:'solar'             },
+    /* 2028 */
+    { y:2028,m:7, d:22, sym:'⊙', label:'Total Solar Eclipse (partial ~35% from Singapore)',    color:'#f4d060', type:'eclipse-solar',
+      note:'Partial phase visible from Singapore' },
+    { y:2028,m:12,d:31, sym:'●', label:'Total Lunar Eclipse — Blood Moon',                     color:'#cc4444', type:'eclipse-lunar',
+      note:'Visible Singapore · New Year\'s Eve ~23:00 SGT' },
+  ];
+
+  function eventsOn(year, month, day) {
+    return PLANET_EVENTS.filter(function(e){ return e.y===year&&e.m===month&&e.d===day; });
+  }
+  function eventsInMonth(year, month) {
+    return PLANET_EVENTS.filter(function(e){ return e.y===year&&e.m===month+1; });
+  }
+  function isLunarEclipseOn(year, month, day) {
+    return PLANET_EVENTS.some(function(e){
+      return e.type==='eclipse-lunar' && e.y===year && e.m===month && e.d===day;
+    });
+  }
+
+  /* ── Calendar rendering ─────────────────────────────────────── */
+
+  var MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+  var DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  var today    = new Date();
+  var curYear  = today.getFullYear();
+  var curMonth = today.getMonth();
+
+  function render() {
+    document.getElementById('cal-pick-month').textContent = MONTH_NAMES[curMonth];
+    document.getElementById('cal-pick-year').textContent  = curYear;
+
+    var daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+    var firstDay    = new Date(curYear, curMonth, 1).getDay();
+    var isCurMonth  = today.getFullYear()===curYear && today.getMonth()===curMonth;
+    var m           = curMonth + 1;
+
+    var html = DAY_NAMES.map(function(d){ return '<div class="cal-dh">'+d+'</div>'; }).join('');
+    for(var e=0; e<firstDay; e++) html += '<div class="cal-cell cal-empty"></div>';
+
+    for(var d=1; d<=daysInMonth; d++) {
+      var age          = moonAge(new Date(curYear, curMonth, d));
+      var pname        = moonPhaseName(age);
+      var active       = activeOn(m, d);
+      var pevents      = eventsOn(curYear, m, d);
+      var isToday      = isCurMonth && d===today.getDate();
+      var lunarEclipse = isLunarEclipseOn(curYear, m, d);
+
+      var dots = active.map(function(s){
+        var pk = isPeak(s,m,d);
+        return '<span class="cal-dot'+(pk?' cal-dot-peak':'')+'" style="background:'+s.color+'" title="'+s.name+(pk?' — PEAK':'')+'">'+'</span>';
+      }).join('');
+
+      var evts = pevents.map(function(ev){
+        return '<span class="cal-pevt" style="color:'+ev.color+'" title="'+ev.label+'">'+ev.sym+'</span>';
+      }).join('');
+
+      html += '<div class="cal-cell'+(isToday?' cal-cell-today':'')+'">' +
+        '<div class="cal-top">' +
+          moonSVG(age, 20, lunarEclipse) +
+          '<span class="cal-dn">'+d+'</span>' +
+        '</div>' +
+        (dots ? '<div class="cal-dots">'+dots+'</div>' : '') +
+        (evts ? '<div class="cal-evts">'+evts+'</div>' : '') +
+        '</div>';
+    }
+    document.getElementById('cal-grid').innerHTML = html;
+
+    /* moon legend */
+    var phases = [0, 3.69, 7.38, 11.08, 14.77, 18.46, 22.15, 25.84];
+    var pnames  = ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous',
+                   'Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'];
+    document.getElementById('cal-moon-legend').innerHTML = phases.map(function(a,i){
+      return '<span class="cal-leg-item">'+moonSVG(a,18)+'<span>'+pnames[i]+'</span></span>';
+    }).join('') +
+    '<span class="cal-leg-item">'+moonSVG(14.77,18,true)+'<span>Lunar Eclipse</span></span>';
+
+    /* showers */
+    var mshowers = showersInMonth(curYear, curMonth);
+    document.getElementById('cal-showers').innerHTML = mshowers.length===0
+      ? '<p class="cal-none">No major meteor showers this month.</p>'
+      : mshowers.map(function(s){
+          var sm = MONTH_NAMES[s.start[0]-1].slice(0,3)+' '+s.start[1];
+          var em = MONTH_NAMES[s.end[0]-1].slice(0,3)  +' '+s.end[1];
+          var pm = MONTH_NAMES[s.peak[0]-1].slice(0,3) +' '+s.peak[1];
+          return '<div class="info-card"><span class="info-swatch" style="background:'+s.color+'"></span>' +
+            '<div><span class="info-name">'+s.name+'</span>' +
+            '<span class="info-sub">'+sm+' – '+em+' &nbsp;·&nbsp; Peak '+pm+' &nbsp;·&nbsp; ZHR ~'+s.zhr+'</span></div></div>';
+        }).join('');
+
+    /* astronomical events */
+    var mevents = eventsInMonth(curYear, curMonth);
+    document.getElementById('cal-planets').innerHTML = mevents.length===0
+      ? '<p class="cal-none">No notable astronomical events this month.</p>'
+      : mevents.map(function(ev){
+          var isEclipse = ev.type==='eclipse-lunar' || ev.type==='eclipse-solar' || ev.type==='eclipse-penumbral';
+          var cardExtra = isEclipse
+            ? ' style="border-color:' + (ev.type==='eclipse-lunar' ? 'rgba(201,64,64,0.4)' : ev.type==='eclipse-penumbral' ? 'rgba(154,166,207,0.3)' : 'rgba(244,208,96,0.4)') + '"'
+            : '';
+          var sub = MONTH_NAMES[ev.m-1]+' '+ev.d+', '+ev.y;
+          if (ev.note) sub += ' &nbsp;·&nbsp; ' + ev.note;
+          return '<div class="info-card"' + cardExtra + '><span class="info-sym" style="color:'+ev.color+'">'+ev.sym+'</span>' +
+            '<div><span class="info-name">'+ev.label+'</span>' +
+            '<span class="info-sub">'+sub+'</span></div></div>';
+        }).join('');
+  }
+
+  /* ── Navigation ─────────────────────────────────────────────── */
+
+  document.getElementById('cal-prev').addEventListener('click', function(){
+    if(--curMonth<0){curMonth=11;curYear--;} closePickers(); render();
+  });
+  document.getElementById('cal-next').addEventListener('click', function(){
+    if(++curMonth>11){curMonth=0;curYear++;} closePickers(); render();
+  });
+  document.getElementById('cal-today-btn').addEventListener('click', function(){
+    curYear=today.getFullYear(); curMonth=today.getMonth(); closePickers(); render();
+  });
+
+  /* ── Month / Year fast-select pickers ───────────────────────── */
+  /* Pickers live on <body> (position:fixed) to avoid any overflow:hidden clipping */
+
+  var monthPicker = document.createElement('div');
+  monthPicker.className = 'cal-picker';
+  monthPicker.hidden = true;
+  document.body.appendChild(monthPicker);
+
+  var yearPicker = document.createElement('div');
+  yearPicker.className = 'cal-picker';
+  yearPicker.hidden = true;
+  document.body.appendChild(yearPicker);
+
+  function positionPicker(picker, trigger) {
+    var rect = trigger.getBoundingClientRect();
+    var w = 224;
+    var left = rect.left + rect.width / 2 - w / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    picker.style.top  = (rect.bottom + 6) + 'px';
+    picker.style.left = left + 'px';
+    picker.style.width = w + 'px';
+  }
+
+  function closePickers() {
+    monthPicker.hidden = true;
+    yearPicker.hidden  = true;
+  }
+
+  function openMonthPicker(trigger) {
+    yearPicker.hidden = true;
+    monthPicker.innerHTML = '<div class="cal-picker-grid">' +
+      MONTH_NAMES.map(function(n, i) {
+        return '<button class="cal-picker-item'+(i===curMonth?' cal-picker-item--active':'')+'" data-m="'+i+'">'+n.slice(0,3)+'</button>';
+      }).join('') + '</div>';
+    positionPicker(monthPicker, trigger);
+    monthPicker.hidden = false;
+  }
+
+  function openYearPicker(trigger) {
+    monthPicker.hidden = true;
+    var start = curYear - 3;
+    var rows = '';
+    for (var y = start; y < start + 8; y++) {
+      rows += '<button class="cal-picker-item'+(y===curYear?' cal-picker-item--active':'')+'" data-y="'+y+'">'+y+'</button>';
+    }
+    yearPicker.innerHTML = '<div class="cal-picker-grid cal-picker-grid--2col">' + rows + '</div>';
+    positionPicker(yearPicker, trigger);
+    yearPicker.hidden = false;
+  }
+
+  document.getElementById('cal-pick-month').addEventListener('click', function(e) {
+    e.stopPropagation();
+    monthPicker.hidden ? openMonthPicker(this) : closePickers();
+  });
+
+  document.getElementById('cal-pick-year').addEventListener('click', function(e) {
+    e.stopPropagation();
+    yearPicker.hidden ? openYearPicker(this) : closePickers();
+  });
+
+  monthPicker.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var btn = e.target.closest('[data-m]');
+    if (!btn) return;
+    curMonth = Number(btn.dataset.m);
+    closePickers();
+    render();
+  });
+
+  yearPicker.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var btn = e.target.closest('[data-y]');
+    if (!btn) return;
+    curYear = Number(btn.dataset.y);
+    closePickers();
+    render();
+  });
+
+  document.addEventListener('click', closePickers);
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closePickers(); });
+
+  render();
+})();
+</script>

@@ -1,0 +1,9 @@
+<nav id="mobile-nav">
+  <% for (var i in theme.menu){ %>
+    <a href="<%- url_for(theme.menu[i]) %>" class="mobile-nav-link"><%= i %></a>
+    <% if (i === 'Stargazing Sites') { %>
+      <a href="/postmap/" class="mobile-nav-link mobile-nav-sub">↳ Map</a>
+      <a href="/proximity/" class="mobile-nav-link mobile-nav-sub">↳ Proximity Search</a>
+    <% } %>
+  <% } %>
+</nav>

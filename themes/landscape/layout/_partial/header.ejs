@@ -1,0 +1,53 @@
+<%
+var _sitesForSearch = site.posts.sort('-date').toArray()
+  .filter(function(p){ return Array.isArray(p.location) && p.location.length === 2; })
+  .map(function(p){ return { name: p.title || 'Untitled site', url: encodeURI('/' + p.path) }; });
+%>
+<script>window._SITES = <%- JSON.stringify(_sitesForSearch) %>;</script>
+<header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="<%- url_for() %>" id="logo"><%= config.title %></a><span class="logo-tagline">(based in Singapore)</span>
+      </h1>
+      <% if (theme.subtitle || config.subtitle){ %>
+        <h2 id="subtitle-wrap">
+          <a href="<%- url_for() %>" id="subtitle"><%= theme.subtitle || config.subtitle %></a>
+        </h2>
+      <% } %>
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="sub-nav">
+        <% if (theme.links) { %>
+          <% for (const i in theme.links) {%>
+            <a class="nav-icon" href="<%- url_for(theme.links[i]) %>"><span class="fa fa-<%= i %>"></span></a>
+          <% } %>
+        <% } %>
+        <a class="nav-icon nav-search-btn" title="<%= __('search') %>"><span class="fa fa-search"></span></a>
+      </nav>
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        <% for (var i in theme.menu){ %>
+          <% if (i === 'Stargazing Sites') { %>
+            <div class="nav-dropdown-wrap">
+              <a class="main-nav-link nav-has-dropdown" href="<%- url_for(theme.menu[i]) %>"><%= i %> <span class="nav-caret">&#9662;</span></a>
+              <div class="nav-dropdown">
+                <a class="nav-dropdown-item" href="<%- url_for(theme.menu[i]) %>">Search by Sky Condition</a>
+                <a class="nav-dropdown-item" href="/proximity/">Search by Proximity</a>
+              </div>
+            </div>
+          <% } else { %>
+            <a class="main-nav-link" href="<%- url_for(theme.menu[i]) %>"><%= i %></a>
+          <% } %>
+        <% } %>
+      </nav>
+      <div id="search-form-wrap">
+        <div class="search-form">
+          <input type="search" class="search-form-input" placeholder="Search sites&hellip;" autocomplete="off" aria-label="Search stargazing sites">
+          <ul id="nav-ac-list" class="nav-ac-list" hidden></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
