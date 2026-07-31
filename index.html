@@ -195,6 +195,76 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .ref-chip-sm{display:inline-block;background:rgba(74,144,255,0.1);border:1px solid rgba(74,144,255,0.2);color:var(--accent2);border-radius:4px;padding:1px 6px;font-size:10px;margin:1px 2px;}
 sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;}
 .tref-item{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:8px;padding-left:32px;text-indent:-32px;}
+
+/* ── MOBILE ── */
+#hamburger{display:none;background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0;}
+#sidebar-bd{display:none;position:fixed;inset:0;background:rgba(0,0,10,.6);z-index:19;backdrop-filter:blur(3px);}
+#mob-tabs{display:none;}
+#fab{display:none;}
+
+@media(max-width:720px){
+  /* Topbar */
+  #hamburger{display:block;}
+  .vtabs{display:none;}
+  #topbar .logo{font-size:11px;letter-spacing:1.5px;}
+  .btn-ghost.btn-sm:not(#sync-btn):not(#logout-btn){display:none;}
+  #logout-btn{display:inline-flex;}
+
+  /* Sidebar becomes a drawer overlay */
+  #sidebar{position:absolute;top:0;bottom:0;left:0;z-index:20;transform:translateX(-210px);transition:transform .25s cubic-bezier(.4,0,.2,1);}
+  #sidebar.mob-open{transform:translateX(0);}
+  #sidebar-bd.mob-open{display:block;}
+
+  /* Main fills full width */
+  #main{flex:1;}
+
+  /* Panel full-width on small screens */
+  #panel{width:min(340px,100%);}
+
+  /* Views don't hide behind tab bar */
+  .view{bottom:56px;}
+  #thesis-view{bottom:0;padding-bottom:56px;}
+
+  /* Bottom navigation tabs */
+  #mob-tabs{
+    display:flex;position:fixed;bottom:0;left:0;right:0;height:56px;
+    background:var(--panel2);border-top:1px solid var(--border);
+    z-index:30;backdrop-filter:blur(16px);
+  }
+  .mob-tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;border:none;background:none;color:var(--dim);cursor:pointer;padding:5px 0;
+    transition:color .15s;font-size:10px;letter-spacing:.3px;
+  }
+  .mob-tab .mti{font-size:19px;line-height:1.2;}
+  .mob-tab.on{color:var(--accent);}
+
+  /* FAB */
+  #fab{
+    position:fixed;right:14px;bottom:70px;z-index:25;
+    display:flex;flex-direction:column;align-items:flex-end;gap:9px;
+  }
+  #fab-menu{display:none;flex-direction:column;align-items:flex-end;gap:8px;}
+  #fab-menu.open{display:flex;}
+  .fab-item{
+    display:flex;align-items:center;gap:7px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:22px;
+    padding:8px 14px 8px 11px;font-size:13px;color:var(--text);cursor:pointer;
+    white-space:nowrap;box-shadow:0 3px 14px rgba(0,0,0,.5);
+  }
+  .fab-item:active{background:rgba(74,144,255,.14);}
+  .fab-item .fi{font-size:15px;}
+  #fab-btn{
+    width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#1a55cc,var(--accent));color:#fff;font-size:28px;
+    box-shadow:0 4px 22px rgba(74,144,255,.5);display:flex;align-items:center;justify-content:center;
+    transition:transform .2s;
+  }
+  #fab-btn.open{transform:rotate(45deg);}
+
+  /* Constellation hint moves up */
+  #top-hint{bottom:70px;}
+}
 </style>
 </head>
 <body>
@@ -228,6 +298,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
 
   <!-- TOPBAR -->
   <div id="topbar">
+    <button id="hamburger" onclick="toggleSidebar()" title="Nodes">☰</button>
     <div class="logo">✦ RESEARCH FOREST</div>
     <div class="vtabs">
       <button class="vtab on" id="vtab-top" onclick="switchView('top')">☆ Constellation</button>
@@ -241,12 +312,15 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp').click()">Import</button>
       <input id="imp" type="file" accept=".json" style="display:none" onchange="doImport(event)">
       <button class="btn btn-ghost btn-sm" id="sync-btn" onclick="showGistModal()">☁ Sync</button>
-      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
+      <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="doLogout()">Logout</button>
     </div>
   </div>
 
   <!-- BODY -->
   <div id="body">
+
+    <!-- SIDEBAR BACKDROP (mobile) -->
+    <div id="sidebar-bd" onclick="closeSidebar()"></div>
 
     <!-- SIDEBAR -->
     <div id="sidebar">
@@ -306,6 +380,32 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
 
   </div><!-- /#body -->
 </div><!-- /#app -->
+
+<!-- MOBILE BOTTOM TABS -->
+<div id="mob-tabs">
+  <button class="mob-tab on" id="mtab-top" onclick="switchView('top');closeSidebar()">
+    <span class="mti">☆</span><span>Map</span>
+  </button>
+  <button class="mob-tab" id="mtab-front" onclick="switchView('front');closeSidebar()">
+    <span class="mti">◈</span><span>Navigate</span>
+  </button>
+  <button class="mob-tab" id="mtab-thesis" onclick="switchView('thesis');closeSidebar()">
+    <span class="mti">✦</span><span>Thesis</span>
+  </button>
+  <button class="mob-tab" id="mtab-nodes" onclick="toggleSidebar()">
+    <span class="mti">⊞</span><span>Nodes</span>
+  </button>
+</div>
+
+<!-- FAB (mobile quick-add) -->
+<div id="fab">
+  <div id="fab-menu">
+    <div class="fab-item" onclick="closeFab();showAddNodeModal()"><span class="fi">✦</span> New Node</div>
+    <div class="fab-item" id="fab-task-btn" onclick="closeFab();fabOpenTab('tasks')"><span class="fi">+</span> Add Task</div>
+    <div class="fab-item" id="fab-note-btn" onclick="closeFab();fabOpenTab('notes')"><span class="fi">✎</span> Add Note</div>
+  </div>
+  <button id="fab-btn" onclick="toggleFab()">+</button>
+</div>
 
 <!-- CONNECT MODE BANNER -->
 <div id="connect-banner">Click the SOURCE node, then the TARGET node — ESC to cancel</div>
@@ -596,7 +696,11 @@ function switchView(v){
   ['top','front','thesis'].forEach(x=>{
     document.getElementById(x+'-view').classList.toggle('on',x===v);
     document.getElementById('vtab-'+x).classList.toggle('on',x===v);
+    const mt=document.getElementById('mtab-'+x);
+    if(mt)mt.classList.toggle('on',x===v);
   });
+  const mn=document.getElementById('mtab-nodes');
+  if(mn)mn.classList.remove('on');
   if(v==='top'){renderTopView();initConstellationCanvas();}
   if(v==='front'){cancelAnimationFrame(tCanvasFrame);renderFrontView();}
   if(v==='thesis'){cancelAnimationFrame(tCanvasFrame);}
@@ -741,6 +845,7 @@ function selectNode(id){
   renderSidebar();openPanel();renderPanel();
   if(curView==='front')renderFrontView();
   if(curView==='top')renderTopView();
+  closeSidebar();
 }
 
 // ── PANEL ──────────────────────────────────────
@@ -1748,6 +1853,51 @@ function _renderSelectedRefs(){
     </span>`;
   }).join('');
 }
+
+// ── MOBILE ─────────────────────────────────────
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const bd=document.getElementById('sidebar-bd');
+  const open=!sb.classList.contains('mob-open');
+  sb.classList.toggle('mob-open',open);
+  bd.classList.toggle('mob-open',open);
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('mob-open');
+  document.getElementById('sidebar-bd').classList.remove('mob-open');
+}
+
+let _fabOpen=false;
+function toggleFab(){
+  _fabOpen=!_fabOpen;
+  document.getElementById('fab-btn').classList.toggle('open',_fabOpen);
+  document.getElementById('fab-menu').classList.toggle('open',_fabOpen);
+}
+function closeFab(){
+  _fabOpen=false;
+  document.getElementById('fab-btn').classList.remove('open');
+  document.getElementById('fab-menu').classList.remove('open');
+}
+function fabOpenTab(tab){
+  if(!selNode){
+    // Pick the first node if available, otherwise prompt to add one
+    const ids=Object.keys(DB.nodes);
+    if(!ids.length){showAddNodeModal();return;}
+    selectNode(ids[0]);
+  }
+  openPanel();switchTab(tab);
+  // Scroll the form into view after panel renders
+  setTimeout(()=>{
+    const el=document.getElementById('pcontent');
+    if(el)el.scrollTop=el.scrollHeight;
+  },120);
+}
+
+// Close FAB when tapping outside it
+document.addEventListener('click',e=>{
+  const fab=document.getElementById('fab');
+  if(_fabOpen&&fab&&!fab.contains(e.target))closeFab();
+});
 
 </script>
 </body>
