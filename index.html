@@ -526,10 +526,20 @@ async function gistPull(){
   if(syncBtn) syncBtn.textContent = '☁ Syncing…';
   try{
     const res = await fetch(`https://api.github.com/gists/${gid}`,{headers:GIST_HEADERS(tok)});
+    if(res.status===401) throw new Error('Invalid token — check your GitHub Personal Access Token.');
+    if(res.status===404) throw new Error('Gist not found — check the Gist ID is correct and the token has gist scope.');
     if(!res.ok) throw new Error(`GitHub API error ${res.status}`);
     const data = await res.json();
-    const content = data.files['rf_data.json']?.content;
-    if(!content) throw new Error('rf_data.json not found in Gist');
+    const fileObj = data.files['rf_data.json'];
+    if(!fileObj) throw new Error('No research data found in this Gist.\n\nYou need to Push your forest from your main device first: open the app there, click ☁ Sync → Push to Gist.');
+    // Handle files GitHub API marks as truncated (>1 MB)
+    let content = fileObj.content;
+    if(fileObj.truncated){
+      const raw = await fetch(fileObj.raw_url, {headers:GIST_HEADERS(tok)});
+      if(!raw.ok) throw new Error('Failed to fetch full file from Gist (truncated).');
+      content = await raw.text();
+    }
+    if(!content) throw new Error('Gist file is empty.');
     DB = JSON.parse(content);
     save(); render();
     localStorage.setItem('rf_gist_last', new Date().toISOString());
@@ -537,7 +547,7 @@ async function gistPull(){
       <p style="color:var(--dim);font-size:13px;">Data loaded from GitHub Gist.</p>
       <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Done</button></div>`);
   }catch(e){
-    showModal(`<h3>Sync Failed</h3><p style="color:var(--red);font-size:13px;">${e.message}</p>
+    showModal(`<h3>Sync Failed</h3><p style="color:var(--red);font-size:13px;white-space:pre-line;">${esc(e.message)}</p>
       <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">OK</button></div>`);
   }finally{
     if(syncBtn) syncBtn.textContent = '☁ Sync';
