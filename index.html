@@ -131,6 +131,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .t-coding{background:rgba(68,255,150,0.18);color:#99ffcc;}
 .t-analysis{background:rgba(255,200,68,0.18);color:#ffdd99;}
 .t-writing{background:rgba(255,100,150,0.18);color:#ffaabb;}
+.t-thinking{background:rgba(180,140,255,0.18);color:#cc99ff;}
 .t-other{background:rgba(150,150,150,0.18);color:#aaaaaa;}
 .task-body{flex:1;min-width:0;}
 .task-name{font-size:13px;line-height:1.4;}
@@ -906,7 +907,7 @@ function deleteTask(id){
 function updateTask(id,patch){if(DB.tasks[id])Object.assign(DB.tasks[id],patch);save();renderPanel();}
 function _editTaskType(id){
   const t=DB.tasks[id];if(!t)return;
-  const types=['theory','literature','cfd','cfd-post','coding','analysis','writing','other'];
+  const types=['theory','literature','cfd','cfd-post','coding','analysis','writing','thinking','other'];
   showModal(`<h3>Change Task Type</h3>
     <div class="fg"><select id="ett">
       ${types.map(tp=>`<option value="${tp}"${t.type===tp?' selected':''}>${fmtType(tp)}</option>`).join('')}
@@ -1063,7 +1064,7 @@ function renderPanel(){
 
   else if(curTab==='tasks'){
     const tasks=(n.taskIds||[]).map(tid=>DB.tasks[tid]).filter(Boolean);
-    const types=['theory','literature','cfd','cfd-post','coding','analysis','writing','other'];
+    const types=['theory','literature','cfd','cfd-post','coding','analysis','writing','thinking','other'];
     c.innerHTML=`
       ${tasks.length?tasks.map(t=>`
         <div class="task${t.status==='done'?' done':''}">
