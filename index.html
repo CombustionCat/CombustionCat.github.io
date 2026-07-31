@@ -147,15 +147,52 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .modal h3{font-size:15px;margin-bottom:18px;color:var(--accent2);}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
 
-/* ── THESIS ── */
-#thesis-view{overflow-y:auto;padding:36px 20px;}
-.tdoc{max-width:740px;margin:0 auto;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:44px 48px;}
-.tdoc h1{font-size:21px;color:var(--accent2);margin-bottom:4px;}
-.tdoc-meta{color:var(--dim);font-size:12px;margin-bottom:32px;}
-.tsec{margin-bottom:30px;}
-.tsec h2{font-size:15px;color:var(--accent2);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
-.tsec p{font-size:13px;line-height:1.85;margin-bottom:14px;color:var(--text);}
-.tsec .tref{font-size:11px;color:var(--dim);font-style:italic;margin-top:-10px;margin-bottom:14px;}
+/* ── THESIS EDITOR ── */
+#thesis-view{overflow-y:auto;padding:16px 10px 80px;}
+.tdoc{max-width:760px;margin:0 auto;}
+.tblock{position:relative;border-radius:8px;margin:1px 0;transition:background .12s;}
+.tblock:hover{background:rgba(255,255,255,0.025);}
+.tblock.dragging{opacity:.3;}
+.tblock.dnd-over{outline:2px dashed var(--accent);background:rgba(74,144,255,0.06);}
+.tblock-inner{padding:8px 36px 10px 30px;}
+.tblock-drag{position:absolute;left:5px;top:12px;color:rgba(80,120,255,0.2);cursor:grab;font-size:13px;user-select:none;line-height:1;letter-spacing:-2px;padding:3px 1px;}
+.tblock-drag:active{cursor:grabbing;}
+.tblock:hover .tblock-drag{color:var(--dim);}
+.tblock-del{position:absolute;right:6px;top:10px;background:none;border:none;color:var(--dim);cursor:pointer;opacity:0;font-size:12px;padding:3px 6px;border-radius:4px;}
+.tblock:hover .tblock-del{opacity:.5;}
+/* Node block */
+.tblock-node .tblock-inner{border-left:2px solid var(--border);margin-left:6px;}
+.tnode-hd{display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.tnode-hd h2{font-size:14px;color:var(--accent2);margin:0;flex:1;}
+.tnode-badge{font-size:9px;padding:2px 6px;border-radius:3px;letter-spacing:.3px;}
+/* Paragraphs */
+.tpara-item{display:flex;align-items:flex-start;gap:3px;padding:3px 0;border-radius:4px;}
+.tpara-item:hover{background:rgba(255,255,255,0.03);}
+.tpara-item.dnd-over{outline:1px dashed var(--accent);}
+.tpara-drag{color:rgba(80,120,255,0.15);cursor:grab;font-size:11px;padding:3px 1px;user-select:none;flex-shrink:0;margin-top:2px;letter-spacing:-2px;}
+.tpara-item:hover .tpara-drag{color:var(--dim);}
+.tpara-body{flex:1;font-size:13px;line-height:1.8;color:var(--text);outline:none;white-space:pre-wrap;min-height:1.4em;word-break:break-word;}
+.tpara-body:focus{border-bottom:1px solid rgba(74,144,255,0.35);}
+.tpara-del{background:none;border:none;color:var(--dim);cursor:pointer;opacity:0;font-size:12px;padding:2px 4px;flex-shrink:0;margin-top:2px;}
+.tpara-item:hover .tpara-del{opacity:.55;}
+.tpara-add{background:none;border:1px dashed rgba(74,144,255,0.18);border-radius:5px;color:rgba(200,216,255,0.3);cursor:pointer;font-size:11px;padding:4px 10px;width:100%;text-align:left;margin-top:5px;transition:all .15s;}
+.tpara-add:hover{border-color:var(--accent);color:var(--dim);}
+/* Heading block */
+.tblock-hd .tblock-inner{padding-top:10px;padding-bottom:6px;}
+.tblock-h1 [contenteditable]{font-size:20px;font-weight:700;color:var(--accent2);}
+.tblock-h2 [contenteditable]{font-size:16px;font-weight:600;color:var(--accent2);}
+.tblock-h3 [contenteditable]{font-size:13px;font-weight:600;color:var(--text);}
+.tblock-hd [contenteditable]{display:block;width:100%;background:none;outline:none;border-bottom:1px solid transparent;transition:border-color .2s;padding-bottom:2px;}
+.tblock-hd [contenteditable]:focus{border-color:var(--accent);}
+/* Freetext block */
+.tblock-ft [contenteditable]{display:block;width:100%;background:none;outline:none;font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;min-height:1.8em;border-left:2px solid transparent;padding-left:8px;transition:border-color .2s;word-break:break-word;}
+.tblock-ft [contenteditable]:focus{border-left-color:var(--accent);}
+/* Insert zone */
+.tinsert{height:18px;display:flex;align-items:center;opacity:0;transition:opacity .15s;}
+.tdoc:hover .tinsert,.tinsert:hover,.tinsert.dnd-over{opacity:1;}
+.tinsert-btns{display:flex;gap:3px;padding:0 32px;}
+.tinsert-btn{background:rgba(74,144,255,0.07);border:1px solid rgba(74,144,255,0.18);border-radius:4px;color:rgba(200,216,255,0.45);cursor:pointer;font-size:10px;padding:1px 8px;letter-spacing:.3px;transition:all .15s;}
+.tinsert-btn:hover{background:rgba(74,144,255,0.2);color:var(--text);}
 
 /* ── EMPTY STATE ── */
 .empty{text-align:center;color:var(--dim);padding:28px 16px;font-size:13px;line-height:1.7;}
@@ -703,7 +740,7 @@ function switchView(v){
   if(mn)mn.classList.remove('on');
   if(v==='top'){renderTopView();initConstellationCanvas();}
   if(v==='front'){cancelAnimationFrame(tCanvasFrame);renderFrontView();}
-  if(v==='thesis'){cancelAnimationFrame(tCanvasFrame);}
+  if(v==='thesis'){cancelAnimationFrame(tCanvasFrame);renderThesisView();}
 }
 
 // ── UTILS ──────────────────────────────────────
@@ -715,6 +752,7 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function fmtType(t){return t==='cfd'?'CFD':t?t[0].toUpperCase()+t.slice(1):'';}
 function statusColor(s){
   return{active:'#4a90ff',exploring:'#ffaa44',completed:'#44ff88',abandoned:'#ff4455',paused:'#9999cc'}[s]||'#888';
 }
@@ -730,6 +768,8 @@ function addNode(name,status,desc){
   DB.nodes[id]={id,name,status:status||'exploring',description:desc||'',
     x:W/2+(Math.random()-.5)*220, y:H/2+(Math.random()-.5)*220,
     paragraphs:[], taskIds:[]};
+  if(!DB.thesis_doc)DB.thesis_doc=[];
+  DB.thesis_doc.push({type:'node',nodeId:id});
   save();render();return id;
 }
 function updateNode(id,patch){if(DB.nodes[id])Object.assign(DB.nodes[id],patch);save();render();}
@@ -738,6 +778,7 @@ function deleteNode(id){
   Object.keys(DB.tasks).forEach(tid=>{DB.tasks[tid].nodeIds=(DB.tasks[tid].nodeIds||[]).filter(n=>n!==id);});
   if(DB.nodes[id]?.taskIds){DB.nodes[id].taskIds.forEach(tid=>delete DB.tasks[tid]);}
   delete DB.nodes[id];
+  if(DB.thesis_doc)DB.thesis_doc=DB.thesis_doc.filter(b=>!(b.type==='node'&&b.nodeId===id));
   if(selNode===id){selNode=null;closePanel();}
   if(frontNode===id)frontNode=Object.keys(DB.nodes)[0]||null;
   save();render();
@@ -780,7 +821,7 @@ function _editTaskType(id){
   const types=['theory','literature','cfd','coding','analysis','writing','other'];
   showModal(`<h3>Change Task Type</h3>
     <div class="fg"><select id="ett">
-      ${types.map(tp=>`<option value="${tp}"${t.type===tp?' selected':''}>${tp[0].toUpperCase()+tp.slice(1)}</option>`).join('')}
+      ${types.map(tp=>`<option value="${tp}"${t.type===tp?' selected':''}>${fmtType(tp)}</option>`).join('')}
     </select></div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
@@ -896,7 +937,7 @@ function renderPanel(){
           <input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTask('${t.id}')">
           <div class="task-body">
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-              <span class="tbadge t-${t.type}" onclick="_editTaskType('${t.id}')" style="cursor:pointer;" title="Click to change type">${t.type}</span>
+              <span class="tbadge t-${t.type}" onclick="_editTaskType('${t.id}')" style="cursor:pointer;" title="Click to change type">${fmtType(t.type)}</span>
               <span class="task-name" ondblclick="_editTaskName('${t.id}')" title="Double-click to rename">${esc(t.name)}</span>
               ${t.zoteroData?`<span class="zot-badge">Z</span>`:''}
             </div>
@@ -909,14 +950,20 @@ function renderPanel(){
         <div class="tadd-title">Add Task</div>
         <div class="fg" style="margin-bottom:7px;">
           <select id="tt" onchange="_onTaskTypeChange()" style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
-            <option value="">Type...</option>${types.map(t=>`<option value="${t}">${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}
+            <option value="">Type...</option>${types.map(t=>`<option value="${t}">${fmtType(t)}</option>`).join('')}
           </select>
         </div>
-        <div class="fg zot-wrap" style="margin-bottom:7px;">
-          <input id="tn" placeholder="Task name..." autocomplete="off" oninput="_onTaskNameInput()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
-          <div class="zot-dd" id="zot-dd"></div>
+        <div class="fg" style="margin-bottom:7px;">
+          <input id="tn" placeholder="Task name..." autocomplete="off" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
         </div>
-        <div id="zot-hint" style="font-size:10px;color:var(--dim);margin:-4px 0 8px;display:none;">Searching your Zotero library as you type…</div>
+        <div id="zot-section" style="display:none;margin-bottom:7px;">
+          <div style="font-size:10px;color:var(--dim);margin-bottom:4px;">Search Zotero library…</div>
+          <div class="fg zot-wrap">
+            <input id="zot-q" placeholder="Author, title, keyword..." autocomplete="off" oninput="_onZotQueryInput()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+            <div class="zot-dd" id="zot-dd"></div>
+          </div>
+          <div id="zot-hint" style="font-size:10px;color:var(--dim);margin:3px 0 0;display:none;"></div>
+        </div>
         <div class="fg" style="margin-bottom:7px;"><input id="td" placeholder="Notes (optional)..." style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;"></div>
         <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_submitTask()">Add Task</button>
       </div>`;
@@ -1498,90 +1545,287 @@ function hexAlpha(hex,a){
 }
 
 // ── THESIS VIEW ────────────────────────────────
+function _initThesisDoc(){
+  if(!DB.thesis_doc)DB.thesis_doc=[];
+  const existIds=new Set(DB.thesis_doc.filter(b=>b.type==='node').map(b=>b.nodeId));
+  Object.keys(DB.nodes).forEach(id=>{if(!existIds.has(id))DB.thesis_doc.push({type:'node',nodeId:id});});
+  DB.thesis_doc=DB.thesis_doc.filter(b=>b.type!=='node'||DB.nodes[b.nodeId]);
+}
+
+function _tInsert(pos){
+  return`<div class="tinsert" data-pos="${pos}"><div class="tinsert-btns">
+    <button class="tinsert-btn" onclick="tInsert('h1',${pos})">H1</button>
+    <button class="tinsert-btn" onclick="tInsert('h2',${pos})">H2</button>
+    <button class="tinsert-btn" onclick="tInsert('h3',${pos})">H3</button>
+    <button class="tinsert-btn" onclick="tInsert('text',${pos})">Text block</button>
+  </div></div>`;
+}
+
+function _tNodeBlock(b,i){
+  const n=DB.nodes[b.nodeId];if(!n)return'';
+  const tasks=(n.taskIds||[]).map(tid=>DB.tasks[tid]).filter(Boolean);
+  const ndone=tasks.filter(t=>t.status==='done').length;
+  const paras=n.paragraphs||[];
+  const col=statusColor(n.status);
+  return`<div class="tblock tblock-node" data-idx="${i}" data-nodeid="${esc(n.id)}">
+    <span class="tblock-drag" draggable="true" title="Drag to reorder">⠿⠿</span>
+    <div class="tblock-inner">
+      <div class="tnode-hd">
+        <h2><span style="color:${col};font-size:9px;margin-right:3px;">●</span>${esc(n.name)}</h2>
+        <span class="tnode-badge tbadge t-${n.status}">${n.status}</span>
+        <span style="font-size:10px;color:var(--dim);">${ndone}/${tasks.length} tasks</span>
+      </div>
+      ${n.description?`<div style="font-size:12px;color:var(--dim);font-style:italic;margin-bottom:8px;">${esc(n.description)}</div>`:''}
+      ${paras.map((p,pi)=>`
+        <div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
+          <span class="tpara-drag" draggable="true" title="Drag to reorder">⠿⠿</span>
+          <div class="tpara-body" contenteditable="true" data-nodeid="${esc(n.id)}" data-pi="${pi}" onblur="tSavePara(this)">${esc(p.content)}</div>
+          <button class="tpara-del" onclick="tDelPara('${esc(n.id)}',${pi})" title="Delete">✕</button>
+        </div>`).join('')}
+      <button class="tpara-add" onclick="tAddPara('${esc(n.id)}')">+ Add paragraph</button>
+    </div>
+  </div>`;
+}
+
+function _tHdBlock(b,i){
+  const lvl=b.level||1;
+  return`<div class="tblock tblock-hd tblock-h${lvl}" data-idx="${i}">
+    <span class="tblock-drag" draggable="true" title="Drag to reorder">⠿⠿</span>
+    <button class="tblock-del" onclick="tRemoveBlock(${i})" title="Remove">✕</button>
+    <div class="tblock-inner">
+      <div contenteditable="true" data-bid="${esc(b.id)}" onblur="tSaveHd(this)">${esc(b.text||'')}</div>
+    </div>
+  </div>`;
+}
+
+function _tFtBlock(b,i){
+  return`<div class="tblock tblock-ft" data-idx="${i}">
+    <span class="tblock-drag" draggable="true" title="Drag to reorder">⠿⠿</span>
+    <button class="tblock-del" onclick="tRemoveBlock(${i})" title="Remove">✕</button>
+    <div class="tblock-inner">
+      <div contenteditable="true" data-bid="${esc(b.id)}" onblur="tSaveFt(this)">${esc(b.content||'')}</div>
+    </div>
+  </div>`;
+}
+
+function _ieeeRefTxt(k,num,gRefMap){
+  const m=gRefMap[k];if(!m)return'';
+  const au=m.ieeeAuthors||m.authors||'Unknown';
+  let s=`[${num}] ${esc(au)}, "${esc(m.title)}"`;
+  if(m.journal)s+=`, <em>${esc(m.journal)}</em>`;
+  if(m.volume)s+=`, vol. ${esc(m.volume)}`;
+  if(m.issue)s+=`, no. ${esc(m.issue)}`;
+  if(m.pages)s+=`, pp. ${esc(m.pages)}`;
+  if(m.year)s+=`, ${m.year}`;
+  s+='.';
+  if(m.doi)s+=` <a href="https://doi.org/${esc(m.doi)}" target="_blank" style="color:var(--accent);">${esc(m.doi)}</a>`;
+  return`<div class="tref-item">${s}</div>`;
+}
+
 function renderThesisView(){
   const doc=document.getElementById('tdoc');
-  const nodes=Object.values(DB.nodes);
-  const allTasks=Object.values(DB.tasks);
-  const done=allTasks.filter(t=>t.status==='done').length;
-  const paths=Object.values(DB.paths);
+  if(!doc)return;
+  _initThesisDoc();
 
-  if(!nodes.length){
-    doc.innerHTML='<div class="empty" style="padding:60px 20px;">No research nodes yet.<br>Add nodes and write paragraphs to build your thesis document.</div>';
+  if(!Object.keys(DB.nodes).length&&!DB.thesis_doc.length){
+    doc.innerHTML='<div class="empty" style="padding:60px 20px;text-align:center;">No research nodes yet.<br>Add nodes in the constellation view to build your thesis.</div>';
     return;
   }
 
-  // Build citation registry
   const gRefMap=_buildGlobalRefMap();
   const orderedKeys=[];
-  nodes.forEach(n=>(n.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
-    if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
-  })));
-  const citNum={};
-  orderedKeys.forEach((k,i)=>citNum[k]=i+1);
+  (DB.thesis_doc||[]).forEach(b=>{
+    if(b.type==='node'){
+      const n=DB.nodes[b.nodeId];
+      (n?.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
+        if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
+      }));
+    }
+  });
 
-  const renderCites=p=>{
-    const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
-    return nums.length?`<sup class="cite">${nums.join('')}</sup>`:'';
-  };
+  let html='';
+  html+=_tInsert(0);
+  DB.thesis_doc.forEach((b,i)=>{
+    if(b.type==='node')html+=_tNodeBlock(b,i);
+    else if(b.type==='heading')html+=_tHdBlock(b,i);
+    else if(b.type==='freetext')html+=_tFtBlock(b,i);
+    html+=_tInsert(i+1);
+  });
 
-  const ieeeRef=(k,num)=>{
-    const m=gRefMap[k];if(!m)return'';
-    const au=m.ieeeAuthors||m.authors||'Unknown';
-    let s=`[${num}] ${esc(au)}, "${esc(m.title)}"`;
-    if(m.journal)s+=`, <em>${esc(m.journal)}</em>`;
-    if(m.volume)s+=`, vol. ${esc(m.volume)}`;
-    if(m.issue)s+=`, no. ${esc(m.issue)}`;
-    if(m.pages)s+=`, pp. ${esc(m.pages)}`;
-    if(m.year)s+=`, ${m.year}`;
-    s+='.';
-    if(m.doi)s+=` <a href="https://doi.org/${esc(m.doi)}" target="_blank" style="color:var(--accent);">${esc(m.doi)}</a>`;
-    return`<div class="tref-item">${s}</div>`;
-  };
-
-  doc.innerHTML=`
-    <h1>PhD Research Thesis</h1>
-    <div class="tdoc-meta">${nodes.length} nodes · ${paths.length} paths · ${done}/${allTasks.length} tasks complete · Last saved ${new Date().toLocaleDateString()}</div>
-    ${nodes.map(n=>{
-      const tasks=(n.taskIds||[]).map(tid=>DB.tasks[tid]).filter(Boolean);
-      const ndone=tasks.filter(t=>t.status==='done').length;
-      const paras=n.paragraphs||[];
-      const col=statusColor(n.status);
-      return`<div class="tsec">
-        <h2><span style="color:${col};font-size:10px;">●</span> ${esc(n.name)}
-          <span style="font-size:11px;font-weight:400;color:var(--dim);margin-left:8px;">${n.status} · ${ndone}/${tasks.length} tasks</span>
-        </h2>
-        ${n.description?`<p style="color:var(--dim);font-style:italic;">${esc(n.description)}</p>`:''}
-        ${paras.length?paras.map(p=>`<p>${esc(p.content)}${renderCites(p)}</p>`).join('')
-          :'<p style="color:var(--dim);font-style:italic;font-size:12px;">No paragraphs written yet for this node.</p>'}
-      </div>`;
-    }).join('')}
-    ${orderedKeys.length?`<div class="tsec">
-      <h2>References</h2>
-      ${orderedKeys.map((k,i)=>ieeeRef(k,i+1)).join('')}
-    </div>`:''}
-    <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;">
-      <button class="btn btn-ghost btn-sm" onclick="exportThesis()">Export as Text</button>
+  if(orderedKeys.length){
+    html+=`<div class="tblock tblock-node" style="margin-top:12px;">
+      <div class="tblock-inner">
+        <div class="tnode-hd"><h2>References</h2></div>
+        ${orderedKeys.map((k,i)=>_ieeeRefTxt(k,i+1,gRefMap)).join('')}
+      </div>
     </div>`;
+  }
+
+  html+=`<div style="margin-top:16px;padding:0 36px;"><button class="btn btn-ghost btn-sm" onclick="exportThesis()">Export as Text</button></div>`;
+  doc.innerHTML=html;
+  _initThesisDnD();
+}
+
+function tInsert(type,pos){
+  if(!DB.thesis_doc)DB.thesis_doc=[];
+  const id=uid();
+  let block;
+  if(type==='h1')block={type:'heading',id,level:1,text:''};
+  else if(type==='h2')block={type:'heading',id,level:2,text:''};
+  else if(type==='h3')block={type:'heading',id,level:3,text:''};
+  else block={type:'freetext',id,content:''};
+  DB.thesis_doc.splice(pos,0,block);
+  save();renderThesisView();
+  setTimeout(()=>{const el=document.querySelector(`[data-bid="${id}"]`);if(el)el.focus();},50);
+}
+
+function tRemoveBlock(idx){
+  if(!DB.thesis_doc)return;
+  DB.thesis_doc.splice(idx,1);
+  save();renderThesisView();
+}
+
+function tSaveHd(el){
+  const bid=el.dataset.bid;
+  if(!bid||!DB.thesis_doc)return;
+  const b=DB.thesis_doc.find(x=>x.id===bid);
+  if(b)b.text=el.innerText.trim();
+  save();
+}
+
+function tSaveFt(el){
+  const bid=el.dataset.bid;
+  if(!bid||!DB.thesis_doc)return;
+  const b=DB.thesis_doc.find(x=>x.id===bid);
+  if(b)b.content=el.innerText.trim();
+  save();
+}
+
+function tSavePara(el){
+  const nodeId=el.dataset.nodeid;
+  const pi=parseInt(el.dataset.pi);
+  const n=DB.nodes[nodeId];
+  if(!n||!n.paragraphs||!n.paragraphs[pi])return;
+  n.paragraphs[pi].content=el.innerText.trim();
+  save();
+}
+
+function tDelPara(nodeId,pi){
+  const n=DB.nodes[nodeId];if(!n||!n.paragraphs)return;
+  if(!confirm('Delete this paragraph?'))return;
+  n.paragraphs.splice(pi,1);
+  save();renderThesisView();
+}
+
+function tAddPara(nodeId){
+  const n=DB.nodes[nodeId];if(!n)return;
+  if(!n.paragraphs)n.paragraphs=[];
+  n.paragraphs.push({id:uid(),content:'',at:Date.now(),refKeys:[]});
+  save();renderThesisView();
+  setTimeout(()=>{
+    const items=document.querySelectorAll(`[data-nodeid="${nodeId}"] .tpara-body`);
+    if(items.length)items[items.length-1].focus();
+  },50);
+}
+
+function _initThesisDnD(){
+  const doc=document.getElementById('tdoc');
+  if(!doc)return;
+  let dragBlockIdx=null;
+  let dragParaData=null;
+
+  doc.addEventListener('dragstart',e=>{
+    const handle=e.target.closest('.tblock-drag,.tpara-drag');
+    if(!handle){e.preventDefault();return;}
+    e.stopPropagation();
+    if(handle.classList.contains('tpara-drag')){
+      const item=handle.closest('.tpara-item');if(!item)return;
+      dragParaData={nodeId:item.dataset.nodeid,pi:parseInt(item.dataset.pi)};
+      dragBlockIdx=null;
+      item.classList.add('dragging');
+    } else {
+      const block=handle.closest('.tblock');if(!block)return;
+      dragBlockIdx=parseInt(block.dataset.idx);
+      dragParaData=null;
+      block.classList.add('dragging');
+    }
+    e.dataTransfer.effectAllowed='move';
+  });
+
+  doc.addEventListener('dragend',()=>{
+    doc.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));
+    doc.querySelectorAll('.dnd-over').forEach(el=>el.classList.remove('dnd-over'));
+    dragBlockIdx=null;dragParaData=null;
+  });
+
+  doc.addEventListener('dragover',e=>{
+    if(dragBlockIdx!=null){
+      const ins=e.target.closest('.tinsert');
+      if(ins){e.preventDefault();doc.querySelectorAll('.tinsert.dnd-over').forEach(el=>el.classList.remove('dnd-over'));ins.classList.add('dnd-over');}
+    } else if(dragParaData){
+      const item=e.target.closest('.tpara-item');
+      if(item){e.preventDefault();doc.querySelectorAll('.tpara-item.dnd-over').forEach(el=>el.classList.remove('dnd-over'));item.classList.add('dnd-over');}
+    }
+  });
+
+  doc.addEventListener('drop',e=>{
+    e.preventDefault();
+    if(dragBlockIdx!=null){
+      const ins=e.target.closest('.tinsert');
+      if(!ins)return;
+      let pos=parseInt(ins.dataset.pos);
+      if(pos>dragBlockIdx)pos--;
+      const removed=DB.thesis_doc.splice(dragBlockIdx,1);
+      DB.thesis_doc.splice(pos,0,...removed);
+      save();renderThesisView();
+    } else if(dragParaData){
+      const dropItem=e.target.closest('.tpara-item');
+      if(!dropItem)return;
+      const toNodeId=dropItem.dataset.nodeid;
+      const toPi=parseInt(dropItem.dataset.pi);
+      const fromNode=DB.nodes[dragParaData.nodeId];
+      const toNode=DB.nodes[toNodeId];
+      if(!fromNode||!toNode)return;
+      const [para]=fromNode.paragraphs.splice(dragParaData.pi,1);
+      const adj=(fromNode===toNode&&toPi>dragParaData.pi)?toPi-1:toPi;
+      toNode.paragraphs.splice(adj,0,para);
+      save();renderThesisView();
+    }
+    dragBlockIdx=null;dragParaData=null;
+  });
 }
 
 function exportThesis(){
-  const nodes=Object.values(DB.nodes);
+  _initThesisDoc();
   const gRefMap=_buildGlobalRefMap();
   const orderedKeys=[];
-  nodes.forEach(n=>(n.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
-    if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
-  })));
+  (DB.thesis_doc||[]).forEach(b=>{
+    if(b.type==='node'){
+      const n=DB.nodes[b.nodeId];
+      (n?.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
+        if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
+      }));
+    }
+  });
   const citNum={};
   orderedKeys.forEach((k,i)=>citNum[k]=i+1);
 
   let t='PhD RESEARCH THESIS\n'+'═'.repeat(40)+'\n\n';
-  nodes.forEach(n=>{
-    t+=`## ${n.name} [${n.status}]\n\n`;
-    if(n.description)t+=n.description+'\n\n';
-    (n.paragraphs||[]).forEach(p=>{
-      const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
-      t+=p.content+(nums.length?' '+nums.join(''):'')+'\n\n';
-    });
+  (DB.thesis_doc||[]).forEach(b=>{
+    if(b.type==='node'){
+      const n=DB.nodes[b.nodeId];if(!n)return;
+      t+=`## ${n.name} [${n.status}]\n\n`;
+      if(n.description)t+=n.description+'\n\n';
+      (n.paragraphs||[]).forEach(p=>{
+        const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
+        t+=p.content+(nums.length?' '+nums.join(''):'')+'\n\n';
+      });
+    } else if(b.type==='heading'){
+      const prefix='#'.repeat(b.level||1);
+      t+=`${prefix} ${b.text||''}\n\n`;
+    } else if(b.type==='freetext'){
+      if(b.content)t+=b.content+'\n\n';
+    }
   });
   if(orderedKeys.length){
     t+='REFERENCES\n'+'─'.repeat(40)+'\n\n';
@@ -1712,24 +1956,20 @@ function _onTaskTypeChange(){
   _pendingZotItem=null;
   _zotResults=[];
   const dd=document.getElementById('zot-dd');
+  const zs=document.getElementById('zot-section');
   const hint=document.getElementById('zot-hint');
-  const inp=document.getElementById('tn');
+  const zq=document.getElementById('zot-q');
   const type=document.getElementById('tt')?.value;
   if(dd)dd.style.display='none';
-  if(hint)hint.style.display=type==='literature'?'block':'none';
-  if(inp&&type==='literature'){
-    inp.placeholder='Search Zotero library…';
-  } else if(inp){
-    inp.placeholder='Task name…';
-  }
+  if(hint){hint.style.display='none';hint.textContent='';}
+  if(zq)zq.value='';
+  if(zs)zs.style.display=type==='literature'?'block':'none';
 }
 
-function _onTaskNameInput(){
-  const type=document.getElementById('tt')?.value;
-  if(type!=='literature'){return;}
+function _onZotQueryInput(){
   _pendingZotItem=null;
   clearTimeout(_zotTimer);
-  const q=document.getElementById('tn')?.value.trim();
+  const q=document.getElementById('zot-q')?.value.trim();
   const dd=document.getElementById('zot-dd');
   if(!q||q.length<2){if(dd)dd.style.display='none';return;}
   _zotTimer=setTimeout(()=>_doZotSearch(q),380);
@@ -1773,8 +2013,12 @@ async function _doZotSearch(query){
 function selectZotItem(idx){
   const item=_zotResults[idx];if(!item)return;
   _pendingZotItem=_zotMeta(item);
-  const inp=document.getElementById('tn');
-  if(inp)inp.value=_pendingZotItem.title;
+  const tn=document.getElementById('tn');
+  if(tn&&!tn.value.trim())tn.value=_pendingZotItem.title;
+  const hint=document.getElementById('zot-hint');
+  if(hint){hint.textContent='Selected: '+_pendingZotItem.title+((_pendingZotItem.year)?' ('+_pendingZotItem.year+')':'');hint.style.display='block';}
+  const zq=document.getElementById('zot-q');
+  if(zq)zq.value='';
   const dd=document.getElementById('zot-dd');
   if(dd)dd.style.display='none';
 }
@@ -1782,7 +2026,7 @@ function selectZotItem(idx){
 // Close dropdown on outside click
 document.addEventListener('click',e=>{
   const dd=document.getElementById('zot-dd');
-  if(dd&&!dd.contains(e.target)&&e.target.id!=='tn')dd.style.display='none';
+  if(dd&&!dd.contains(e.target)&&e.target.id!=='zot-q')dd.style.display='none';
 });
 
 // ── REFERENCE PICKER ───────────────────────────
