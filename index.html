@@ -538,7 +538,14 @@ function load(){
   try{const s=localStorage.getItem('rf_data');if(s)DB=JSON.parse(s);}catch(e){}
   DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};
 }
-function save(){localStorage.setItem('rf_data',JSON.stringify(DB));}
+let _syncDirty=false;
+function _updateSyncBtn(){
+  const btn=document.getElementById('sync-btn');if(!btn)return;
+  const hasCreds=!!localStorage.getItem('rf_gist_token');
+  if(_syncDirty&&hasCreds){btn.textContent='☁ Sync ●';btn.style.color='var(--amber)';}
+  else{btn.textContent='☁ Sync';btn.style.color='';}
+}
+function save(){localStorage.setItem('rf_data',JSON.stringify(DB));_syncDirty=true;_updateSyncBtn();}
 
 function doExport(){
   const b=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
@@ -648,6 +655,7 @@ async function gistPush(){
     const data = await res.json();
     localStorage.setItem('rf_gist_id', data.id);
     localStorage.setItem('rf_gist_last', new Date().toISOString());
+    _syncDirty=false;_updateSyncBtn();
     showModal(`<h3>☁ Pushed!</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:10px;">Data saved to GitHub Gist.</p>
       <p style="font-size:12px;color:var(--dim);margin-bottom:4px;">Gist ID (copy this for other devices):</p>
@@ -686,6 +694,7 @@ async function gistPull(){
     if(!content) throw new Error('Gist file is empty.');
     DB = JSON.parse(content);
     save(); render();
+    _syncDirty=false;_updateSyncBtn();
     localStorage.setItem('rf_gist_last', new Date().toISOString());
     showModal(`<h3>☁ Pulled!</h3>
       <p style="color:var(--dim);font-size:13px;">Data loaded from GitHub Gist.</p>
@@ -701,6 +710,7 @@ async function gistPull(){
 // ── BOOT ───────────────────────────────────────
 function bootApp(mode){
   load();
+  _syncDirty=false;
   document.getElementById('login').style.display='none';
   document.getElementById('app').classList.add('on');
   initStarfield();
@@ -2268,6 +2278,14 @@ function fabOpenTab(tab){
 document.addEventListener('click',e=>{
   const fab=document.getElementById('fab');
   if(_fabOpen&&fab&&!fab.contains(e.target))closeFab();
+});
+
+// Warn before leaving if there are unsynced changes
+window.addEventListener('beforeunload',e=>{
+  if(_syncDirty&&localStorage.getItem('rf_gist_token')){
+    e.preventDefault();
+    e.returnValue='You have unsynced changes. Push to Gist before leaving to avoid losing progress.';
+  }
 });
 
 // Auto-login on refresh if passphrase was already set on this device
