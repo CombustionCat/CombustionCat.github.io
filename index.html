@@ -346,7 +346,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
     <div class="logo">✦ RESEARCH FOREST</div>
     <div class="vtabs">
       <button class="vtab on" id="vtab-top" onclick="switchView('top')">☆ Constellation</button>
-      <button class="vtab" id="vtab-front" onclick="switchView('front')">◈ First-Person</button>
+      <button class="vtab" id="vtab-front" onclick="switchView('front')">◈ Node View</button>
       <button class="vtab" id="vtab-thesis" onclick="switchView('thesis')">✦ Thesis</button>
     </div>
     <div class="spacer"></div>
@@ -396,7 +396,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
           <div id="fnode-name"></div>
           <div id="fnode-status"></div>
         </div>
-        <div id="front-hint">Click a star to travel to that node · Click node in sidebar to change position</div>
+        <div id="front-hint">Click a destination node to travel forward · Select a node in the sidebar to change position</div>
       </div>
 
       <!-- THESIS VIEW -->
@@ -975,7 +975,7 @@ function renderPanel(){
       <div class="fg"><label>Description</label>
         <textarea oninput="updateNode('${n.id}',{description:this.value})">${esc(n.description)}</textarea></div>
       <div style="display:flex;gap:7px;margin-top:4px;flex-wrap:wrap;">
-        <button class="btn btn-sm" onclick="gotoFront('${n.id}')">◈ View in First-Person</button>
+        <button class="btn btn-sm" onclick="gotoFront('${n.id}')">◈ Node View</button>
         <button class="btn btn-red btn-sm" onclick="confirmDel('${n.id}')">Delete Node</button>
       </div>`;
   }
@@ -1429,7 +1429,7 @@ d3.selection.prototype.attrs=function(obj){
   Object.entries(obj).forEach(([k,v])=>this.attr(k,v));return this;
 };
 
-// ── FRONT VIEW (First-Person) ──────────────────
+// ── FRONT VIEW (Node View) ─────────────────────
 let fCtx, fFrame, fHitAreas=[];
 
 function renderFrontView(){
@@ -1438,54 +1438,52 @@ function renderFrontView(){
   const wrap=document.getElementById('front-view');
   cv.width=wrap.clientWidth;cv.height=wrap.clientHeight;
   fCtx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
 
   const nid=frontNode||Object.keys(DB.nodes)[0]||null;
   if(!nid||!DB.nodes[nid]){
-    // Empty state
-    fCtx.fillStyle='#020210';fCtx.fillRect(0,0,cv.width,cv.height);
+    fCtx.fillStyle='#020210';fCtx.fillRect(0,0,W,H);
     fCtx.fillStyle='rgba(180,200,255,0.3)';fCtx.font='14px Segoe UI, sans-serif';fCtx.textAlign='center';
-    fCtx.fillText('Add nodes and select one to explore the First-Person view',cv.width/2,cv.height/2);
+    fCtx.fillText('Select a node to enter the Node View',W/2,H/2);
     document.getElementById('fnode-name').textContent='';
     document.getElementById('fnode-status').textContent='';
     return;
   }
 
   const node=DB.nodes[nid];
-  const connPaths=Object.values(DB.paths).filter(p=>p.source===nid||p.target===nid);
+  // Only forward (outgoing) paths
+  const connPaths=Object.values(DB.paths).filter(p=>p.source===nid);
 
-  // Background stars
-  const bgStars=Array.from({length:320},()=>({
-    x:Math.random()*cv.width, y:Math.random()*cv.height,
-    r:Math.random()*1.2+.2, a:Math.random()*.7+.2,
-    da:(Math.random()*.015+.005)*(Math.random()>.5?1:-1)
-  }));
-
-  // HUD
   document.getElementById('fnode-name').textContent=node.name;
   document.getElementById('fnode-status').textContent=node.status.toUpperCase();
 
-  // Pre-compute destination positions (fan across upper area)
-  const W=cv.width, H=cv.height;
-  const spread=Math.min(Math.PI*1.1, connPaths.length>1?Math.PI*1.4:0);
+  const hY=Math.round(H*0.38); // horizon line Y
+  const vpX=W/2;               // vanishing point X
+
+  // Sky stars (above horizon only)
+  const bgStars=Array.from({length:260},()=>({
+    x:Math.random()*W, y:Math.random()*hY,
+    r:Math.random()*1.2+.2, a:Math.random()*.7+.2,
+    da:(Math.random()*.012+.004)*(Math.random()>.5?1:-1)
+  }));
+
+  // Path layout: fan out at the bottom, converge near horizon
+  const N=connPaths.length;
+  const maxFan=Math.min(W*0.36, N*110);
   const destPositions=connPaths.map((p,i)=>{
-    const n2=connPaths.length;
-    const angleOffset=n2===1?0:(i/(n2-1)-.5)*spread;
-    const baseAngle=-Math.PI/2+angleOffset;
-    const targX=W/2+Math.sin(baseAngle)*W*.32;
-    const targY=H*.18+Math.abs(Math.cos(baseAngle*.8))*H*.1;
-    const othId=p.source===nid?p.target:p.source;
-    return{p,othId,targX,targY};
+    const frac=N<=1?0.5:i/(N-1);
+    const bx=W/2+(frac-0.5)*maxFan*2;  // centre X at bottom of screen
+    const vx=vpX+(frac-0.5)*55;         // centre X at horizon (slight spread)
+    return{p, othId:p.target, bx, vx};
   });
 
-  // Pre-compute sparkles per path (persists across frames)
+  // Sparkles per path — travel from viewer toward horizon
   const pathSparkles=destPositions.map(()=>
-    Array.from({length:32},()=>({
-      t:Math.random(),
-      dt:0.0025+Math.random()*0.004,
-      off:(Math.random()-.5)*22,
-      size:0.4+Math.random()*1.6,
-      a:Math.random(),
-      da:(0.022+Math.random()*0.035)*(Math.random()>.5?1:-1)
+    Array.from({length:38},()=>({
+      t:Math.random(), dt:0.003+Math.random()*0.005,
+      off:(Math.random()-.5)*20,
+      size:0.5+Math.random()*1.8,
+      a:Math.random(), da:(0.02+Math.random()*0.04)*(Math.random()>.5?1:-1)
     }))
   );
 
@@ -1494,146 +1492,158 @@ function renderFrontView(){
   function frame(){
     fCtx.clearRect(0,0,W,H);
 
-    // BG gradient
-    const g=fCtx.createRadialGradient(W/2,H*.6,0,W/2,H*.3,Math.max(W,H)*.9);
-    g.addColorStop(0,'#0c0825');g.addColorStop(1,'#020210');
-    fCtx.fillStyle=g;fCtx.fillRect(0,0,W,H);
+    // ── SKY ──────────────────────────────────────────────
+    const skyG=fCtx.createLinearGradient(0,0,0,hY);
+    skyG.addColorStop(0,'#010110');skyG.addColorStop(1,'#0c082a');
+    fCtx.fillStyle=skyG;fCtx.fillRect(0,0,W,hY);
 
-    // BG stars
     bgStars.forEach(s=>{
       s.a+=s.da;if(s.a>.9||s.a<.1)s.da*=-1;
       fCtx.beginPath();fCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
       fCtx.fillStyle=`rgba(200,218,255,${s.a})`;fCtx.fill();
     });
 
+    // Atmospheric horizon glow
+    const horizG=fCtx.createLinearGradient(0,hY-50,0,hY+30);
+    horizG.addColorStop(0,'rgba(40,60,180,0)');
+    horizG.addColorStop(0.5,'rgba(40,60,180,0.1)');
+    horizG.addColorStop(1,'rgba(0,0,0,0)');
+    fCtx.fillStyle=horizG;fCtx.fillRect(0,hY-50,W,80);
+
+    // ── GROUND ───────────────────────────────────────────
+    const groundG=fCtx.createLinearGradient(0,hY,0,H);
+    groundG.addColorStop(0,'#08051a');groundG.addColorStop(1,'#030210');
+    fCtx.fillStyle=groundG;fCtx.fillRect(0,hY,W,H-hY);
+
+    // Perspective horizontal grid lines (depth markers)
+    for(let i=1;i<=8;i++){
+      const t=Math.pow(i/8,1.7);
+      const y=hY+(H-hY)*t;
+      fCtx.beginPath();fCtx.moveTo(0,y);fCtx.lineTo(W,y);
+      fCtx.strokeStyle=`rgba(50,70,150,${0.05+t*0.05})`;fCtx.lineWidth=1;fCtx.stroke();
+    }
+    // Radial grid lines converging to VP
+    for(let i=-8;i<=8;i++){
+      fCtx.beginPath();fCtx.moveTo(vpX,hY);fCtx.lineTo(vpX+i*W*0.14,H);
+      fCtx.strokeStyle='rgba(35,55,120,0.04)';fCtx.lineWidth=1;fCtx.stroke();
+    }
+
     fHitAreas=[];
 
-    const sx=W/2, sy=H-70;
-    destPositions.forEach(({p,othId,targX,targY},pi)=>{
+    // ── PATHS ─────────────────────────────────────────────
+    destPositions.forEach(({p,othId,bx,vx},pi)=>{
       const other=DB.nodes[othId];if(!other)return;
       const aban=p.status==='abandoned';
-      const beamR=aban?255:255, beamG=aban?80:255, beamB=aban?80:255;
+      const pR=aban?255:255, pG=aban?70:255, pB=aban?70:255;
 
-      // Beam direction & perpendicular
-      const dx=targX-sx, dy=targY-sy;
-      const len=Math.hypot(dx,dy);
-      const nx=-dy/len, ny=dx/len;
-      const bw=16; // base half-width
+      const hwB=58, hwT=4.5; // half-width: bottom vs horizon
 
-      // Main beam trapezoid
-      const beamGrad=fCtx.createLinearGradient(sx,sy,targX,targY);
-      beamGrad.addColorStop(0,`rgba(${beamR},${beamG},${beamB},0.18)`);
-      beamGrad.addColorStop(0.7,`rgba(${beamR},${beamG},${beamB},0.06)`);
-      beamGrad.addColorStop(1,`rgba(${beamR},${beamG},${beamB},0)`);
+      // Path surface fill
+      const pathG=fCtx.createLinearGradient(0,H,0,hY);
+      pathG.addColorStop(0,`rgba(${pR},${pG},${pB},0.16)`);
+      pathG.addColorStop(0.65,`rgba(${pR},${pG},${pB},0.06)`);
+      pathG.addColorStop(1,`rgba(${pR},${pG},${pB},0)`);
       fCtx.beginPath();
-      fCtx.moveTo(sx+nx*bw, sy+ny*bw);
-      fCtx.lineTo(sx-nx*bw, sy-ny*bw);
-      fCtx.lineTo(targX-nx*2, targY-ny*2);
-      fCtx.lineTo(targX+nx*2, targY+ny*2);
-      fCtx.closePath();fCtx.fillStyle=beamGrad;fCtx.fill();
+      fCtx.moveTo(bx-hwB,H);fCtx.lineTo(bx+hwB,H);
+      fCtx.lineTo(vx+hwT,hY);fCtx.lineTo(vx-hwT,hY);
+      fCtx.closePath();fCtx.fillStyle=pathG;fCtx.fill();
 
-      // Lane lines (rainbow-road style, converging)
-      for(let lane=-2;lane<=2;lane++){
-        const lo=lane*5.5;
-        const la=0.13-Math.abs(lane)*0.022;
-        const lg=fCtx.createLinearGradient(sx,sy,targX,targY);
-        lg.addColorStop(0,`rgba(${beamR},${beamG},${beamB},${la})`);
-        lg.addColorStop(0.75,`rgba(${beamR},${beamG},${beamB},${la*.4})`);
-        lg.addColorStop(1,`rgba(${beamR},${beamG},${beamB},0)`);
-        fCtx.beginPath();
-        fCtx.moveTo(sx+nx*lo, sy+ny*lo);
-        fCtx.lineTo(targX+nx*lo*0.12, targY+ny*lo*0.12);
-        fCtx.strokeStyle=lg;
-        if(aban){fCtx.setLineDash([7,7]);}
-        fCtx.lineWidth=1.2;fCtx.stroke();fCtx.setLineDash([]);
-      }
-
-      // Sparkle particles drifting along beam
-      pathSparkles[pi].forEach(sp=>{
-        sp.t=(sp.t+sp.dt)%1;
-        sp.a+=sp.da;if(sp.a>.88||sp.a<.08)sp.da*=-1;
-        const taper=sp.off*(1-sp.t*.88);
-        const px=sx+dx*sp.t+nx*taper;
-        const py=sy+dy*sp.t+ny*taper;
-        // soft glow
-        const sg=fCtx.createRadialGradient(px,py,0,px,py,sp.size*3.5);
-        sg.addColorStop(0,`rgba(${beamR},${beamG},${beamB},${sp.a*.55})`);
-        sg.addColorStop(1,`rgba(${beamR},${beamG},${beamB},0)`);
-        fCtx.beginPath();fCtx.arc(px,py,sp.size*3.5,0,Math.PI*2);
-        fCtx.fillStyle=sg;fCtx.fill();
-        // bright core
-        fCtx.beginPath();fCtx.arc(px,py,sp.size,0,Math.PI*2);
-        fCtx.fillStyle=`rgba(${beamR},${beamG},${beamB},${sp.a})`;fCtx.fill();
+      // Edge + centre lane lines (perspective-converging)
+      [[-1,0.12],[0,0.22],[1,0.12]].forEach(([side,alpha])=>{
+        const bxE=bx+side*hwB, vxE=vx+side*hwT*0.9;
+        const lg=fCtx.createLinearGradient(0,H,0,hY);
+        lg.addColorStop(0,`rgba(${pR},${pG},${pB},${alpha})`);
+        lg.addColorStop(0.8,`rgba(${pR},${pG},${pB},${alpha*0.3})`);
+        lg.addColorStop(1,`rgba(${pR},${pG},${pB},0)`);
+        fCtx.beginPath();fCtx.moveTo(bxE,H);fCtx.lineTo(vxE,hY);
+        if(aban&&side!==0)fCtx.setLineDash([14,12]);
+        fCtx.strokeStyle=lg;fCtx.lineWidth=side===0?1.8:1;
+        fCtx.stroke();fCtx.setLineDash([]);
       });
 
-      // Destination halo
-      const hg=fCtx.createRadialGradient(targX,targY,0,targX,targY,38);
-      hg.addColorStop(0,'rgba(255,255,255,0.12)');hg.addColorStop(1,'rgba(255,255,255,0)');
-      fCtx.beginPath();fCtx.arc(targX,targY,38,0,Math.PI*2);fCtx.fillStyle=hg;fCtx.fill();
+      // Glitter particles traveling away from viewer toward horizon
+      pathSparkles[pi].forEach(sp=>{
+        sp.t=(sp.t+sp.dt)%1;
+        sp.a+=sp.da;if(sp.a>.9||sp.a<.07)sp.da*=-1;
+        const ox=sp.off*(1-sp.t*0.9);
+        const px=bx+(vx-bx)*sp.t+ox;
+        const py=H+(hY-H)*sp.t;
+        const sz=sp.size*(1-sp.t*0.88);
+        if(sz<0.08)return;
+        // glow
+        const sg=fCtx.createRadialGradient(px,py,0,px,py,sz*4);
+        sg.addColorStop(0,`rgba(${pR},${pG},${pB},${sp.a*0.5})`);
+        sg.addColorStop(1,`rgba(${pR},${pG},${pB},0)`);
+        fCtx.beginPath();fCtx.arc(px,py,sz*4,0,Math.PI*2);fCtx.fillStyle=sg;fCtx.fill();
+        fCtx.beginPath();fCtx.arc(px,py,sz,0,Math.PI*2);
+        fCtx.fillStyle=`rgba(${pR},${pG},${pB},${sp.a})`;fCtx.fill();
+      });
 
-      // Destination star rings
-      fCtx.beginPath();fCtx.arc(targX,targY,18,0,Math.PI*2);
-      fCtx.strokeStyle=`rgba(${beamR},${beamG},${beamB},0.25)`;fCtx.lineWidth=1.5;fCtx.stroke();
-      fCtx.beginPath();fCtx.arc(targX,targY,10,0,Math.PI*2);
-      fCtx.fillStyle=`rgba(${beamR},${beamG},${beamB},0.55)`;fCtx.fill();
-      fCtx.beginPath();fCtx.arc(targX,targY,4.5,0,Math.PI*2);
+      // Destination node sits just above horizon at end of its path
+      const dnX=vx, dnY=hY-14;
+      const col=statusColor(other.status);
+
+      // Node glow
+      const ng=fCtx.createRadialGradient(dnX,dnY,0,dnX,dnY,50);
+      ng.addColorStop(0,`rgba(${pR},${pG},${pB},0.22)`);
+      ng.addColorStop(0.4,hexAlpha(col,0.12));
+      ng.addColorStop(1,'rgba(0,0,0,0)');
+      fCtx.beginPath();fCtx.arc(dnX,dnY,50,0,Math.PI*2);fCtx.fillStyle=ng;fCtx.fill();
+
+      // Rings
+      fCtx.beginPath();fCtx.arc(dnX,dnY,20,0,Math.PI*2);
+      fCtx.strokeStyle=`rgba(${pR},${pG},${pB},0.22)`;fCtx.lineWidth=1.5;fCtx.stroke();
+      fCtx.beginPath();fCtx.arc(dnX,dnY,11,0,Math.PI*2);
+      fCtx.fillStyle=hexAlpha(col,0.65);fCtx.fill();
+      fCtx.beginPath();fCtx.arc(dnX,dnY,5,0,Math.PI*2);
       fCtx.fillStyle='#fff';fCtx.fill();
 
-      // Node name label
-      const col=statusColor(other.status);
+      // Node name pill
       fCtx.font='bold 13px Segoe UI, sans-serif';
       fCtx.textAlign='center';
       const nm=other.name;
       const tw=fCtx.measureText(nm).width;
-      // label pill background
-      fCtx.fillStyle='rgba(5,8,28,0.72)';
-      fCtx.beginPath();
-      fCtx.roundRect?fCtx.roundRect(targX-tw/2-8,targY-40,tw+16,20,5):null;
-      fCtx.fill();
+      fCtx.fillStyle='rgba(4,6,22,0.8)';
+      if(fCtx.roundRect){fCtx.beginPath();fCtx.roundRect(dnX-tw/2-9,dnY-50,tw+18,22,5);fCtx.fill();}
       fCtx.fillStyle='rgba(230,240,255,0.96)';
-      fCtx.fillText(nm,targX,targY-25);
+      fCtx.fillText(nm,dnX,dnY-34);
 
-      // Status dot + name of connected node
-      fCtx.beginPath();fCtx.arc(targX,targY+18,3.5,0,Math.PI*2);
-      fCtx.fillStyle=col;fCtx.fill();
+      // Status label
       fCtx.font='10px Segoe UI, sans-serif';
-      fCtx.fillStyle='rgba(180,200,255,0.5)';
-      fCtx.fillText(other.status,targX+8,targY+21);
+      fCtx.fillStyle=col;
+      fCtx.fillText(other.status,dnX,dnY+32);
 
-      // Path name along beam
+      // Path name (midway along road)
       if(p.name){
+        const mx2=bx+(vx-bx)*0.42, my2=H+(hY-H)*0.42;
         fCtx.font='10px Segoe UI, sans-serif';
-        fCtx.fillStyle='rgba(200,220,255,0.28)';
-        fCtx.fillText(p.name,(sx+targX)/2-10,(sy+targY)/2-12);
+        fCtx.fillStyle='rgba(200,220,255,0.22)';
+        fCtx.fillText(p.name,mx2,my2-14);
       }
 
-      // Task progress
-      const tasks=(other.taskIds||[]).map(tid=>DB.tasks[tid]).filter(Boolean);
-      if(tasks.length){
-        const done=tasks.filter(t=>t.status==='done').length;
-        fCtx.font='10px Segoe UI, sans-serif';
-        fCtx.fillStyle='rgba(180,200,255,0.38)';
-        fCtx.fillText(`${done}/${tasks.length} tasks`,targX,targY+32);
-      }
-
-      fHitAreas.push({x:targX,y:targY,r:22,nodeId:othId});
+      fHitAreas.push({x:dnX,y:dnY,r:26,nodeId:othId});
     });
 
-    // Current node (standing position)
+    // No outgoing paths message
+    if(N===0){
+      fCtx.font='13px Segoe UI, sans-serif';fCtx.textAlign='center';
+      fCtx.fillStyle='rgba(150,170,220,0.45)';
+      fCtx.fillText('No outgoing paths from this node',W/2,hY+70);
+      fCtx.font='11px Segoe UI, sans-serif';
+      fCtx.fillStyle='rgba(100,120,180,0.35)';
+      fCtx.fillText('Use the Paths tab to connect this node to another',W/2,hY+92);
+    }
+
+    // ── FLOOR GLOW (standing position) ───────────────────
     const nCol=statusColor(node.status);
-    const glGrad=fCtx.createRadialGradient(sx,sy,0,sx,sy,60);
-    glGrad.addColorStop(0,hexAlpha(nCol,0.3));glGrad.addColorStop(1,'rgba(0,0,0,0)');
-    fCtx.fillStyle=glGrad;fCtx.fillRect(sx-70,sy-70,140,140);
-    fCtx.beginPath();fCtx.arc(sx,sy,15,0,Math.PI*2);
-    fCtx.fillStyle=hexAlpha(nCol,0.85);fCtx.fill();
-    fCtx.beginPath();fCtx.arc(sx,sy,6,0,Math.PI*2);
-    fCtx.fillStyle='#fff';fCtx.fill();
+    const floorG=fCtx.createRadialGradient(W/2,H,0,W/2,H,W*0.55);
+    floorG.addColorStop(0,hexAlpha(nCol,0.18));floorG.addColorStop(1,'rgba(0,0,0,0)');
+    fCtx.fillStyle=floorG;fCtx.fillRect(0,H-180,W,200);
 
     fFrame=requestAnimationFrame(frame);
   }
   frame();
 
-  // Click handler
   cv.onclick=(e)=>{
     const rect=cv.getBoundingClientRect();
     const mx=e.clientX-rect.left, my=e.clientY-rect.top;
