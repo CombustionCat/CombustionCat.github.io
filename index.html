@@ -561,11 +561,16 @@ async function doLogin(){
     localStorage.setItem('rf_auth',h);
     if(loginTok)localStorage.setItem('rf_gist_token',loginTok);
     if(loginGid)localStorage.setItem('rf_gist_id',loginGid);
-    bootApp(loginTok&&loginGid?'pull':'new');
+    const tok1=localStorage.getItem('rf_gist_token');
+    const gid1=localStorage.getItem('rf_gist_id');
+    bootApp(tok1&&gid1?'pull':'new');
   } else if(stored===h){
     if(loginTok)localStorage.setItem('rf_gist_token',loginTok);
     if(loginGid)localStorage.setItem('rf_gist_id',loginGid);
-    bootApp(loginTok&&loginGid?'pull':null);
+    // On manual login always pull if credentials exist — phone may have stale local data
+    const tok2=localStorage.getItem('rf_gist_token');
+    const gid2=localStorage.getItem('rf_gist_id');
+    bootApp(tok2&&gid2?'pull':null);
   } else {
     msg.textContent='Wrong passphrase.';
     document.getElementById('pw').value='';
