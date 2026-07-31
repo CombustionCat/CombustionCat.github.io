@@ -155,7 +155,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
 
 /* ── THESIS EDITOR ── */
-#thesis-view{overflow-y:auto;padding:16px 10px 80px;}
+#thesis-view{overflow-y:auto;padding:0 0 80px;display:flex;flex-direction:column;}
+.thesis-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel2);gap:8px;flex-wrap:wrap;}
+.thesis-mode-toggle{display:flex;background:rgba(0,0,0,0.35);border-radius:6px;padding:2px;gap:1px;}
+.thesis-mode-btn{background:none;border:none;border-radius:4px;color:var(--dim);cursor:pointer;font-size:12px;padding:4px 13px;transition:all .15s;font-family:inherit;letter-spacing:.3px;}
+.thesis-mode-btn.on{background:rgba(74,144,255,0.22);color:var(--text);}
+.thesis-export-btns{display:flex;gap:4px;flex-wrap:wrap;}
+#tdoc{flex:1;padding:16px 10px 20px;}
+/* ── THESIS VIEW-MODE document ── */
+.tvdoc{max-width:680px;margin:12px auto 0;background:rgba(255,255,255,0.97);color:#111;border-radius:5px;padding:54px 66px;box-shadow:0 6px 40px rgba(0,0,0,0.45);font-family:Georgia,'Times New Roman',serif;font-size:12.5pt;line-height:1.85;}
+@media(max-width:720px){.tvdoc{padding:28px 22px;}}
+.tvdoc-meta{font-size:10pt;color:#666;margin-bottom:30px;padding-bottom:10px;border-bottom:2px solid #ddd;}
+.tvdoc-wordcount{float:right;font-size:9.5pt;}
+.tvdoc-section{margin-bottom:26px;}
+.tvdoc-node-hd{font-size:15pt;font-weight:700;color:#111;margin:0 0 10px;padding-bottom:5px;border-bottom:1px solid #ddd;font-family:Georgia,serif;}
+.tvdoc-desc{font-style:italic;color:#555;font-size:11pt;margin-bottom:10px;}
+.tvdoc-para{margin-bottom:12px;text-align:justify;color:#111;}
+.tvdoc-para-empty{color:#bbb;font-style:italic;font-size:11pt;}
+.tvdoc-h1{font-size:20pt;color:#000;margin:32px 0 14px;font-family:Georgia,serif;}
+.tvdoc-h2{font-size:15pt;color:#111;margin:24px 0 10px;font-family:Georgia,serif;}
+.tvdoc-h3{font-size:12.5pt;color:#222;margin:18px 0 8px;font-weight:700;font-family:Georgia,serif;}
+.tvdoc .tref-item{color:#333;font-size:11pt;margin-bottom:8px;line-height:1.5;}
+.tvdoc .tref-item a{color:#1a55cc;}
+.tvdoc .tref-item em{font-style:italic;}
 .tdoc{max-width:760px;margin:0 auto;}
 .tblock{position:relative;border-radius:8px;margin:1px 0;transition:background .12s;}
 .tblock:hover{background:rgba(255,255,255,0.025);}
@@ -477,6 +499,7 @@ let selNode = null;   // selected node id
 let frontNode = null; // node id shown in front view
 let curView = 'top';
 let curTab = 'info';
+let _thesisMode = 'edit'; // 'edit' | 'view'
 let connectMode = false;
 let connectSrc = null;
 
@@ -1766,16 +1789,8 @@ function _ieeeRefTxt(k,num,gRefMap){
   return`<div class="tref-item">${s}</div>`;
 }
 
-function renderThesisView(){
-  const doc=document.getElementById('tdoc');
-  if(!doc)return;
-  _initThesisDoc();
-
-  if(!Object.keys(DB.nodes).length&&!DB.thesis_doc.length){
-    doc.innerHTML='<div class="empty" style="padding:60px 20px;text-align:center;">No research nodes yet.<br>Add nodes in the constellation view to build your thesis.</div>';
-    return;
-  }
-
+// Shared: build ordered citation keys across thesis_doc
+function _thesisCitations(){
   const gRefMap=_buildGlobalRefMap();
   const orderedKeys=[];
   (DB.thesis_doc||[]).forEach(b=>{
@@ -1786,7 +1801,53 @@ function renderThesisView(){
       }));
     }
   });
+  const citNum={};
+  orderedKeys.forEach((k,i)=>citNum[k]=i+1);
+  return{gRefMap,orderedKeys,citNum};
+}
 
+function _thesisToolbar(){
+  return`<div class="thesis-toolbar">
+    <div class="thesis-mode-toggle">
+      <button class="thesis-mode-btn${_thesisMode==='edit'?' on':''}" onclick="_setThesisMode('edit')">✎ Edit</button>
+      <button class="thesis-mode-btn${_thesisMode==='view'?' on':''}" onclick="_setThesisMode('view')">☰ View</button>
+    </div>
+    <div class="thesis-export-btns">
+      <button class="btn btn-ghost btn-sm" onclick="exportThesis()">↓ Text</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportThesisWord()">↓ Word</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportThesisLatex()">↓ LaTeX</button>
+    </div>
+  </div>`;
+}
+
+function _setThesisMode(m){_thesisMode=m;renderThesisView();}
+
+function renderThesisView(){
+  const wrap=document.getElementById('thesis-view');
+  const doc=document.getElementById('tdoc');
+  if(!doc)return;
+  _initThesisDoc();
+
+  // Inject sticky toolbar into thesis-view (before tdoc)
+  let tb=document.getElementById('thesis-tb');
+  if(!tb){
+    tb=document.createElement('div');tb.id='thesis-tb';
+    wrap.insertBefore(tb,doc);
+  }
+  tb.innerHTML=_thesisToolbar();
+
+  if(!Object.keys(DB.nodes).length&&!DB.thesis_doc.length){
+    doc.innerHTML='<div class="empty" style="padding:60px 20px;text-align:center;">No research nodes yet.<br>Add nodes in the constellation view to build your thesis.</div>';
+    return;
+  }
+
+  if(_thesisMode==='view'){
+    _renderThesisDocView(doc);
+    return;
+  }
+
+  // ── EDIT MODE ──────────────────────────────────
+  const {gRefMap,orderedKeys}=_thesisCitations();
   let html='';
   html+=_tInsert(0);
   DB.thesis_doc.forEach((b,i)=>{
@@ -1795,7 +1856,6 @@ function renderThesisView(){
     else if(b.type==='freetext')html+=_tFtBlock(b,i);
     html+=_tInsert(i+1);
   });
-
   if(orderedKeys.length){
     html+=`<div class="tblock tblock-node" style="margin-top:12px;">
       <div class="tblock-inner">
@@ -1804,10 +1864,60 @@ function renderThesisView(){
       </div>
     </div>`;
   }
-
-  html+=`<div style="margin-top:16px;padding:0 36px;"><button class="btn btn-ghost btn-sm" onclick="exportThesis()">Export as Text</button></div>`;
   doc.innerHTML=html;
   _initThesisDnD();
+}
+
+function _renderThesisDocView(doc){
+  const {gRefMap,orderedKeys,citNum}=_thesisCitations();
+
+  const renderCites=p=>{
+    const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
+    return nums.length?`<sup style="font-size:8pt;color:#1a55cc;">${nums.join('')}</sup>`:'';
+  };
+
+  // Word count across paragraphs + freetext blocks
+  let words=0;
+  (DB.thesis_doc||[]).forEach(b=>{
+    if(b.type==='node')(DB.nodes[b.nodeId]?.paragraphs||[]).forEach(p=>{words+=(p.content||'').trim().split(/\s+/).filter(Boolean).length;});
+    else if(b.type==='freetext')words+=(b.content||'').trim().split(/\s+/).filter(Boolean).length;
+  });
+
+  let body='';
+  (DB.thesis_doc||[]).forEach(b=>{
+    if(b.type==='node'){
+      const n=DB.nodes[b.nodeId];if(!n)return;
+      const paras=n.paragraphs||[];
+      const col=statusColor(n.status);
+      body+=`<div class="tvdoc-section">
+        <h2 class="tvdoc-node-hd"><span style="color:${col};font-size:9pt;margin-right:5px;">●</span>${esc(n.name)}</h2>
+        ${n.description?`<p class="tvdoc-desc">${esc(n.description)}</p>`:''}
+        ${paras.length
+          ?paras.map(p=>`<p class="tvdoc-para">${esc(p.content)}${renderCites(p)}</p>`).join('')
+          :`<p class="tvdoc-para-empty">No paragraphs yet.</p>`}
+      </div>`;
+    } else if(b.type==='heading'){
+      const lvl=b.level||1;
+      body+=`<h${lvl} class="tvdoc-h${lvl}">${esc(b.text||'')}</h${lvl}>`;
+    } else if(b.type==='freetext'){
+      if(b.content)body+=`<p class="tvdoc-para">${esc(b.content).replace(/\n/g,'<br>')}</p>`;
+    }
+  });
+
+  if(orderedKeys.length){
+    body+=`<div class="tvdoc-section" style="margin-top:36px;padding-top:20px;border-top:2px solid #ddd;">
+      <h2 class="tvdoc-node-hd">References</h2>
+      ${orderedKeys.map((k,i)=>_ieeeRefTxt(k,i+1,gRefMap)).join('')}
+    </div>`;
+  }
+
+  doc.innerHTML=`<div class="tvdoc">
+    <div class="tvdoc-meta">
+      ${Object.keys(DB.nodes).length} nodes · ${orderedKeys.length} references
+      <span class="tvdoc-wordcount">${words.toLocaleString()} words</span>
+    </div>
+    ${body||'<p class="tvdoc-para-empty">No content yet. Switch to Edit mode to start writing.</p>'}
+  </div>`;
 }
 
 function tInsert(type,pos){
@@ -1941,18 +2051,7 @@ function _initThesisDnD(){
 
 function exportThesis(){
   _initThesisDoc();
-  const gRefMap=_buildGlobalRefMap();
-  const orderedKeys=[];
-  (DB.thesis_doc||[]).forEach(b=>{
-    if(b.type==='node'){
-      const n=DB.nodes[b.nodeId];
-      (n?.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
-        if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
-      }));
-    }
-  });
-  const citNum={};
-  orderedKeys.forEach((k,i)=>citNum[k]=i+1);
+  const {gRefMap,orderedKeys,citNum}=_thesisCitations();
 
   let t='PhD RESEARCH THESIS\n'+'═'.repeat(40)+'\n\n';
   (DB.thesis_doc||[]).forEach(b=>{
@@ -1989,6 +2088,131 @@ function exportThesis(){
   }
   const b=new Blob([t],{type:'text/plain'});
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:`thesis-${today()}.txt`});
+  a.click();
+}
+
+function latexEsc(s){
+  return String(s||'')
+    .replace(/\\/g,'\\textbackslash{}')
+    .replace(/&/g,'\\&').replace(/%/g,'\\%').replace(/\$/g,'\\$')
+    .replace(/#/g,'\\#').replace(/_/g,'\\_')
+    .replace(/\{/g,'\\{').replace(/\}/g,'\\}')
+    .replace(/~/g,'\\textasciitilde{}')
+    .replace(/\^/g,'\\textasciicircum{}');
+}
+
+function exportThesisWord(){
+  _initThesisDoc();
+  const {gRefMap,orderedKeys,citNum}=_thesisCitations();
+  let body='';
+  (DB.thesis_doc||[]).forEach(b=>{
+    if(b.type==='node'){
+      const n=DB.nodes[b.nodeId];if(!n)return;
+      body+=`<h2>${esc(n.name)}</h2>`;
+      if(n.description)body+=`<p><em>${esc(n.description)}</em></p>`;
+      (n.paragraphs||[]).forEach(p=>{
+        const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
+        body+=`<p>${esc(p.content)}${nums.length?' <sup>'+nums.join('')+'</sup>':''}</p>`;
+      });
+    } else if(b.type==='heading'){
+      const tag='h'+(b.level||1);
+      body+=`<${tag}>${esc(b.text||'')}</${tag}>`;
+    } else if(b.type==='freetext'){
+      if(b.content)body+=`<p>${esc(b.content).replace(/\n/g,'<br>')}</p>`;
+    }
+  });
+  if(orderedKeys.length){
+    body+='<h2>References</h2>';
+    orderedKeys.forEach((k,i)=>{
+      const m=gRefMap[k];if(!m)return;
+      const au=m.ieeeAuthors||m.authors||'Unknown';
+      let s=`[${i+1}] ${esc(au)}, &ldquo;${esc(m.title)}&rdquo;`;
+      if(m.journal)s+=`, <em>${esc(m.journal)}</em>`;
+      if(m.volume)s+=`, vol. ${esc(m.volume)}`;
+      if(m.issue)s+=`, no. ${esc(m.issue)}`;
+      if(m.pages)s+=`, pp. ${esc(m.pages)}`;
+      if(m.year)s+=`, ${m.year}`;
+      s+='.';
+      if(m.doi)s+=` doi:${esc(m.doi)}`;
+      body+=`<p style="margin-left:18pt;text-indent:-18pt;">${s}</p>`;
+    });
+  }
+  const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='utf-8'><title>PhD Research Thesis</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:2.54cm;color:#000;line-height:1.6;}
+  h1{font-size:18pt;text-align:center;margin-bottom:6pt;}
+  h2{font-size:14pt;margin-top:18pt;margin-bottom:6pt;border-bottom:1px solid #ccc;padding-bottom:3pt;}
+  h3{font-size:12pt;margin-top:12pt;font-weight:bold;}
+  p{text-align:justify;margin-bottom:8pt;}
+  sup{font-size:8pt;}
+</style></head>
+<body><h1>PhD Research Thesis</h1>${body}</body></html>`;
+  const blob=new Blob(['﻿',html],{type:'application/msword'});
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`thesis-${today()}.doc`});
+  a.click();
+}
+
+function exportThesisLatex(){
+  _initThesisDoc();
+  const {gRefMap,orderedKeys,citNum}=_thesisCitations();
+  let tex=`\\documentclass[12pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\usepackage{setspace}
+\\onehalfspacing
+\\usepackage{hyperref}
+
+\\title{PhD Research Thesis}
+\\author{}
+\\date{\\today}
+
+\\begin{document}
+\\maketitle
+\\tableofcontents
+\\newpage
+
+`;
+  (DB.thesis_doc||[]).forEach(b=>{
+    if(b.type==='node'){
+      const n=DB.nodes[b.nodeId];if(!n)return;
+      tex+=`\\section{${latexEsc(n.name)}}\n`;
+      if(n.description)tex+=`\\textit{${latexEsc(n.description)}}\n\n`;
+      (n.paragraphs||[]).forEach(p=>{
+        const nums=(p.refKeys||[]).filter(k=>citNum[k]).map(k=>`[${citNum[k]}]`);
+        tex+=latexEsc(p.content)+(nums.length?' '+nums.join(''):'')+'\n\n';
+      });
+    } else if(b.type==='heading'){
+      const cmds=['\\section','\\subsection','\\subsubsection'];
+      tex+=`${cmds[(b.level||1)-1]}{${latexEsc(b.text||'')}}\n\n`;
+    } else if(b.type==='freetext'){
+      if(b.content)tex+=latexEsc(b.content)+'\n\n';
+    }
+  });
+  if(orderedKeys.length){
+    tex+='\n\\begin{thebibliography}{99}\n';
+    orderedKeys.forEach((k,i)=>{
+      const m=gRefMap[k];if(!m)return;
+      const au=m.ieeeAuthors||m.authors||'Unknown';
+      let s=`\\bibitem{ref${i+1}} ${latexEsc(au)}, ``${latexEsc(m.title)}''`;
+      if(m.journal)s+=`, \\textit{${latexEsc(m.journal)}}`;
+      if(m.volume)s+=`, vol.~${latexEsc(m.volume)}`;
+      if(m.issue)s+=`, no.~${latexEsc(m.issue)}`;
+      if(m.pages)s+=`, pp.~${latexEsc(m.pages)}`;
+      if(m.year)s+=`, ${m.year}`;
+      s+='.';
+      if(m.doi)s+=` \\href{https://doi.org/${latexEsc(m.doi)}}{doi:${latexEsc(m.doi)}}`;
+      tex+=s+'\n';
+    });
+    tex+='\\end{thebibliography}\n';
+  }
+  tex+='\n\\end{document}\n';
+  const blob=new Blob([tex],{type:'text/plain'});
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`thesis-${today()}.tex`});
   a.click();
 }
 
