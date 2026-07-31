@@ -127,6 +127,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .t-theory{background:rgba(150,100,255,0.18);color:#bb99ff;}
 .t-literature{background:rgba(68,200,255,0.18);color:#88ddff;}
 .t-cfd{background:rgba(255,150,68,0.18);color:#ffcc99;}
+.t-cfd-post{background:rgba(255,110,40,0.18);color:#ff9966;}
 .t-coding{background:rgba(68,255,150,0.18);color:#99ffcc;}
 .t-analysis{background:rgba(255,200,68,0.18);color:#ffdd99;}
 .t-writing{background:rgba(255,100,150,0.18);color:#ffaabb;}
@@ -833,7 +834,7 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function fmtType(t){return t==='cfd'?'CFD':t?t[0].toUpperCase()+t.slice(1):'';}
+function fmtType(t){return t==='cfd'?'CFD':t==='cfd-post'?'CFD Post-processing':t?t[0].toUpperCase()+t.slice(1):'';}
 function statusColor(s){
   return{active:'#4a90ff',exploring:'#ffaa44',completed:'#44ff88',abandoned:'#ff4455',paused:'#9999cc'}[s]||'#888';
 }
@@ -900,7 +901,7 @@ function deleteTask(id){
 function updateTask(id,patch){if(DB.tasks[id])Object.assign(DB.tasks[id],patch);save();renderPanel();}
 function _editTaskType(id){
   const t=DB.tasks[id];if(!t)return;
-  const types=['theory','literature','cfd','coding','analysis','writing','other'];
+  const types=['theory','literature','cfd','cfd-post','coding','analysis','writing','other'];
   showModal(`<h3>Change Task Type</h3>
     <div class="fg"><select id="ett">
       ${types.map(tp=>`<option value="${tp}"${t.type===tp?' selected':''}>${fmtType(tp)}</option>`).join('')}
@@ -1057,7 +1058,7 @@ function renderPanel(){
 
   else if(curTab==='tasks'){
     const tasks=(n.taskIds||[]).map(tid=>DB.tasks[tid]).filter(Boolean);
-    const types=['theory','literature','cfd','coding','analysis','writing','other'];
+    const types=['theory','literature','cfd','cfd-post','coding','analysis','writing','other'];
     c.innerHTML=`
       ${tasks.length?tasks.map(t=>`
         <div class="task${t.status==='done'?' done':''}">
