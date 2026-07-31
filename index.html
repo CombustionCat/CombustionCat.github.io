@@ -171,6 +171,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #fnode-name{font-size:17px;color:var(--accent2);text-shadow:0 0 20px var(--accent);}
 #fnode-status{font-size:11px;color:var(--dim);letter-spacing:1.5px;margin-top:3px;}
 #front-hint{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--dim);pointer-events:none;}
+
+/* ── ZOTERO AUTOCOMPLETE ── */
+.zot-wrap{position:relative;}
+.zot-dd{display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:400;background:#0a0a22;border:1px solid var(--border);border-radius:6px;max-height:210px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,.6);}
+.zot-item{padding:9px 11px;font-size:12px;cursor:pointer;border-bottom:1px solid rgba(80,120,255,0.08);line-height:1.4;color:var(--text);}
+.zot-item:hover{background:rgba(74,144,255,0.1);}
+.zot-item:last-child{border-bottom:none;}
+.zot-title{font-weight:500;}
+.zot-meta{font-size:10px;color:var(--dim);margin-top:2px;}
+.zot-badge{font-size:9px;background:rgba(68,200,255,0.15);color:#88ddff;border-radius:3px;padding:1px 5px;margin-left:4px;vertical-align:middle;letter-spacing:.3px;}
+
+/* ── REFERENCE PICKER ── */
+.ref-picker{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:7px;}
+.ref-chip{display:inline-block;background:rgba(74,144,255,0.1);border:1px solid rgba(74,144,255,0.22);border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer;margin:2px 3px;transition:background .15s;color:var(--accent2);}
+.ref-chip:hover{background:rgba(74,144,255,0.22);}
 </style>
 </head>
 <body>
@@ -202,6 +217,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     </div>
     <div class="spacer"></div>
     <div class="right">
+      <button class="btn btn-ghost btn-sm" onclick="showSettings()">⚙ Zotero</button>
       <button class="btn btn-ghost btn-sm" onclick="doExport()">Export</button>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp').click()">Import</button>
       <input id="imp" type="file" accept=".json" style="display:none" onchange="doImport(event)">
@@ -539,18 +555,26 @@ function renderPanel(){
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
               <span class="tbadge t-${t.type}">${t.type}</span>
               <span class="task-name">${esc(t.name)}</span>
+              ${t.zoteroData?`<span class="zot-badge">Z</span>`:''}
             </div>
+            ${t.zoteroData?.journal?`<div class="task-desc">${esc(t.zoteroData.journal)}${t.zoteroData.year?' · '+t.zoteroData.year:''}</div>`:''}
             ${t.description?`<div class="task-desc">${esc(t.description)}</div>`:''}
           </div>
           <button class="icon-btn" onclick="deleteTask('${t.id}')">✕</button>
         </div>`).join(''):'<div class="empty">No tasks yet.</div>'}
       <div class="tadd" style="margin-top:10px;">
         <div class="tadd-title">Add Task</div>
-        <div class="fg" style="margin-bottom:7px;"><input id="tn" placeholder="Task name..."></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
-          <select id="tt"><option value="">Type...</option>${types.map(t=>`<option value="${t}">${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}</select>
+        <div class="fg" style="margin-bottom:7px;">
+          <select id="tt" onchange="_onTaskTypeChange()" style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+            <option value="">Type...</option>${types.map(t=>`<option value="${t}">${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}
+          </select>
         </div>
-        <div class="fg" style="margin-bottom:7px;"><input id="td" placeholder="Notes (optional)..."></div>
+        <div class="fg zot-wrap" style="margin-bottom:7px;">
+          <input id="tn" placeholder="Task name..." autocomplete="off" oninput="_onTaskNameInput()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+          <div class="zot-dd" id="zot-dd"></div>
+        </div>
+        <div id="zot-hint" style="font-size:10px;color:var(--dim);margin:-4px 0 8px;display:none;">Searching your Zotero library as you type…</div>
+        <div class="fg" style="margin-bottom:7px;"><input id="td" placeholder="Notes (optional)..." style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;"></div>
         <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_submitTask()">Add Task</button>
       </div>`;
   }
@@ -573,9 +597,16 @@ function renderPanel(){
       <div class="tadd" style="margin-top:10px;">
         <div class="tadd-title">Add Note / Paragraph</div>
         <div class="fg" style="margin-bottom:7px;">
-          <textarea id="ptext" placeholder="Write paragraph content..." style="min-height:90px;"></textarea>
+          <textarea id="ptext" placeholder="Write paragraph content..." style="min-height:90px;width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;font-family:inherit;"></textarea>
         </div>
-        <div class="fg" style="margin-bottom:7px;"><input id="prefs" placeholder="References (e.g. Smith 2020, Jones 2022)..."></div>
+        <div style="margin-bottom:7px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;">References</label>
+            <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10px;" onclick="_toggleRefPicker()">Pick from tasks ▾</button>
+          </div>
+          <div class="ref-picker" id="ref-picker" style="display:none;"></div>
+          <input id="prefs" placeholder="e.g. Smith (2020); Jones et al. (2022)…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+        </div>
         <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_submitPara()">Add Paragraph</button>
       </div>`;
   }
@@ -610,7 +641,11 @@ function _submitTask(){
   if(!name)return;
   const type=document.getElementById('tt')?.value||'other';
   const desc=document.getElementById('td')?.value.trim()||'';
-  addTask(name,type,[selNode],desc);
+  const id=addTask(name,type,[selNode],desc);
+  if(type==='literature'&&_pendingZotItem&&DB.tasks[id]){
+    DB.tasks[id].zoteroData=_pendingZotItem;save();
+  }
+  _pendingZotItem=null;_zotResults=[];
 }
 function _submitPara(){
   const txt=document.getElementById('ptext')?.value.trim();
@@ -1110,6 +1145,202 @@ function hideTip(){document.getElementById('tip').style.display='none';}
 window.addEventListener('resize',()=>{
   if(curView==='front')renderFrontView();
 });
+
+// ═══════════════════════════════════════════════
+//  ZOTERO INTEGRATION
+// ═══════════════════════════════════════════════
+
+// ── SETTINGS ───────────────────────────────────
+function getZoteroSettings(){
+  return{uid:localStorage.getItem('zot_uid')||'', key:localStorage.getItem('zot_key')||''};
+}
+function saveZoteroSettings(uid,key){
+  localStorage.setItem('zot_uid',uid.trim());
+  localStorage.setItem('zot_key',key.trim());
+}
+
+function showSettings(){
+  const {uid,key}=getZoteroSettings();
+  showModal(`<h3>⚙ Zotero Settings</h3>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:16px;line-height:1.6;">
+      Connect your Zotero library to get predictive search when adding Literature tasks.<br><br>
+      1. Find your <strong>User ID</strong> at zotero.org → Settings → Feeds/API<br>
+      2. Create an <strong>API Key</strong> (read-only is enough) at the same page
+    </p>
+    <div class="fg"><label>Zotero User ID</label>
+      <input id="zot-uid" value="${esc(uid)}" placeholder="e.g. 1234567"></div>
+    <div class="fg"><label>Zotero API Key</label>
+      <input id="zot-key" type="password" value="${esc(key)}" placeholder="Paste your API key..."></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_saveZotSettings()">Save</button>
+    </div>`);
+}
+function _saveZotSettings(){
+  const uid=document.getElementById('zot-uid')?.value||'';
+  const key=document.getElementById('zot-key')?.value||'';
+  saveZoteroSettings(uid,key);
+  closeModal();
+}
+
+// ── API ────────────────────────────────────────
+async function searchZotero(query){
+  const {uid,key}=getZoteroSettings();
+  if(!uid||!key)return null; // null = not configured
+  const url=`https://api.zotero.org/users/${uid}/items?q=${encodeURIComponent(query)}&limit=10&format=json&itemType=-attachment`;
+  const res=await fetch(url,{headers:{'Zotero-API-Key':key}});
+  if(!res.ok)throw new Error(`Zotero API error ${res.status}`);
+  return await res.json();
+}
+
+function _zotLabel(item){
+  const d=item.data;
+  const authors=(d.creators||[]).filter(c=>c.creatorType==='author');
+  const last=authors[0]?.lastName||authors[0]?.name||'Unknown';
+  const year=d.date?d.date.slice(0,4):'';
+  const title=d.title||'Untitled';
+  return year?`${last} (${year}) — ${title}`:`${last} — ${title}`;
+}
+
+function _zotMeta(item){
+  const d=item.data;
+  const authors=(d.creators||[]).filter(c=>c.creatorType==='author');
+  const last=authors[0]?.lastName||authors[0]?.name||'Unknown';
+  const allAuthors=authors.map(a=>a.lastName||a.name).filter(Boolean).join(', ');
+  const year=d.date?d.date.slice(0,4):'';
+  const title=d.title||'Untitled';
+  const journal=d.publicationTitle||d.journalAbbreviation||d.bookTitle||'';
+  const n=authors.length;
+  const citation=year
+    ?(n>2?`${last} et al. (${year})`:(n===2?`${authors[0]?.lastName||''} & ${authors[1]?.lastName||''} (${year})`:`${last} (${year})`))
+    :last;
+  return{key:item.key,title,authors:allAuthors,year,journal,citation};
+}
+
+// ── AUTOCOMPLETE STATE ─────────────────────────
+let _zotTimer=null;
+let _zotResults=[];
+let _pendingZotItem=null;
+
+function _onTaskTypeChange(){
+  _pendingZotItem=null;
+  _zotResults=[];
+  const dd=document.getElementById('zot-dd');
+  const hint=document.getElementById('zot-hint');
+  const inp=document.getElementById('tn');
+  const type=document.getElementById('tt')?.value;
+  if(dd)dd.style.display='none';
+  if(hint)hint.style.display=type==='literature'?'block':'none';
+  if(inp&&type==='literature'){
+    inp.placeholder='Search Zotero library…';
+  } else if(inp){
+    inp.placeholder='Task name…';
+  }
+}
+
+function _onTaskNameInput(){
+  const type=document.getElementById('tt')?.value;
+  if(type!=='literature'){return;}
+  _pendingZotItem=null;
+  clearTimeout(_zotTimer);
+  const q=document.getElementById('tn')?.value.trim();
+  const dd=document.getElementById('zot-dd');
+  if(!q||q.length<2){if(dd)dd.style.display='none';return;}
+  _zotTimer=setTimeout(()=>_doZotSearch(q),380);
+}
+
+async function _doZotSearch(query){
+  const dd=document.getElementById('zot-dd');
+  if(!dd)return;
+
+  const {uid,key}=getZoteroSettings();
+  if(!uid||!key){
+    dd.innerHTML='<div class="zot-item" style="color:var(--amber);">⚙ Set your Zotero API key in the Zotero button above first.</div>';
+    dd.style.display='block';return;
+  }
+
+  dd.innerHTML='<div class="zot-item" style="color:var(--dim);">Searching…</div>';
+  dd.style.display='block';
+
+  try{
+    const items=await searchZotero(query);
+    if(!document.getElementById('zot-dd'))return; // panel re-rendered
+    if(!items||!items.length){
+      dd.innerHTML='<div class="zot-item" style="color:var(--dim);">No results found.</div>';return;
+    }
+    _zotResults=items;
+    dd.innerHTML=items.map((item,i)=>{
+      const label=_zotLabel(item);
+      const meta=_zotMeta(item);
+      const journal=meta.journal?`<div class="zot-meta">${esc(meta.journal)}${meta.year?' · '+meta.year:''}</div>`:'';
+      return`<div class="zot-item" onclick="selectZotItem(${i})">
+        <div class="zot-title">${esc(label)}</div>
+        ${journal}
+      </div>`;
+    }).join('');
+  }catch(e){
+    if(document.getElementById('zot-dd'))
+      dd.innerHTML=`<div class="zot-item" style="color:var(--red);">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function selectZotItem(idx){
+  const item=_zotResults[idx];if(!item)return;
+  _pendingZotItem=_zotMeta(item);
+  const inp=document.getElementById('tn');
+  if(inp)inp.value=_pendingZotItem.title;
+  const dd=document.getElementById('zot-dd');
+  if(dd)dd.style.display='none';
+}
+
+// Close dropdown on outside click
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('zot-dd');
+  if(dd&&!dd.contains(e.target)&&e.target.id!=='tn')dd.style.display='none';
+});
+
+// ── REFERENCE PICKER ───────────────────────────
+function _toggleRefPicker(){
+  const picker=document.getElementById('ref-picker');
+  if(!picker)return;
+  if(picker.style.display==='block'){picker.style.display='none';return;}
+
+  const node=DB.nodes[selNode];
+  const litTasks=(node?.taskIds||[])
+    .map(tid=>DB.tasks[tid])
+    .filter(t=>t&&t.type==='literature');
+
+  if(!litTasks.length){
+    picker.innerHTML='<div style="font-size:12px;color:var(--dim);">No literature tasks on this node yet.<br>Add some in the Tasks tab first.</div>';
+  } else {
+    // Show all lit tasks — Zotero-linked ones first, then manual ones
+    const zotLinked=litTasks.filter(t=>t.zoteroData);
+    const manual=litTasks.filter(t=>!t.zoteroData);
+    let html='';
+    if(zotLinked.length){
+      html+=`<div style="font-size:10px;color:var(--dim);margin-bottom:5px;letter-spacing:.5px;">FROM ZOTERO</div>`;
+      html+=zotLinked.map(t=>{
+        const label=t.zoteroData.citation;
+        return`<span class="ref-chip" onclick="_appendRef('${label.replace(/'/g,"\\'")}')">
+          ${esc(label)} <span class="zot-badge">Z</span>
+        </span>`;
+      }).join('');
+    }
+    if(manual.length){
+      if(zotLinked.length)html+=`<div style="font-size:10px;color:var(--dim);margin:8px 0 5px;letter-spacing:.5px;">MANUAL TASKS</div>`;
+      html+=manual.map(t=>`<span class="ref-chip" onclick="_appendRef('${t.name.replace(/'/g,"\\'")}')">${esc(t.name)}</span>`).join('');
+    }
+    picker.innerHTML=html;
+  }
+  picker.style.display='block';
+}
+
+function _appendRef(citation){
+  const inp=document.getElementById('prefs');if(!inp)return;
+  const cur=inp.value.trim();
+  inp.value=cur?cur+'; '+citation:citation;
+  inp.focus();
+}
 
 </script>
 </body>
