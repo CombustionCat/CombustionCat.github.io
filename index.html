@@ -1557,11 +1557,17 @@ function renderFrontView(){
 
   // Path layout: fan out at the bottom, converge near horizon
   const N=connPaths.length;
-  const maxFan=Math.min(W*0.36, N*110);
+  // Each node needs ~130px at the horizon so name labels don't overlap
+  const horizSpread=N<=1?0:Math.min(W*0.86,(N-1)*130);
+  // Bottom spread fans wider than horizon; each path needs room for hwB on each side
+  const botSpread=N<=1?0:Math.min(W*0.90,Math.max(horizSpread*1.5,N*150));
+  // Path half-widths shrink when many paths share the screen
+  const hwB=Math.min(58,N<=1?58:botSpread/(N*2.6));
+  const hwT=Math.min(4.5,N<=1?4.5:Math.max(1.5,horizSpread/(N*12)));
   const destPositions=connPaths.map((p,i)=>{
     const frac=N<=1?0.5:i/(N-1);
-    const bx=W/2+(frac-0.5)*maxFan*2;  // centre X at bottom of screen
-    const vx=vpX+(frac-0.5)*55;         // centre X at horizon (slight spread)
+    const bx=W/2+(frac-0.5)*botSpread;
+    const vx=vpX+(frac-0.5)*horizSpread;
     return{p, othId:p.target, bx, vx};
   });
 
@@ -1623,8 +1629,6 @@ function renderFrontView(){
       const other=DB.nodes[othId];if(!other)return;
       const aban=p.status==='abandoned';
       const pR=aban?255:255, pG=aban?70:255, pB=aban?70:255;
-
-      const hwB=58, hwT=4.5; // half-width: bottom vs horizon
 
       // Path surface fill
       const pathG=fCtx.createLinearGradient(0,H,0,hY);
