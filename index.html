@@ -2112,42 +2112,66 @@ async function _mvConnect(){
   const phdName = sel?.options[sel.selectedIndex]?.text || 'PhD';
   const msg = document.getElementById('mv-msg');
   if(!phdId){msg.textContent='Select your PhD folder.';return;}
-  msg.textContent='Setting up "Research Forest" subfolder…';msg.style.color='var(--dim)';
+  msg.textContent='Looking for "Research Forest" subfolder…';msg.style.color='var(--dim)';
   try{
-    // Step 1: Try to find an existing "Research Forest" subfolder (may fail due to CORS on some setups)
-    let rfCat = null;
-    try{
-      const childRes = await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${phdId}`,{
-        headers:{'X-Full-Access-Token':tok}
-      });
-      if(childRes.ok){
-        const children = await childRes.json();
-        rfCat = children.find(c=>c.db==='Categories'&&c.title==='Research Forest');
-      }
-    }catch(e){ /* network/CORS — will attempt to create below */ }
-
-    // Step 2: Create subfolder if not found
-    if(!rfCat){
-      const cr = await fetch('https://serv.amazingmarvin.com/api/addCategory',{
-        method:'POST',
-        headers:{'X-Full-Access-Token':tok,'Content-Type':'application/json'},
-        body:JSON.stringify({title:'Research Forest',parentId:phdId})
-      });
-      if(!cr.ok) throw new Error(`Could not create subfolder (${cr.status}) — check your token has Full Access.`);
-      rfCat = await cr.json();
+    // Use GET /api/categories (the only reliably CORS-accessible endpoint)
+    const res = await fetch('https://serv.amazingmarvin.com/api/categories',{
+      headers:{'X-Full-Access-Token':tok}
+    });
+    if(!res.ok) throw new Error(`API error ${res.status}`);
+    const cats = await res.json();
+    const rfCat = cats.find(c => c.title==='Research Forest' && c.parentId===phdId);
+    if(rfCat){
+      _mvFinishConnect(phdId, phdName, rfCat._id);
+    } else {
+      // Can't create via POST (CORS) — ask user to create manually in AM
+      showModal(`<h3>⊕ One manual step</h3>
+        <p style="color:var(--dim);font-size:13px;margin-bottom:14px;line-height:1.6;">
+          In Amazing Marvin, open your <strong>${esc(phdName)}</strong> folder and create
+          a new subfolder called exactly:<br>
+          <span style="color:var(--accent2);font-size:14px;letter-spacing:.5px;display:block;margin:10px 0 10px 4px;">Research Forest</span>
+          Then come back and click the button below.
+        </p>
+        <div class="modal-footer">
+          <button class="btn btn-ghost btn-sm" onclick="_mvReconfigure()">Back</button>
+          <button class="btn btn-sm" onclick="_mvFindRfFolder('${esc(phdId)}','${esc(phdName)}')">Done, I created it ✓</button>
+        </div>`);
     }
-
-    if(!rfCat?._id) throw new Error('No subfolder ID returned from Amazing Marvin.');
-    localStorage.setItem('rf_marvin_phd_id', phdId);
-    localStorage.setItem('rf_marvin_phd_name', phdName);
-    localStorage.setItem('rf_marvin_rf_cat_id', rfCat._id);
-    showModal(`<h3>⊕ Connected!</h3>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:4px;">PhD folder: <strong>${esc(phdName)}</strong></p>
-      <p style="color:var(--dim);font-size:12px;margin-bottom:18px;">"Research Forest" subfolder is ready. All new RF tasks will be sent there.</p>
-      <div class="modal-footer"><button class="btn btn-sm" onclick="closeModal()">Done</button></div>`);
   }catch(e){
     msg.textContent=e.message;msg.style.color='var(--red)';
   }
+}
+
+async function _mvFindRfFolder(phdId, phdName){
+  const tok = localStorage.getItem('rf_marvin_token');
+  showModal(`<h3>⊕ Connecting…</h3><p style="color:var(--dim);font-size:13px;">Searching for "Research Forest" subfolder…</p>`);
+  try{
+    const res = await fetch('https://serv.amazingmarvin.com/api/categories',{
+      headers:{'X-Full-Access-Token':tok}
+    });
+    if(!res.ok) throw new Error(`API error ${res.status}`);
+    const cats = await res.json();
+    const rfCat = cats.find(c => c.title==='Research Forest' && c.parentId===phdId);
+    if(!rfCat) throw new Error('Could not find it — make sure the folder is named exactly "Research Forest" and is inside your PhD folder, then try again.');
+    _mvFinishConnect(phdId, phdName, rfCat._id);
+  }catch(e){
+    showModal(`<h3>⊕ Not found</h3>
+      <p style="color:var(--red);font-size:13px;margin-bottom:16px;">${esc(e.message)}</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="_mvReconfigure()">Back</button>
+        <button class="btn btn-sm" onclick="_mvFindRfFolder('${esc(phdId)}','${esc(phdName)}')">Try Again</button>
+      </div>`);
+  }
+}
+
+function _mvFinishConnect(phdId, phdName, rfCatId){
+  localStorage.setItem('rf_marvin_phd_id', phdId);
+  localStorage.setItem('rf_marvin_phd_name', phdName);
+  localStorage.setItem('rf_marvin_rf_cat_id', rfCatId);
+  showModal(`<h3>⊕ Connected!</h3>
+    <p style="color:var(--dim);font-size:13px;margin-bottom:4px;">PhD folder: <strong>${esc(phdName)}</strong></p>
+    <p style="color:var(--dim);font-size:12px;margin-bottom:18px;">"Research Forest" subfolder is ready.</p>
+    <div class="modal-footer"><button class="btn btn-sm" onclick="closeModal()">Done</button></div>`);
 }
 
 async function _mvFetchAllTasks(tok, parentId, skipCatIds, depth=0){
@@ -2179,12 +2203,12 @@ async function _mvShowFolderFilter(){
   if(!tok||!phdId) return;
   showModal(`<h3>⊟ Filter Folders</h3><p style="color:var(--dim);font-size:12px;">Loading subfolders…</p>`);
   try{
-    const res = await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${phdId}`,{
+    const res = await fetch('https://serv.amazingmarvin.com/api/categories',{
       headers:{'X-Full-Access-Token':tok}
     });
     if(!res.ok) throw new Error(`Marvin API ${res.status}`);
-    const children = await res.json();
-    const cats = children.filter(c => c.db==='Categories' && c._id!==rfCatId);
+    const allCats = await res.json();
+    const cats = allCats.filter(c => c.parentId===phdId && c._id!==rfCatId);
     _mvFilterCatIds = cats.map(c => c._id);
     const excluded = new Set(JSON.parse(localStorage.getItem('rf_marvin_exclude_cats')||'[]'));
     showModal(`<h3>⊟ Filter Folders</h3>
