@@ -133,6 +133,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .t-writing{background:rgba(255,100,150,0.18);color:#ffaabb;}
 .t-thinking{background:rgba(180,140,255,0.18);color:#cc99ff;}
 .t-other{background:rgba(150,150,150,0.18);color:#aaaaaa;}
+.label-chip{display:inline-flex;align-items:center;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:3px;cursor:pointer;transition:opacity .15s;letter-spacing:.2px;}
+.label-chip:hover{opacity:.7;}
+.label-completed{background:rgba(68,255,136,0.12);color:#66ee99;border:1px solid rgba(68,255,136,0.2);}
+.label-deleted{background:rgba(255,68,85,0.12);color:#ff8899;border:1px solid rgba(255,68,85,0.2);}
+.label-removed{background:rgba(255,68,85,0.12);color:#ff8899;border:1px solid rgba(255,68,85,0.2);}
 .task-body{flex:1;min-width:0;}
 .task-name{font-size:13px;line-height:1.4;}
 .task-desc{font-size:11px;color:var(--dim);margin-top:2px;}
@@ -302,7 +307,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   #hamburger{display:block;}
   .vtabs{display:none;}
   #topbar .logo{font-size:11px;letter-spacing:1.5px;}
-  .btn-ghost.btn-sm:not(#sync-btn):not(#logout-btn){display:none;}
+  .btn-ghost.btn-sm:not(#sync-btn):not(#logout-btn):not(#marvin-btn){display:none;}
   #logout-btn{display:inline-flex;}
 
   /* Sidebar becomes a drawer overlay */
@@ -412,6 +417,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp').click()">Import</button>
       <input id="imp" type="file" accept=".json" style="display:none" onchange="doImport(event)">
       <button class="btn btn-ghost btn-sm" id="sync-btn" onclick="showGistModal()">☁ Sync</button>
+      <button class="btn btn-ghost btn-sm" id="marvin-btn" onclick="showMarvinModal()">⊕ Marvin</button>
       <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="doLogout()">Logout</button>
     </div>
   </div>
@@ -897,15 +903,22 @@ function addTask(name,type,nodeIds,desc){
     if(DB.nodes[nid]){DB.nodes[nid].taskIds=DB.nodes[nid].taskIds||[];
       if(!DB.nodes[nid].taskIds.includes(id))DB.nodes[nid].taskIds.push(id);}
   });
-  save();renderPanel();return id;
+  save();renderPanel();
+  marvinPushNewTask(id);
+  return id;
 }
 function toggleTask(id){
   const t=DB.tasks[id];if(!t)return;
-  t.status=t.status==='done'?'todo':'done';save();renderPanel();
+  const wasDone=t.status==='done';
+  t.status=wasDone?'todo':'done';
+  if(!wasDone && t.amSource && t.marvinId) _mvAddTagToAmTask(t.marvinId,'Completed');
+  save();renderPanel();
 }
 function deleteTask(id){
-  (DB.tasks[id]?.nodeIds||[]).forEach(nid=>{
-    if(DB.nodes[nid])DB.nodes[nid].taskIds=(DB.nodes[nid].taskIds||[]).filter(t=>t!==id);
+  const t=DB.tasks[id];
+  if(t?.amSource && t.marvinId) _mvAddTagToAmTask(t.marvinId,'Removed');
+  (t?.nodeIds||[]).forEach(nid=>{
+    if(DB.nodes[nid])DB.nodes[nid].taskIds=(DB.nodes[nid].taskIds||[]).filter(x=>x!==id);
   });
   delete DB.tasks[id];save();renderPanel();
 }
@@ -1085,6 +1098,7 @@ function renderPanel(){
               <span class="tbadge t-${t.type}" onclick="_editTaskType('${t.id}')" style="cursor:pointer;" title="Click to change type">${fmtType(t.type)}</span>
               <span class="task-name" ondblclick="_editTaskName('${t.id}')" title="Double-click to rename">${esc(t.name)}</span>
               ${t.zoteroData?`<span class="zot-badge">Z</span>`:''}
+              ${_labelsHtml(t)}
             </div>
             ${t.zoteroData?.journal?`<div class="task-desc">${esc(t.zoteroData.journal)}${t.zoteroData.year?' · '+t.zoteroData.year:''}</div>`:''}
             ${t.description?`<div class="task-desc">${esc(t.description)}</div>`:''}
@@ -1774,6 +1788,18 @@ function hexAlpha(hex,a){
   return`rgba(${r},${g},${b},${a})`;
 }
 
+// ── LABEL UTILITIES ────────────────────────────
+function _labelsHtml(t){
+  if(!(t.labels&&t.labels.length)) return '';
+  const colors={Completed:'label-completed',Deleted:'label-deleted',Removed:'label-removed'};
+  return ' '+t.labels.map(l=>`<span class="label-chip ${colors[l]||'label-completed'}" onclick="event.stopPropagation();_rfRemoveLabel('${t.id}','${esc(l)}')" title="Click to remove label">${esc(l)} ×</span>`).join('');
+}
+function _rfRemoveLabel(taskId,label){
+  const t=DB.tasks[taskId];if(!t)return;
+  t.labels=(t.labels||[]).filter(l=>l!==label);
+  save();render();
+}
+
 // ── TASK VIEW ──────────────────────────────────
 function _buildTaskPathGroups(){
   const nids = Object.keys(DB.nodes);
@@ -1832,18 +1858,25 @@ function renderTasksView(){
   const inner = document.getElementById('tv-inner');
   if(!inner) return;
 
-  const allTasks = Object.values(DB.tasks);
+  // Just Landed = AM-sourced tasks not yet assigned to a node
+  const landedTasks = Object.values(DB.tasks).filter(t => t.amSource && !(t.nodeIds&&t.nodeIds.length));
+  // Regular tasks = everything else (excludes unassigned AM tasks)
+  const allTasks = Object.values(DB.tasks).filter(t => !(t.amSource && !(t.nodeIds&&t.nodeIds.length)));
   const doneCnt = allTasks.filter(t => t.status==='done').length;
   const pct = allTasks.length ? Math.round(doneCnt/allTasks.length*100) : 0;
   const f = _tasksFilter;
+  const landedCnt = landedTasks.length;
 
-  function taskVisible(t){ return f==='all' || t.status===f || (f==='todo' && t.status!=='done'); }
+  function taskVisible(t){
+    if(t.amSource && !(t.nodeIds&&t.nodeIds.length)) return false;
+    return f==='all' || t.status===f || (f==='todo' && t.status!=='done');
+  }
 
-  const groups = _buildTaskPathGroups();
-  let html = '';
+  const landedBadge = landedCnt
+    ? ` <span style="background:rgba(255,200,68,0.2);color:#ffcc88;border-radius:3px;padding:0 5px;font-size:10px;">${landedCnt}</span>`
+    : '';
 
-  // summary bar
-  html += `<div class="tv-summary">
+  let html = `<div class="tv-summary">
     <div class="tv-stats">
       <span>${allTasks.length} task${allTasks.length!==1?'s':''}</span>
       <span class="tv-dot">·</span>
@@ -1856,12 +1889,71 @@ function renderTasksView(){
       <button class="tv-filter-btn${f==='all'?' on':''}" onclick="_setTasksFilter('all')">All</button>
       <button class="tv-filter-btn${f==='todo'?' on':''}" onclick="_setTasksFilter('todo')">Todo</button>
       <button class="tv-filter-btn${f==='done'?' on':''}" onclick="_setTasksFilter('done')">Done</button>
+      <button class="tv-filter-btn${f==='landed'?' on':''}" onclick="_setTasksFilter('landed')">Just Landed${landedBadge}</button>
     </div>
   </div>`;
 
+  // ── JUST LANDED view ──────────────────────────────────────────────────────
+  if(f==='landed'){
+    if(!landedCnt){
+      html += `<div style="text-align:center;padding:60px 20px;color:var(--dim);">
+        No tasks in Just Landed.<br>
+        <span style="font-size:12px;">New tasks synced from Amazing Marvin (PhD folder) will appear here.</span>
+      </div>`;
+    } else {
+      const taskRow = t => `<div class="tv-task-item${t.status==='done'?' done':''}">
+        <input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTaskDone('${t.id}',this.checked)">
+        <span class="tbadge" style="font-size:9px;padding:1px 6px;flex-shrink:0;cursor:pointer;${t.type?'background:rgba(255,255,255,0.08);color:var(--text);':'background:rgba(255,170,68,0.15);color:var(--amber);border:1px solid rgba(255,170,68,0.3);'}" onclick="_mvSetType('${t.id}')" title="Click to set task type">${t.type?fmtType(t.type):'+ type'}</span>
+        <div style="flex:1;min-width:0;">
+          <div class="tv-task-name">${esc(t.name||'Untitled')}${_labelsHtml(t)}</div>
+          ${t.description?`<div class="tv-task-desc">${esc(t.description)}</div>`:''}
+        </div>
+        <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 9px;flex-shrink:0;margin-right:4px;white-space:nowrap;" onclick="_mvAssignNode('${t.id}')">→ Node</button>
+        <button class="icon-btn" onclick="deleteTask('${t.id}');renderTasksView()">✕</button>
+      </div>`;
+
+      html += `<div class="tv-group">
+        <div class="tv-group-hd" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>⊕ Just Landed &nbsp;<span class="tv-group-label" style="color:var(--amber);">from Amazing Marvin — assign to node or process</span></span>
+          <span style="font-size:10px;color:var(--dim);">${landedCnt} task${landedCnt!==1?'s':''}</span>
+        </div>
+        <div class="tv-node-section"><div class="tv-task-list">
+          ${landedTasks.map(taskRow).join('')}
+        </div></div>
+      </div>`;
+    }
+    inner.innerHTML = html;
+    return;
+  }
+
+  // ── INBOX: backward-compat for non-amSource unassigned tasks ──────────────
+  const inboxTasks = Object.values(DB.tasks).filter(t => !t.amSource && !(t.nodeIds&&t.nodeIds.length));
+  const visibleInbox = inboxTasks.filter(taskVisible);
+  if(visibleInbox.length){
+    html += `<div class="tv-group">
+      <div class="tv-group-hd" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>⊕ Inbox &nbsp;<span class="tv-group-label" style="color:var(--amber);">unassigned — set type &amp; assign to node</span></span>
+        <span style="font-size:10px;color:var(--dim);">${visibleInbox.length} task${visibleInbox.length!==1?'s':''}</span>
+      </div>
+      <div class="tv-node-section"><div class="tv-task-list">
+        ${visibleInbox.map(t=>`<div class="tv-task-item${t.status==='done'?' done':''}">
+          <input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTaskDone('${t.id}',this.checked)">
+          <span class="tbadge" style="font-size:9px;padding:1px 6px;flex-shrink:0;cursor:pointer;${t.type?'background:rgba(255,255,255,0.08);color:var(--text);':'background:rgba(255,170,68,0.15);color:var(--amber);border:1px solid rgba(255,170,68,0.3);'}" onclick="_mvSetType('${t.id}')" title="Click to set task type">${t.type?fmtType(t.type):'+ type'}</span>
+          <div style="flex:1;min-width:0;">
+            <div class="tv-task-name">${esc(t.name||'Untitled')}${_labelsHtml(t)}</div>
+            ${t.description?`<div class="tv-task-desc">${esc(t.description)}</div>`:''}
+          </div>
+          <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 9px;flex-shrink:0;margin-right:4px;white-space:nowrap;" onclick="_mvAssignNode('${t.id}')">→ Node</button>
+          <button class="icon-btn" onclick="deleteTask('${t.id}');renderTasksView()">✕</button>
+        </div>`).join('')}
+      </div></div>
+    </div>`;
+  }
+
+  // ── PATH GROUPS ───────────────────────────────────────────────────────────
+  const groups = _buildTaskPathGroups();
   let anyGroup = false;
   groups.forEach(group => {
-    // check if any visible tasks in this group
     const hasVisible = group.nodes.some(({id}) => {
       const n = DB.nodes[id];
       return (n.taskIds||[]).some(tid => DB.tasks[tid] && taskVisible(DB.tasks[tid]));
@@ -1900,7 +1992,7 @@ function renderTasksView(){
             <input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTaskDone('${t.id}',this.checked)">
             <span class="tbadge t-${t.type}" style="font-size:9px;padding:1px 5px;flex-shrink:0;">${fmtType(t.type)}</span>
             <div>
-              <div class="tv-task-name">${esc(t.name||'Untitled')}</div>
+              <div class="tv-task-name">${esc(t.name||'Untitled')}${_labelsHtml(t)}</div>
               ${t.description?`<div class="tv-task-desc">${esc(t.description)}</div>`:''}
             </div>
           </div>`).join('')}
@@ -1911,7 +2003,7 @@ function renderTasksView(){
     html += `</div>`;
   });
 
-  if(!anyGroup){
+  if(!anyGroup && !visibleInbox.length){
     html += `<div style="text-align:center;padding:60px 20px;color:var(--dim);">
       No tasks${f!=='all'?' matching this filter':' yet'}.<br>
       <span style="font-size:12px;">Add tasks by selecting a node and opening the Tasks tab.</span>
@@ -1922,14 +2014,340 @@ function renderTasksView(){
 }
 
 function toggleTaskDone(id, done){
-  if(!DB.tasks[id]) return;
-  DB.tasks[id].status = done ? 'done' : 'todo';
+  const t=DB.tasks[id]; if(!t) return;
+  t.status = done ? 'done' : 'todo';
+  if(done && t.amSource && t.marvinId) _mvAddTagToAmTask(t.marvinId,'Completed');
   save(); renderTasksView();
 }
 
 function _setTasksFilter(f){
   _tasksFilter = f;
   renderTasksView();
+}
+
+// ── AMAZING MARVIN ─────────────────────────────
+async function _mvApi(path, method='GET', body=null){
+  const tok = localStorage.getItem('rf_marvin_token');
+  if(!tok) return null;
+  const opts = {method, headers:{'X-Full-Access-Token':tok}};
+  if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  const res = await fetch(`https://serv.amazingmarvin.com/api${path}`, opts);
+  if(!res.ok) throw new Error(`Marvin API ${res.status}`);
+  return res.json();
+}
+
+function showMarvinModal(){
+  const tok = localStorage.getItem('rf_marvin_token');
+  const phdName = localStorage.getItem('rf_marvin_phd_name')||'PhD';
+  const rfCatId = localStorage.getItem('rf_marvin_rf_cat_id');
+  if(tok && rfCatId){
+    showModal(`<h3>⊕ Amazing Marvin</h3>
+      <p style="color:var(--dim);font-size:12px;margin-bottom:4px;">Connected — PhD folder: <strong>${esc(phdName)}</strong></p>
+      <p style="color:var(--dim);font-size:11px;margin-bottom:18px;line-height:1.6;">New RF tasks → AM "Research Forest" subfolder.<br>New AM tasks (PhD folder) → Just Landed tab.<br>Done/delete in either app adds a tag — no direct sync.</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-sm" style="flex:1;justify-content:center;" onclick="closeModal();marvinSync()">↻ Sync Now</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;" onclick="_mvReconfigure()">Reconfigure</button>
+      </div>
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button></div>`);
+  } else {
+    _mvReconfigure();
+  }
+}
+
+function _mvReconfigure(){
+  const savedTok = localStorage.getItem('rf_marvin_token')||'';
+  showModal(`<h3>⊕ Connect Amazing Marvin</h3>
+    <p style="color:var(--dim);font-size:12px;margin-bottom:14px;line-height:1.6;">
+      Get your Full Access Token in AM:<br>Settings → Integrations → API → <strong>Full Access Token</strong>
+    </p>
+    <div class="fg">
+      <label>Full Access Token</label>
+      <input id="mv-tok" type="password" placeholder="Full-access token…" value="${esc(savedTok)}">
+    </div>
+    <div id="mv-cats-wrap" style="display:none;" class="fg">
+      <label>PhD Folder</label>
+      <select id="mv-cat-sel" style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;">
+        <option value="">Select your PhD folder…</option>
+      </select>
+    </div>
+    <div id="mv-msg" style="min-height:18px;font-size:12px;color:var(--red);margin-top:4px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-ghost btn-sm" onclick="_mvLoadCats()">Load Folders</button>
+      <button class="btn btn-sm" id="mv-connect-btn" style="display:none;" onclick="_mvConnect()">Connect</button>
+    </div>`);
+}
+
+async function _mvLoadCats(){
+  const tok = document.getElementById('mv-tok')?.value.trim();
+  const msg = document.getElementById('mv-msg');
+  if(!tok){msg.textContent='Enter your Full Access Token first.';return;}
+  msg.textContent='Loading folders…';msg.style.color='var(--dim)';
+  try{
+    const res = await fetch('https://serv.amazingmarvin.com/api/categories',{
+      headers:{'X-Full-Access-Token':tok}
+    });
+    if(!res.ok) throw new Error(`API error ${res.status} — check your token.`);
+    const cats = await res.json();
+    const sel = document.getElementById('mv-cat-sel');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Select your PhD folder…</option>'
+      + cats.map(c=>`<option value="${c._id}">${esc(c.title)}</option>`).join('');
+    document.getElementById('mv-cats-wrap').style.display = '';
+    document.getElementById('mv-connect-btn').style.display = '';
+    msg.textContent = '';
+    localStorage.setItem('rf_marvin_token', tok);
+  }catch(e){
+    msg.textContent=e.message;msg.style.color='var(--red)';
+  }
+}
+
+async function _mvConnect(){
+  const tok = localStorage.getItem('rf_marvin_token') || document.getElementById('mv-tok')?.value.trim();
+  const sel = document.getElementById('mv-cat-sel');
+  const phdId = sel?.value;
+  const phdName = sel?.options[sel.selectedIndex]?.text || 'PhD';
+  const msg = document.getElementById('mv-msg');
+  if(!phdId){msg.textContent='Select your PhD folder.';return;}
+  msg.textContent='Setting up "Research Forest" subfolder…';msg.style.color='var(--dim)';
+  try{
+    const children = await (await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${phdId}`,{
+      headers:{'X-Full-Access-Token':tok}
+    })).json();
+    let rfCat = children.find(c=>c.db==='Categories'&&c.title==='Research Forest');
+    if(!rfCat){
+      const cr = await fetch('https://serv.amazingmarvin.com/api/addCategory',{
+        method:'POST',
+        headers:{'X-Full-Access-Token':tok,'Content-Type':'application/json'},
+        body:JSON.stringify({title:'Research Forest',parentId:phdId})
+      });
+      if(!cr.ok) throw new Error(`Could not create subfolder: ${cr.status}`);
+      rfCat = await cr.json();
+    }
+    localStorage.setItem('rf_marvin_phd_id', phdId);
+    localStorage.setItem('rf_marvin_phd_name', phdName);
+    localStorage.setItem('rf_marvin_rf_cat_id', rfCat._id);
+    showModal(`<h3>⊕ Connected!</h3>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:4px;">PhD folder: <strong>${esc(phdName)}</strong></p>
+      <p style="color:var(--dim);font-size:12px;margin-bottom:18px;">"Research Forest" subfolder is ready. All new RF tasks will be sent there.</p>
+      <div class="modal-footer"><button class="btn btn-sm" onclick="closeModal()">Done</button></div>`);
+  }catch(e){
+    msg.textContent=e.message;msg.style.color='var(--red)';
+  }
+}
+
+async function _mvFetchAllTasks(tok, parentId, skipCatId, depth=0){
+  if(depth>3) return [];
+  const res = await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${parentId}`,{
+    headers:{'X-Full-Access-Token':tok}
+  });
+  if(!res.ok) throw new Error(`Marvin API ${res.status}`);
+  const children = await res.json();
+  let tasks = [];
+  for(const child of children){
+    if(child.db==='Tasks'){
+      tasks.push(child);
+    } else if(child.db==='Categories' && child._id!==skipCatId){
+      const sub = await _mvFetchAllTasks(tok, child._id, skipCatId, depth+1);
+      tasks = tasks.concat(sub);
+    }
+  }
+  return tasks;
+}
+
+async function _mvFetchDirectChildTasks(tok, parentId){
+  try{
+    const res = await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${parentId}`,{
+      headers:{'X-Full-Access-Token':tok}
+    });
+    if(!res.ok) return [];
+    const ch = await res.json();
+    return ch.filter(c => c.db==='Tasks');
+  }catch(e){ return []; }
+}
+
+async function _mvEnsureLabel(name, tok){
+  if(!tok) tok = localStorage.getItem('rf_marvin_token');
+  if(!tok) return null;
+  const cacheKey = 'rf_mv_lbl_' + name;
+  const cached = localStorage.getItem(cacheKey);
+  if(cached) return cached;
+  try{
+    const res = await fetch('https://serv.amazingmarvin.com/api/labels',{
+      headers:{'X-Full-Access-Token':tok}
+    });
+    if(res.ok){
+      const labels = await res.json();
+      const found = Array.isArray(labels) && labels.find(l => l.title===name);
+      if(found){ localStorage.setItem(cacheKey, found._id); return found._id; }
+    }
+    const cr = await fetch('https://serv.amazingmarvin.com/api/addLabel',{
+      method:'POST',
+      headers:{'X-Full-Access-Token':tok,'Content-Type':'application/json'},
+      body: JSON.stringify({title: name})
+    });
+    if(cr.ok){ const lbl = await cr.json(); if(lbl._id){ localStorage.setItem(cacheKey, lbl._id); return lbl._id; } }
+  }catch(e){ console.warn('AM label error:',e.message); }
+  return null;
+}
+
+async function _mvAddTagToAmTask(marvinId, tagName){
+  const tok = localStorage.getItem('rf_marvin_token');
+  if(!tok||!marvinId) return;
+  try{
+    const labelId = await _mvEnsureLabel(tagName, tok);
+    if(!labelId) return;
+    const tr = await fetch(`https://serv.amazingmarvin.com/api/doc?_id=${marvinId}`,{
+      headers:{'X-Full-Access-Token':tok}
+    });
+    if(!tr.ok) return;
+    const task = await tr.json();
+    const current = Array.isArray(task.labelIds) ? task.labelIds : [];
+    if(current.includes(labelId)) return;
+    await fetch('https://serv.amazingmarvin.com/api/updateTask',{
+      method:'POST',
+      headers:{'X-Full-Access-Token':tok,'Content-Type':'application/json'},
+      body: JSON.stringify({_id: marvinId, updates:{labelIds:[...current, labelId]}})
+    });
+  }catch(e){ console.warn('AM tag failed:',e.message); }
+}
+
+async function marvinSync(){
+  const tok = localStorage.getItem('rf_marvin_token');
+  const phdId = localStorage.getItem('rf_marvin_phd_id');
+  const rfCatId = localStorage.getItem('rf_marvin_rf_cat_id');
+  if(!tok||!phdId){showMarvinModal();return;}
+  const btn = document.getElementById('marvin-btn');
+  if(btn) btn.textContent='↺ Syncing…';
+  try{
+    // AM PhD folder (excluding RF subfolder) → Just Landed candidates
+    const amTasks = await _mvFetchAllTasks(tok, phdId, rfCatId);
+    // AM RF subfolder → check RF-originated tasks for done/deletion
+    const rfSubTasks = rfCatId ? await _mvFetchDirectChildTasks(tok, rfCatId) : [];
+    const rfSubById = {};
+    rfSubTasks.forEach(t => { rfSubById[t._id] = t; });
+
+    const rfByMarvinId = {};
+    Object.values(DB.tasks).forEach(t=>{ if(t.marvinId) rfByMarvinId[t.marvinId]=t; });
+
+    let imported=0, updated=0;
+
+    // ── AM→RF: new tasks from PhD folder go to Just Landed ──────────────────
+    amTasks.forEach(amTask=>{
+      if(amTask.db!=='Tasks') return;
+      const existing = rfByMarvinId[amTask._id];
+      if(existing){
+        // Migrate old tasks that lack amSource flag (they were in Inbox before)
+        if(!existing.amSource && !(existing.nodeIds&&existing.nodeIds.length)){
+          existing.amSource=true; existing.labels=existing.labels||[]; updated++;
+        }
+        // Do NOT sync done status from AM for amSource tasks — RF manages its own lifecycle
+      } else {
+        const id=uid();
+        DB.tasks[id]={id, name:amTask.title||'Untitled', type:null,
+          status:'todo', description:amTask.note||'',
+          nodeIds:[], marvinId:amTask._id, amSource:true, labels:[]};
+        imported++;
+      }
+    });
+
+    // ── RF→AM: detect done/deletion in AM RF subfolder ──────────────────────
+    const amPhdIds = new Set(amTasks.map(t=>t._id));
+    Object.values(DB.tasks).forEach(t=>{
+      if(t.amSource||!t.marvinId) return;
+      t.labels = t.labels||[];
+      const amTask = rfSubById[t.marvinId];
+      if(!amTask && !amPhdIds.has(t.marvinId)){
+        if(!t.labels.includes('Deleted')){ t.labels.push('Deleted'); updated++; }
+      } else if(amTask){
+        const amDone = !!(amTask.done||amTask.completedAt);
+        if(amDone && !t.labels.includes('Completed') && !t.labels.includes('Deleted')){
+          t.labels.push('Completed'); updated++;
+        }
+      }
+    });
+
+    save(); render();
+    const landedCnt = Object.values(DB.tasks).filter(t=>t.amSource&&!(t.nodeIds&&t.nodeIds.length)).length;
+    showModal(`<h3>↻ Marvin Sync</h3>
+      ${imported?`<p style="color:var(--dim);font-size:13px;margin-bottom:6px;">${imported} new task${imported!==1?'s':''} added to Just Landed.</p>`:''}
+      ${updated?`<p style="color:var(--dim);font-size:12px;">${updated} task${updated!==1?' statuses':' status'} updated.</p>`:''}
+      ${!imported&&!updated?`<p style="color:var(--dim);font-size:13px;">Nothing new — all tasks up to date.</p>`:''}
+      ${landedCnt?`<p style="font-size:11px;color:rgba(200,216,255,0.35);margin-top:8px;">Go to Tasks → Just Landed to process incoming tasks.</p>`:''}
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Done</button></div>`);
+  }catch(e){
+    showModal(`<h3>Sync Failed</h3><p style="color:var(--red);font-size:13px;">${esc(e.message)}</p>
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">OK</button></div>`);
+  }finally{
+    if(btn) btn.textContent='⊕ Marvin';
+  }
+}
+
+async function marvinPushNewTask(rfTaskId){
+  const tok = localStorage.getItem('rf_marvin_token');
+  const catId = localStorage.getItem('rf_marvin_rf_cat_id');
+  if(!tok||!catId) return;
+  const t = DB.tasks[rfTaskId];
+  if(!t||t.marvinId) return;
+  try{
+    const result = await _mvApi('/addTask','POST',{title:t.name,parentId:catId,note:t.description||''});
+    if(result&&result._id){DB.tasks[rfTaskId].marvinId=result._id;save();}
+  }catch(e){ console.warn('Marvin push failed:',e.message); }
+}
+
+
+function _mvSetType(taskId){
+  const t=DB.tasks[taskId];if(!t)return;
+  const types=['theory','literature','cfd','cfd-post','coding','analysis','writing','thinking','other'];
+  showModal(`<h3>Set Task Type</h3>
+    <div class="fg"><select id="mvt">
+      <option value="">Select type…</option>
+      ${types.map(tp=>`<option value="${tp}"${t.type===tp?' selected':''}>${fmtType(tp)}</option>`).join('')}
+    </select></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_mvSaveType('${taskId}')">Save</button>
+    </div>`);
+}
+function _mvSaveType(taskId){
+  const tp=document.getElementById('mvt')?.value;
+  if(tp){DB.tasks[taskId].type=tp;save();}
+  closeModal();renderTasksView();
+}
+
+function _mvAssignNode(taskId){
+  const t=DB.tasks[taskId];if(!t)return;
+  const nodes=Object.values(DB.nodes);
+  if(!nodes.length){
+    showModal(`<h3>No nodes yet</h3>
+      <p style="color:var(--dim);font-size:13px;">Create a research node first, then assign this task.</p>
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">OK</button></div>`);
+    return;
+  }
+  const cats={};
+  nodes.forEach(n=>{const c=(n.category||'').trim()||(n.category||'Uncategorised');(cats[c]=cats[c]||[]).push(n);});
+  const opts = Object.entries(cats).sort(([a],[b])=>a.localeCompare(b))
+    .flatMap(([,ns])=>ns.map(n=>`<option value="${n.id}">${esc(n.name)}</option>`)).join('');
+  showModal(`<h3>Assign to Node</h3>
+    <p style="color:var(--dim);font-size:12px;margin-bottom:12px;">Which research node does this task belong to?</p>
+    <div class="fg">
+      <select id="mvn" style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;">
+        <option value="">Select node…</option>${opts}
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_mvSaveNode('${taskId}')">Assign</button>
+    </div>`);
+}
+function _mvSaveNode(taskId){
+  const nodeId=document.getElementById('mvn')?.value;
+  if(!nodeId)return;
+  const t=DB.tasks[taskId];if(!t)return;
+  t.nodeIds=[nodeId];
+  const n=DB.nodes[nodeId];
+  if(n){n.taskIds=n.taskIds||[];if(!n.taskIds.includes(taskId))n.taskIds.push(taskId);}
+  save();closeModal();renderTasksView();
 }
 
 // ── THESIS VIEW ────────────────────────────────
