@@ -615,7 +615,7 @@ function toggleLoginNewDevice(){
 // ── STORAGE ────────────────────────────────────
 function load(){
   try{const s=localStorage.getItem('rf_data');if(s)DB=JSON.parse(s);}catch(e){}
-  DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};
+  DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};DB.marvinSeen=DB.marvinSeen||[];
 }
 let _syncDirty=false;
 function _updateSyncBtn(){
@@ -916,7 +916,11 @@ function toggleTask(id){
 }
 function deleteTask(id){
   const t=DB.tasks[id];
-  if(t?.amSource && t.marvinId) _mvAddTagToAmTask(t.marvinId,'Removed');
+  if(t?.amSource && t.marvinId){
+    _mvAddTagToAmTask(t.marvinId,'Removed');
+    DB.marvinSeen=DB.marvinSeen||[];
+    if(!DB.marvinSeen.includes(t.marvinId)) DB.marvinSeen.push(t.marvinId);
+  }
   (t?.nodeIds||[]).forEach(nid=>{
     if(DB.nodes[nid])DB.nodes[nid].taskIds=(DB.nodes[nid].taskIds||[]).filter(x=>x!==id);
   });
@@ -1913,9 +1917,9 @@ function renderTasksView(){
       </div>`;
 
       html += `<div class="tv-group">
-        <div class="tv-group-hd" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="tv-group-hd" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <span>⊕ Just Landed &nbsp;<span class="tv-group-label" style="color:var(--amber);">from Amazing Marvin — assign to node or process</span></span>
-          <span style="font-size:10px;color:var(--dim);">${landedCnt} task${landedCnt!==1?'s':''}</span>
+          <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 9px;flex-shrink:0;white-space:nowrap;" onclick="_mvDismissAllLanded()" title="Mark all as seen — they won't re-appear on future syncs">Dismiss all</button>
         </div>
         <div class="tv-node-section"><div class="tv-task-list">
           ${landedTasks.map(taskRow).join('')}
@@ -2235,6 +2239,15 @@ async function _mvShowFolderFilter(){
   }
 }
 
+function _mvDismissAllLanded(){
+  DB.marvinSeen=DB.marvinSeen||[];
+  Object.values(DB.tasks).filter(t=>t.amSource&&!(t.nodeIds&&t.nodeIds.length)).forEach(t=>{
+    if(t.marvinId&&!DB.marvinSeen.includes(t.marvinId)) DB.marvinSeen.push(t.marvinId);
+    delete DB.tasks[t.id];
+  });
+  save();renderTasksView();
+}
+
 function _mvSaveFolderFilter(){
   const excluded = _mvFilterCatIds.filter(id => {
     const el = document.getElementById('mvf-'+id);
@@ -2324,8 +2337,10 @@ async function marvinSync(){
     let imported=0, updated=0;
 
     // ── AM→RF: new tasks from PhD folder go to Just Landed ──────────────────
+    const seen = new Set(DB.marvinSeen||[]);
     amTasks.forEach(amTask=>{
       if(amTask.db!=='Tasks') return;
+      if(seen.has(amTask._id)) return; // already dismissed/deleted in RF
       const existing = rfByMarvinId[amTask._id];
       if(existing){
         // Migrate old tasks that lack amSource flag (they were in Inbox before)
