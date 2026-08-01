@@ -2044,11 +2044,14 @@ function showMarvinModal(){
     showModal(`<h3>⊕ Amazing Marvin</h3>
       <p style="color:var(--dim);font-size:12px;margin-bottom:4px;">Connected — PhD folder: <strong>${esc(phdName)}</strong></p>
       <p style="color:var(--dim);font-size:11px;margin-bottom:18px;line-height:1.6;">New RF tasks → AM "Research Forest" subfolder.<br>New AM tasks (PhD folder) → Just Landed tab.<br>Done/delete in either app adds a tag — no direct sync.</p>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
         <button class="btn btn-sm" style="flex:1;justify-content:center;" onclick="closeModal();marvinSync()">↻ Sync Now</button>
-        <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;" onclick="_mvReconfigure()">Reconfigure</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;" onclick="_mvShowFolderFilter()">⊟ Filter Folders</button>
       </div>
-      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button></div>`);
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="_mvReconfigure()">Reconfigure</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
+      </div>`);
   } else {
     _mvReconfigure();
   }
@@ -2136,8 +2139,9 @@ async function _mvConnect(){
   }
 }
 
-async function _mvFetchAllTasks(tok, parentId, skipCatId, depth=0){
+async function _mvFetchAllTasks(tok, parentId, skipCatIds, depth=0){
   if(depth>3) return [];
+  const skip = skipCatIds instanceof Set ? skipCatIds : new Set([skipCatIds].filter(Boolean));
   const res = await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${parentId}`,{
     headers:{'X-Full-Access-Token':tok}
   });
@@ -2147,12 +2151,62 @@ async function _mvFetchAllTasks(tok, parentId, skipCatId, depth=0){
   for(const child of children){
     if(child.db==='Tasks'){
       tasks.push(child);
-    } else if(child.db==='Categories' && child._id!==skipCatId){
-      const sub = await _mvFetchAllTasks(tok, child._id, skipCatId, depth+1);
+    } else if(child.db==='Categories' && !skip.has(child._id)){
+      const sub = await _mvFetchAllTasks(tok, child._id, skip, depth+1);
       tasks = tasks.concat(sub);
     }
   }
   return tasks;
+}
+
+let _mvFilterCatIds = [];
+
+async function _mvShowFolderFilter(){
+  const tok = localStorage.getItem('rf_marvin_token');
+  const phdId = localStorage.getItem('rf_marvin_phd_id');
+  const rfCatId = localStorage.getItem('rf_marvin_rf_cat_id');
+  if(!tok||!phdId) return;
+  showModal(`<h3>⊟ Filter Folders</h3><p style="color:var(--dim);font-size:12px;">Loading subfolders…</p>`);
+  try{
+    const res = await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${phdId}`,{
+      headers:{'X-Full-Access-Token':tok}
+    });
+    if(!res.ok) throw new Error(`Marvin API ${res.status}`);
+    const children = await res.json();
+    const cats = children.filter(c => c.db==='Categories' && c._id!==rfCatId);
+    _mvFilterCatIds = cats.map(c => c._id);
+    const excluded = new Set(JSON.parse(localStorage.getItem('rf_marvin_exclude_cats')||'[]'));
+    showModal(`<h3>⊟ Filter Folders</h3>
+      <p style="color:var(--dim);font-size:12px;margin-bottom:14px;line-height:1.6;">
+        Checked folders will sync into Just Landed.<br>
+        Uncheck any folder you want to exclude (e.g. admin tasks).
+      </p>
+      ${cats.length
+        ? cats.map(c=>`<label style="display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--border);cursor:pointer;">
+            <input type="checkbox" id="mvf-${c._id}" ${!excluded.has(c._id)?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
+            <span style="font-size:13px;">${esc(c.title)}</span>
+          </label>`).join('')
+        : `<p style="color:var(--dim);font-size:13px;">No subfolders found in PhD folder.</p>`
+      }
+      <p style="font-size:11px;color:rgba(200,216,255,0.3);margin-top:10px;">Tasks directly in the PhD folder (not in any subfolder) always sync.</p>
+      <div class="modal-footer" style="margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" onclick="showMarvinModal()">Back</button>
+        <button class="btn btn-sm" onclick="_mvSaveFolderFilter()">Save</button>
+      </div>`);
+  }catch(e){
+    showModal(`<h3>⊟ Filter Folders</h3>
+      <p style="color:var(--red);font-size:13px;">${esc(e.message)}</p>
+      <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="showMarvinModal()">Back</button></div>`);
+  }
+}
+
+function _mvSaveFolderFilter(){
+  const excluded = _mvFilterCatIds.filter(id => {
+    const el = document.getElementById('mvf-'+id);
+    return el && !el.checked;
+  });
+  localStorage.setItem('rf_marvin_exclude_cats', JSON.stringify(excluded));
+  showMarvinModal();
 }
 
 async function _mvFetchDirectChildTasks(tok, parentId){
@@ -2220,8 +2274,10 @@ async function marvinSync(){
   const btn = document.getElementById('marvin-btn');
   if(btn) btn.textContent='↺ Syncing…';
   try{
-    // AM PhD folder (excluding RF subfolder) → Just Landed candidates
-    const amTasks = await _mvFetchAllTasks(tok, phdId, rfCatId);
+    // AM PhD folder (excluding RF subfolder + user-excluded folders) → Just Landed candidates
+    const excludedCats = JSON.parse(localStorage.getItem('rf_marvin_exclude_cats')||'[]');
+    const skipSet = new Set([rfCatId, ...excludedCats].filter(Boolean));
+    const amTasks = await _mvFetchAllTasks(tok, phdId, skipSet);
     // AM RF subfolder → check RF-originated tasks for done/deletion
     const rfSubTasks = rfCatId ? await _mvFetchDirectChildTasks(tok, rfCatId) : [];
     const rfSubById = {};
