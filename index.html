@@ -313,8 +313,12 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   /* Main fills full width */
   #main{flex:1;}
 
-  /* Panel full-width on small screens */
-  #panel{width:min(340px,100%);}
+  /* Panel full-width on small screens — hidden until a node is selected */
+  #panel{width:min(340px,100%);display:none;transform:translateX(0);transition:none;}
+  #panel.on{display:flex;animation:mob-panel-in .28s cubic-bezier(.4,0,.2,1);}
+}
+@keyframes mob-panel-in{from{transform:translateX(100%);}to{transform:translateX(0);}}
+@media(max-width:720px){
 
   /* Views don't hide behind tab bar */
   .view{bottom:56px;}
@@ -580,6 +584,7 @@ async function doLogin(){
 
 function doLogout(){
   selNode=null;frontNode=null;
+  document.getElementById('panel').classList.remove('on');
   document.getElementById('app').classList.remove('on');
   document.getElementById('login').style.display='flex';
   document.getElementById('pw').value='';
@@ -1022,9 +1027,15 @@ function selectNode(id){
 }
 
 // ── PANEL ──────────────────────────────────────
-function openPanel(){document.getElementById('panel').classList.add('on');}
+function openPanel(){
+  const p=document.getElementById('panel');
+  p.style.display='';
+  p.classList.add('on');
+}
 function closePanel(){
-  document.getElementById('panel').classList.remove('on');
+  const p=document.getElementById('panel');
+  p.style.display='';
+  p.classList.remove('on');
   selNode=null;renderSidebar();
   if(curView==='top')renderTopView();
 }
