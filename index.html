@@ -2114,19 +2114,30 @@ async function _mvConnect(){
   if(!phdId){msg.textContent='Select your PhD folder.';return;}
   msg.textContent='Setting up "Research Forest" subfolder…';msg.style.color='var(--dim)';
   try{
-    const children = await (await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${phdId}`,{
-      headers:{'X-Full-Access-Token':tok}
-    })).json();
-    let rfCat = children.find(c=>c.db==='Categories'&&c.title==='Research Forest');
+    // Step 1: Try to find an existing "Research Forest" subfolder (may fail due to CORS on some setups)
+    let rfCat = null;
+    try{
+      const childRes = await fetch(`https://serv.amazingmarvin.com/api/children?parentId=${phdId}`,{
+        headers:{'X-Full-Access-Token':tok}
+      });
+      if(childRes.ok){
+        const children = await childRes.json();
+        rfCat = children.find(c=>c.db==='Categories'&&c.title==='Research Forest');
+      }
+    }catch(e){ /* network/CORS — will attempt to create below */ }
+
+    // Step 2: Create subfolder if not found
     if(!rfCat){
       const cr = await fetch('https://serv.amazingmarvin.com/api/addCategory',{
         method:'POST',
         headers:{'X-Full-Access-Token':tok,'Content-Type':'application/json'},
         body:JSON.stringify({title:'Research Forest',parentId:phdId})
       });
-      if(!cr.ok) throw new Error(`Could not create subfolder: ${cr.status}`);
+      if(!cr.ok) throw new Error(`Could not create subfolder (${cr.status}) — check your token has Full Access.`);
       rfCat = await cr.json();
     }
+
+    if(!rfCat?._id) throw new Error('No subfolder ID returned from Amazing Marvin.');
     localStorage.setItem('rf_marvin_phd_id', phdId);
     localStorage.setItem('rf_marvin_phd_name', phdName);
     localStorage.setItem('rf_marvin_rf_cat_id', rfCat._id);
