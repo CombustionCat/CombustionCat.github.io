@@ -1180,7 +1180,8 @@ function renderPanel(){
           <div class="para-meta">
             <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
             <div style="display:flex;gap:3px;">
-              <button class="icon-btn" title="Edit paragraph" onclick="_inlineEdit('${n.id}','${p.id}')">✎</button>
+              <button class="icon-btn" title="Edit paragraph (popup)" onclick="_editPara('${n.id}','${p.id}')">✎</button>
+              <button class="icon-btn" title="Edit inline" onclick="_inlineEdit('${n.id}','${p.id}')" style="font-size:10px;">✏</button>
               <button class="icon-btn" title="Delete paragraph" onclick="deletePara('${n.id}','${p.id}')">✕</button>
             </div>
           </div>
@@ -1272,7 +1273,13 @@ function _editPara(nodeId,paraId){
     const t=DB.tasks[tid];
     if(t&&t.zoteroData&&!seen.has(t.zoteroData.key)){seen.add(t.zoteroData.key);_editRefTasks.push(t);}
   });
-  showModal(`<div style="flex-shrink:0;margin-bottom:10px;"><h3 style="margin:0;">Edit Paragraph</h3></div>
+  showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <h3 style="margin:0;">Edit Paragraph</h3>
+    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);">🔍
+      <input type="range" min="12" max="28" value="15" style="width:72px;accent-color:var(--accent2);"
+        oninput="document.getElementById('ep').style.fontSize=this.value+'px'">
+    </label>
+  </div>
     <div class="rte-wrap">
       ${_rteToolbarHtml('ep')}
       <div id="ep" class="rte-editor" contenteditable="true" data-placeholder="Paragraph content… type $$x^2$$ for math" oninput="_rteAutoEq(this)"></div>
@@ -1596,7 +1603,13 @@ function _rteExpand(){
   const curHtml=inline?inline.innerHTML:'';
   showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <h3 style="margin:0;">Paragraph</h3>
-      <span style="font-size:11px;color:var(--dim);">Type <code style="font-size:10px;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">$$x^2$$</code> for math · Mark to highlight</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:11px;color:var(--dim);">Type <code style="font-size:10px;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">$$x^2$$</code> · dbl-click eq to edit</span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);">🔍
+          <input type="range" min="12" max="28" value="15" style="width:72px;accent-color:var(--accent2);"
+            oninput="document.getElementById('ptext-popup').style.fontSize=this.value+'px'">
+        </label>
+      </div>
     </div>
     <div class="rte-wrap">
       ${_rteToolbarHtml('ptext-popup')}
@@ -1666,8 +1679,8 @@ function cancelConnect(){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){cancelConnect();closeModal();_cancelInlineEdit();}});
 
-// Click a rendered equation inside an active editor → expand back to $$latex$$ for editing
-document.addEventListener('click',e=>{
+// Double-click a rendered equation inside an active editor → expand back to $$latex$$ for editing
+document.addEventListener('dblclick',e=>{
   const span=e.target.closest('.rte-eq[data-latex]');
   if(!span)return;
   const editor=span.closest('[contenteditable="true"]');
