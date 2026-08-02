@@ -1270,13 +1270,12 @@ function _editPara(nodeId,paraId){
     const t=DB.tasks[tid];
     if(t&&t.zoteroData&&!seen.has(t.zoteroData.key)){seen.add(t.zoteroData.key);_editRefTasks.push(t);}
   });
-  showModal(`<h3>Edit Paragraph</h3>
-    <div class="fg"><label>Content</label>
-      <div class="rte-wrap">
-        ${_rteToolbarHtml('ep')}
-        <div id="ep" class="rte-editor" style="min-height:150px;" contenteditable="true" data-placeholder="Paragraph content..."></div>
-      </div></div>
-    <div style="margin-bottom:10px;">
+  showModal(`<div style="flex-shrink:0;margin-bottom:10px;"><h3 style="margin:0;">Edit Paragraph</h3></div>
+    <div class="rte-wrap">
+      ${_rteToolbarHtml('ep')}
+      <div id="ep" class="rte-editor" contenteditable="true" data-placeholder="Paragraph content..."></div>
+    </div>
+    <div style="flex-shrink:0;padding-top:10px;">
       <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
         <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;flex:1;">References</label>
         <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;" onclick="_toggleEditRefPicker()">Zotero ▾</button>
@@ -1287,10 +1286,10 @@ function _editPara(nodeId,paraId){
       <div id="edit-cref-form" style="display:none;"></div>
       <div id="edit-all-refs" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;"></div>
     </div>
-    <div class="modal-footer">
+    <div style="flex-shrink:0;display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border);">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
       <button class="btn btn-sm" onclick="_saveEditPara('${nodeId}','${paraId}')">Save</button>
-    </div>`);
+    </div>`,true);
   setTimeout(()=>{
     const el=document.getElementById('ep');
     if(el){if(p.format==='html')el.innerHTML=p.content;else el.textContent=p.content;}
