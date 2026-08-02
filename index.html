@@ -167,6 +167,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .modal.wide{width:min(900px,96vw);height:88vh;display:flex;flex-direction:column;padding:18px 22px;}
 .modal.wide .rte-wrap{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;}
 .modal.wide .rte-editor{flex:1;overflow-y:auto;min-height:0;font-size:15px;line-height:1.95;padding:24px 32px;}
+/* ── HIGHLIGHTS ── */
+mark.rte-hl{border-radius:2px;padding:0 1px;color:inherit;}
+mark.rte-hl-y{background:rgba(255,220,50,0.32);}
+mark.rte-hl-g{background:rgba(70,255,130,0.22);}
+mark.rte-hl-b{background:rgba(80,160,255,0.26);}
+mark.rte-hl-r{background:rgba(255,80,100,0.26);}
+.rte-hl-menu{position:fixed;background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:7px;display:flex;gap:5px;align-items:center;box-shadow:0 4px 18px rgba(0,0,0,.55);z-index:700;}
+.rte-hl-swatch{width:20px;height:20px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,0.12);transition:transform .1s;}
+.rte-hl-swatch:hover{transform:scale(1.2);}
+/* ── CUSTOM REFS ── */
+.ref-chip-sm.ref-link{color:#88ddff;border-color:rgba(80,180,255,0.28);background:rgba(80,180,255,0.08);}
+.ref-chip-sm.ref-file{color:#ffcc88;border-color:rgba(255,180,80,0.28);background:rgba(255,180,80,0.08);}
+a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
+.cref-form{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;}
+.cref-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 0;outline:none;margin-bottom:6px;font-family:inherit;}
+/* ── LIST STYLES IN EDITOR ── */
+.rte-editor ul,.rte-editor ol,.modal .rte-editor ul,.modal .rte-editor ol{padding-left:22px;margin:4px 0;}
+.rte-editor li{margin:2px 0;}
 
 /* ── CONNECT MODE BANNER ── */
 #connect-banner{position:fixed;top:54px;left:50%;transform:translateX(-50%);background:rgba(255,170,68,0.12);border:1px solid rgba(255,170,68,0.35);border-radius:8px;padding:7px 18px;font-size:12px;color:#ffcc88;z-index:200;display:none;pointer-events:none;}
@@ -979,19 +997,20 @@ function _saveTaskName(id){
 }
 
 // ── PARAGRAPHS ─────────────────────────────────
-function addPara(nodeId,content,refKeys,format){
+function addPara(nodeId,content,refKeys,format,customRefs){
   const n=DB.nodes[nodeId];if(!n)return;
   n.paragraphs=n.paragraphs||[];
-  n.paragraphs.push({id:uid(),content,refKeys:refKeys||[],format:format||'text',at:new Date().toISOString()});
+  n.paragraphs.push({id:uid(),content,refKeys:refKeys||[],customRefs:customRefs||[],format:format||'text',at:new Date().toISOString()});
   save();renderPanel();
 }
 function deletePara(nodeId,paraId){
   const n=DB.nodes[nodeId];if(!n)return;
   n.paragraphs=(n.paragraphs||[]).filter(p=>p.id!==paraId);save();renderPanel();
 }
-function updatePara(nodeId,paraId,content,refKeys,format){
+function updatePara(nodeId,paraId,content,refKeys,format,customRefs){
   const n=DB.nodes[nodeId];if(!n)return;
-  const p=n.paragraphs?.find(p=>p.id===paraId);if(p){p.content=content;p.refKeys=refKeys||[];if(format)p.format=format;}
+  const p=n.paragraphs?.find(p=>p.id===paraId);
+  if(p){p.content=content;p.refKeys=refKeys||[];p.customRefs=customRefs||[];if(format)p.format=format;}
   save();renderPanel();
 }
 
@@ -1077,7 +1096,7 @@ function closePanel(){
 
 function switchTab(t){
   curTab=t;
-  if(t==='notes')_pendingRefKeys=[];
+  if(t==='notes'){_pendingRefKeys=[];_pendingCustomRefs=[];}
   ['info','tasks','notes','paths'].forEach(x=>document.getElementById('pt-'+x).classList.toggle('on',x===t));
   renderPanel();
 }
@@ -1164,7 +1183,9 @@ function renderPanel(){
             </div>
           </div>
           <div class="para-text">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>
-          ${(p.refKeys||[]).length?`<div class="para-refs">${p.refKeys.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm">${esc(m?m.citation:k)}</span>`;}).join('')}</div>`:''}
+          ${(()=>{const zk=p.refKeys||[];const cr=p.customRefs||[];if(!zk.length&&!cr.length)return'';
+            return`<div class="para-refs">${zk.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm"><span class="zot-badge" style="margin-right:2px;font-size:8px;">Z</span>${esc(m?m.citation:k)}</span>`;}).join('')}${cr.map(r=>r.type==='link'?`<a class="ref-chip-sm ref-link" href="${esc(r.url||'')}" target="_blank" rel="noopener">🔗 ${esc(r.label||r.url)}</a>`:`<span class="ref-chip-sm ref-file">📎 ${esc(r.label)}</span>`).join('')}</div>`;
+          })()}
         </div>`).join(''):'<div class="empty">No notes yet.<br>Write paragraphs for your thesis here.</div>'}
       <div class="tadd" style="margin-top:10px;">
         <div class="tadd-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -1172,21 +1193,18 @@ function renderPanel(){
           <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
         </div>
         <div class="rte-wrap">
-          <div class="rte-toolbar" onmousedown="return false">
-            <button class="rte-btn" onclick="document.execCommand('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
-            <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
-            <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
-            <div class="rte-sep"></div>
-            <button class="rte-btn" onclick="_rteInsertEq('ptext')" title="Insert LaTeX equation">∑ Eq</button>
-          </div>
+          ${_rteToolbarHtml('ptext')}
           <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content..."></div>
         </div>
         <div style="margin-bottom:7px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
-            <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;">References</label>
-            <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10px;" onclick="_toggleRefPicker()">Add reference ▾</button>
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;">
+            <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;flex:1;">References</label>
+            <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;" onclick="_toggleRefPicker()">Zotero ▾</button>
+            <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;" onclick="_toggleCustomRefForm('link','custom-ref-form','selected-refs')">+ Link</button>
+            <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;" onclick="_toggleCustomRefForm('file','custom-ref-form','selected-refs')">+ File</button>
           </div>
           <div class="ref-picker" id="ref-picker" style="display:none;"></div>
+          <div id="custom-ref-form" style="display:none;"></div>
           <div id="selected-refs" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
         </div>
         <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_submitPara()">Add Paragraph</button>
@@ -1238,13 +1256,14 @@ function _submitTask(){
 function _submitPara(){
   const el=document.getElementById('ptext');
   if(!el||!el.textContent.trim())return;
-  addPara(selNode,el.innerHTML,[..._pendingRefKeys],'html');
+  addPara(selNode,el.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs]);
   el.innerHTML='';
-  _pendingRefKeys=[];
+  _pendingRefKeys=[];_pendingCustomRefs=[];
 }
 function _editPara(nodeId,paraId){
   const n=DB.nodes[nodeId];const p=n?.paragraphs?.find(x=>x.id===paraId);if(!p)return;
   _pendingRefKeys=[...(p.refKeys||[])];
+  _pendingCustomRefs=[...(p.customRefs||[])];
   // Collect unique Zotero references from all tasks on this node
   const seen=new Set();_editRefTasks=[];
   (n?.taskIds||[]).forEach(tid=>{
@@ -1254,20 +1273,19 @@ function _editPara(nodeId,paraId){
   showModal(`<h3>Edit Paragraph</h3>
     <div class="fg"><label>Content</label>
       <div class="rte-wrap">
-        <div class="rte-toolbar" onmousedown="return false">
-          <button class="rte-btn" onclick="document.execCommand('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
-          <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
-          <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
-          <div class="rte-sep"></div>
-          <button class="rte-btn" onclick="_rteInsertEq('ep')" title="Insert LaTeX equation">∑ Eq</button>
-        </div>
+        ${_rteToolbarHtml('ep')}
         <div id="ep" class="rte-editor" style="min-height:150px;" contenteditable="true" data-placeholder="Paragraph content..."></div>
       </div></div>
     <div style="margin-bottom:10px;">
-      <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:6px;">References</label>
-      ${_editRefTasks.length
-        ?`<div id="edit-ref-picker" style="display:flex;flex-wrap:wrap;gap:4px;"></div>`
-        :`<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">No Zotero references on this node.</div>`}
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+        <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;flex:1;">References</label>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;" onclick="_toggleEditRefPicker()">Zotero ▾</button>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;" onclick="_toggleCustomRefForm('link','edit-cref-form','edit-all-refs')">+ Link</button>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;" onclick="_toggleCustomRefForm('file','edit-cref-form','edit-all-refs')">+ File</button>
+      </div>
+      <div id="edit-ref-picker" style="display:none;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
+      <div id="edit-cref-form" style="display:none;"></div>
+      <div id="edit-all-refs" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
@@ -1277,7 +1295,15 @@ function _editPara(nodeId,paraId){
     const el=document.getElementById('ep');
     if(el){if(p.format==='html')el.innerHTML=p.content;else el.textContent=p.content;}
     if(_editRefTasks.length)_renderEditRefPicker();
+    _renderSelectedRefs('edit-all-refs');
   },0);
+}
+function _toggleEditRefPicker(){
+  const el=document.getElementById('edit-ref-picker');if(!el)return;
+  const open=el.style.display==='none'||el.style.display==='';
+  el.style.display=open?'flex':'none';
+  if(open&&_editRefTasks.length)_renderEditRefPicker();
+  else if(open&&!_editRefTasks.length)el.innerHTML='<span style="font-size:11px;color:var(--dim);">No Zotero refs on this node.</span>';
 }
 function _editToggleRef(idx){
   const t=_editRefTasks[idx];if(!t||!t.zoteroData)return;
@@ -1285,6 +1311,7 @@ function _editToggleRef(idx){
   const i=_pendingRefKeys.indexOf(key);
   if(i>-1)_pendingRefKeys.splice(i,1);else _pendingRefKeys.push(key);
   _renderEditRefPicker();
+  _renderSelectedRefs('edit-all-refs');
 }
 function _renderEditRefPicker(){
   const el=document.getElementById('edit-ref-picker');if(!el)return;
@@ -1298,8 +1325,112 @@ function _renderEditRefPicker(){
 function _saveEditPara(nodeId,paraId){
   const el=document.getElementById('ep');
   if(!el||!el.textContent.trim())return;
-  updatePara(nodeId,paraId,el.innerHTML,[..._pendingRefKeys],'html');
-  _pendingRefKeys=[];_editRefTasks=[];closeModal();
+  updatePara(nodeId,paraId,el.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs]);
+  _pendingRefKeys=[];_pendingCustomRefs=[];_editRefTasks=[];closeModal();
+}
+
+// ── TOOLBAR FACTORY ────────────────────────────
+function _rteToolbarHtml(id){
+  return`<div class="rte-toolbar" onmousedown="return false">
+    <button class="rte-btn" onclick="document.execCommand('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+    <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+    <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+    <div class="rte-sep"></div>
+    <button class="rte-btn" onclick="document.execCommand('insertUnorderedList')" title="Bullet list">• List</button>
+    <button class="rte-btn" onclick="document.execCommand('insertOrderedList')" title="Numbered list">1. List</button>
+    <button class="rte-btn" onclick="document.execCommand('indent')" title="Indent">⇥</button>
+    <button class="rte-btn" onclick="document.execCommand('outdent')" title="Outdent">⇤</button>
+    <div class="rte-sep"></div>
+    <button class="rte-btn" onclick="_toggleHighlightMenu('${id}',this)" title="Highlight selected text"><span style="display:inline-block;width:9px;height:9px;background:#ffd700;border-radius:2px;vertical-align:middle;margin-right:2px;"></span>Mark</button>
+    <div class="rte-sep"></div>
+    <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert inline equation (LaTeX)">∑ Eq</button>
+  </div>`;
+}
+
+// ── CUSTOM REFERENCE FORMS ─────────────────────
+function _toggleCustomRefForm(type,formId,refsId){
+  const form=document.getElementById(formId);if(!form)return;
+  if(form.style.display==='block'&&form.dataset.ctype===type){form.style.display='none';return;}
+  form.dataset.ctype=type;form.style.display='block';
+  if(type==='link'){
+    form.innerHTML=`<div class="cref-form">
+      <input id="cref-url" class="cref-input" placeholder="URL (https://…)" autocomplete="off">
+      <input id="cref-label" class="cref-input" placeholder="Label (optional — defaults to URL)">
+      <button class="btn btn-sm" style="padding:3px 12px;font-size:11px;" onclick="_addCustomRef('link','${formId}','${refsId}')">Add Link</button>
+    </div>`;
+    setTimeout(()=>document.getElementById('cref-url')?.focus(),0);
+  }else{
+    form.innerHTML=`<div class="cref-form">
+      <input id="cref-label" class="cref-input" placeholder="File name or label">
+      <input id="cref-path" class="cref-input" placeholder="Path or note (optional)">
+      <button class="btn btn-sm" style="padding:3px 12px;font-size:11px;" onclick="_addCustomRef('file','${formId}','${refsId}')">Add File Ref</button>
+    </div>`;
+    setTimeout(()=>document.getElementById('cref-label')?.focus(),0);
+  }
+}
+function _addCustomRef(type,formId,refsId){
+  const url=type==='link'?document.getElementById('cref-url')?.value.trim():'';
+  const label=document.getElementById('cref-label')?.value.trim()||url;
+  const path=type==='file'?document.getElementById('cref-path')?.value.trim():'';
+  if(type==='link'&&!url)return;
+  if(type==='file'&&!label)return;
+  const ref={id:uid(),type,label,...(url&&{url}),...(path&&{path})};
+  _pendingCustomRefs.push(ref);
+  const form=document.getElementById(formId);if(form)form.style.display='none';
+  _renderSelectedRefs(refsId);
+}
+function _removeCustomRef(refId,refsId){
+  _pendingCustomRefs=_pendingCustomRefs.filter(r=>r.id!==refId);
+  _renderSelectedRefs(refsId||'selected-refs');
+}
+
+// ── HIGHLIGHT ──────────────────────────────────
+let _hlSavedRange=null;
+function _toggleHighlightMenu(editorId,btn){
+  const sel=window.getSelection();
+  _hlSavedRange=(sel&&sel.rangeCount>0&&!sel.isCollapsed)?sel.getRangeAt(0).cloneRange():null;
+  document.querySelectorAll('.rte-hl-menu').forEach(m=>m.remove());
+  const swatches=[{c:'y',bg:'rgba(255,220,50,0.55)',label:'Yellow'},{c:'g',bg:'rgba(70,255,130,0.45)',label:'Green'},{c:'b',bg:'rgba(80,160,255,0.5)',label:'Blue'},{c:'r',bg:'rgba(255,80,100,0.5)',label:'Red'}];
+  const menu=document.createElement('div');
+  menu.className='rte-hl-menu';
+  const r=btn.getBoundingClientRect();
+  menu.style.left=r.left+'px';menu.style.top=(r.bottom+5)+'px';
+  swatches.forEach(s=>{
+    const sw=document.createElement('button');
+    sw.className='rte-hl-swatch';sw.title=s.label;sw.style.background=s.bg;
+    sw.onmousedown=e=>e.preventDefault();
+    sw.onclick=e=>{e.stopPropagation();_rteHighlight(editorId,s.c);menu.remove();};
+    menu.appendChild(sw);
+  });
+  const clr=document.createElement('button');
+  clr.className='rte-hl-swatch';clr.title='Remove highlight';clr.textContent='✕';
+  clr.style.cssText='background:rgba(255,255,255,0.06);color:var(--dim);font-size:11px;';
+  clr.onmousedown=e=>e.preventDefault();
+  clr.onclick=e=>{e.stopPropagation();_rteRemoveHighlight(editorId);menu.remove();};
+  menu.appendChild(clr);
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',function close(e){if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',close);}},),0);
+}
+function _rteHighlight(editorId,colorCls){
+  const editor=document.getElementById(editorId);if(!editor)return;
+  let range=_hlSavedRange;
+  if(range){const s=window.getSelection();s.removeAllRanges();s.addRange(range);}
+  else{const s=window.getSelection();if(!s||s.rangeCount===0||s.isCollapsed)return;range=s.getRangeAt(0);}
+  const mark=document.createElement('mark');mark.className='rte-hl rte-hl-'+colorCls;
+  try{range.surroundContents(mark);}
+  catch(e){const frag=range.extractContents();mark.appendChild(frag);range.insertNode(mark);}
+  window.getSelection().removeAllRanges();_hlSavedRange=null;editor.focus();
+}
+function _rteRemoveHighlight(editorId){
+  const editor=document.getElementById(editorId);if(!editor)return;
+  let range=_hlSavedRange;
+  if(!range){const s=window.getSelection();if(!s||s.rangeCount===0)return;range=s.getRangeAt(0);}
+  const ancestor=range.commonAncestorContainer;
+  const root=ancestor.nodeType===1?ancestor:ancestor.parentElement;
+  Array.from(root.querySelectorAll('mark.rte-hl')).forEach(m=>{
+    if(range.intersectsNode(m)){const p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);p.normalize();}
+  });
+  window.getSelection().removeAllRanges();_hlSavedRange=null;editor.focus();
 }
 
 // ── RICH TEXT EDITOR HELPERS ───────────────────
@@ -1369,14 +1500,8 @@ function _rteExpand(){
       <span style="font-size:11px;color:var(--dim);">∑ Eq inserts equation inline · Enter saves</span>
     </div>
     <div class="rte-wrap">
-      <div class="rte-toolbar" onmousedown="return false">
-        <button class="rte-btn" onclick="document.execCommand('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
-        <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
-        <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
-        <div class="rte-sep"></div>
-        <button class="rte-btn" onclick="_rteInsertEq('ptext-popup')" title="Insert inline equation (LaTeX)">∑ Eq</button>
-      </div>
-      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — equations, bold, italic all inline…"></div>
+      ${_rteToolbarHtml('ptext-popup')}
+      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — bold, italic, bullets, equations, highlights all inline…"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;padding-top:12px;border-top:1px solid var(--border);margin-top:0;">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
@@ -1388,8 +1513,8 @@ function _rteExpand(){
 function _rtePopupSubmit(){
   const popup=document.getElementById('ptext-popup');
   if(!popup||!popup.textContent.trim())return;
-  addPara(selNode,popup.innerHTML,[..._pendingRefKeys],'html');
-  _pendingRefKeys=[];
+  addPara(selNode,popup.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs]);
+  _pendingRefKeys=[];_pendingCustomRefs=[];
   closeModal();
   const inline=document.getElementById('ptext');
   if(inline)inline.innerHTML='';
@@ -3215,7 +3340,8 @@ function _zotMeta(item){
 let _zotTimer=null;
 let _zotResults=[];
 let _pendingZotItem=null;
-let _pendingRefKeys=[];   // keys selected in the add-para picker
+let _pendingRefKeys=[];     // zotero keys selected in the add/edit-para picker
+let _pendingCustomRefs=[];  // [{id,type:'link'|'file',label,url?,path?}]
 let _refPickerTasks=[];   // cache of lit tasks for the panel picker
 let _editRefTasks=[];     // cache of lit tasks for the edit-para modal
 
@@ -3349,20 +3475,24 @@ function _toggleRefKeyByKey(key){
   const i=_pendingRefKeys.indexOf(key);
   if(i>-1)_pendingRefKeys.splice(i,1);else _pendingRefKeys.push(key);
   _renderRefPicker();
-  _renderSelectedRefs();
+  // Render into whichever refs container is currently visible
+  _renderSelectedRefs(document.getElementById('selected-refs')?'selected-refs':'edit-all-refs');
 }
 
-function _renderSelectedRefs(){
-  const el=document.getElementById('selected-refs');if(!el)return;
+function _renderSelectedRefs(targetId){
+  const id=targetId||'selected-refs';
+  const el=document.getElementById(id);if(!el)return;
   const gRefMap=_buildGlobalRefMap();
-  el.innerHTML=_pendingRefKeys.map(k=>{
-    const m=gRefMap[k];
-    const label=m?m.citation:k;
-    const safeKey=k.replace(/'/g,"\\'");
-    return`<span class="ref-chip ref-chip-sel" onclick="_toggleRefKeyByKey('${safeKey}')">
-      ${esc(label)} ×
-    </span>`;
+  const zHtml=_pendingRefKeys.map(k=>{
+    const m=gRefMap[k];const label=m?m.citation:k;const safeKey=k.replace(/'/g,"\\'");
+    return`<span class="ref-chip ref-chip-sel" onclick="_toggleRefKeyByKey('${safeKey}')"><span class="zot-badge" style="margin-right:2px;font-size:8px;">Z</span>${esc(label)} ×</span>`;
   }).join('');
+  const crHtml=_pendingCustomRefs.map(r=>{
+    const icon=r.type==='link'?'🔗':'📎';
+    const cls=r.type==='link'?'ref-link':'ref-file';
+    return`<span class="ref-chip-sm ${cls}" style="cursor:pointer;" onclick="_removeCustomRef('${r.id}','${id}')" title="Click to remove">${icon} ${esc(r.label||r.url||'')} ×</span>`;
+  }).join('');
+  el.innerHTML=zHtml+crHtml;
 }
 
 // ── MOBILE ─────────────────────────────────────
