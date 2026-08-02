@@ -164,9 +164,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .rte-eq{display:inline-block;background:rgba(74,144,255,0.08);border:1px solid rgba(74,144,255,0.2);border-radius:3px;padding:0 3px;cursor:default;user-select:all;}
 .rte-eq-editing{display:inline-flex;align-items:center;gap:4px;background:rgba(74,144,255,0.1);border:1px dashed rgba(74,144,255,0.5);border-radius:4px;padding:1px 6px;vertical-align:middle;line-height:1;}
 .rte-eq-input{background:transparent;border:none;outline:none;color:var(--accent2);font-family:monospace;font-size:12px;min-width:30px;max-width:280px;}
-.modal.wide{width:min(900px,96vw);height:88vh;display:flex;flex-direction:column;padding:18px 22px;}
-.modal.wide .rte-wrap{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;}
-.modal.wide .rte-editor{flex:1;overflow-y:auto;min-height:0;font-size:15px;line-height:1.95;padding:24px 32px;}
+.modal.wide{width:min(960px,98vw);height:94vh;display:flex;flex-direction:column;padding:16px 20px;overflow:hidden;}
+.modal.wide .rte-wrap{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;overflow:hidden;}
+.modal.wide .rte-editor{flex:1;overflow-y:auto;min-height:0 !important;font-size:15px;line-height:1.9;padding:20px 28px;}
 /* ── HIGHLIGHTS ── */
 mark.rte-hl{border-radius:2px;padding:0 1px;color:inherit;}
 mark.rte-hl-y{background:rgba(255,220,50,0.32);}
@@ -1494,20 +1494,18 @@ function _rteInsertEq(editorId){
 function _rteExpand(){
   const inline=document.getElementById('ptext');
   const curHtml=inline?inline.innerHTML:'';
-  showModal(`<div style="display:flex;flex-direction:column;height:100%;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0;">
+  showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <h3 style="margin:0;">Paragraph</h3>
-      <span style="font-size:11px;color:var(--dim);">∑ Eq inserts equation inline · Enter saves</span>
+      <span style="font-size:11px;color:var(--dim);">∑ Eq inline · Mark to highlight</span>
     </div>
     <div class="rte-wrap">
       ${_rteToolbarHtml('ptext-popup')}
-      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — bold, italic, bullets, equations, highlights all inline…"></div>
+      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — bold, italic, bullets, equations, highlights…"></div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;padding-top:12px;border-top:1px solid var(--border);margin-top:0;">
+    <div style="flex-shrink:0;display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border);">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
       <button class="btn btn-sm" onclick="_rtePopupSubmit()">Add Paragraph</button>
-    </div>
-  </div>`,true);
+    </div>`,true);
   setTimeout(()=>{const p=document.getElementById('ptext-popup');if(p){p.innerHTML=curHtml;p.focus();}},0);
 }
 function _rtePopupSubmit(){
