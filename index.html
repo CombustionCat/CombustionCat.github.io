@@ -1752,20 +1752,61 @@ function initStarfield(){
   const cv=document.getElementById('starfield');
   const cx=cv.getContext('2d');
   let stars=[];
-  const resize=()=>{
-    cv.width=innerWidth;cv.height=innerHeight;
-    stars=Array.from({length:180},()=>({
-      x:Math.random()*cv.width, y:Math.random()*cv.height,
-      r:Math.random()*1.3+0.2, a:Math.random()*.6+.2,
-      da:(Math.random()*.008+.003)*(Math.random()>.5?1:-1)
-    }));
+
+  const buildStars=()=>{
+    const W=cv.width,H=cv.height;
+    stars=[];
+    for(let i=0;i<480;i++){
+      const t=Math.random();
+      let x,y,r,a,rgb;
+      if(t<0.12){
+        // Core cluster — dense near center
+        const ang=Math.random()*Math.PI*2;
+        const d=Math.pow(Math.random(),2.2)*Math.min(W,H)*0.1;
+        x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*0.75;
+        r=Math.random()*1.4+0.5; a=Math.random()*0.5+0.35;
+      } else if(t<0.46){
+        // Galactic disk — elliptical band
+        const ang=Math.random()*Math.PI*2;
+        const d=Math.pow(Math.random(),0.6)*Math.min(W,H)*0.46;
+        x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*(0.32+Math.random()*0.42);
+        r=Math.random()*0.9+0.2; a=Math.random()*0.28+0.08;
+      } else {
+        // Background scatter
+        x=Math.random()*W; y=Math.random()*H;
+        r=Math.random()*0.6+0.1; a=Math.random()*0.2+0.04;
+      }
+      const cr=Math.random();
+      rgb=cr<0.62?'190,212,255':cr<0.8?'230,236,255':cr<0.91?'255,225,175':'255,175,135';
+      stars.push({x,y,r,a,rgb,da:(Math.random()*.007+.002)*(Math.random()>.5?1:-1)});
+    }
   };
+
+  const resize=()=>{cv.width=innerWidth;cv.height=innerHeight;buildStars();};
+
   const draw=()=>{
-    cx.clearRect(0,0,cv.width,cv.height);
+    const W=cv.width,H=cv.height;
+    cx.clearRect(0,0,W,H);
+    // Milky Way core bulge
+    const bulge=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.3);
+    bulge.addColorStop(0,'rgba(255,245,210,0.13)');
+    bulge.addColorStop(0.2,'rgba(210,195,255,0.09)');
+    bulge.addColorStop(0.55,'rgba(110,130,255,0.04)');
+    bulge.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=bulge;cx.fillRect(0,0,W,H);
+    // Outer halo
+    const halo=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.65);
+    halo.addColorStop(0,'rgba(70,90,200,0.06)');halo.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=halo;cx.fillRect(0,0,W,H);
+    // Stars
     stars.forEach(s=>{
-      s.a+=s.da;if(s.a>0.85||s.a<0.1)s.da*=-1;
+      s.a+=s.da;if(s.a>0.88||s.a<0.04)s.da*=-1;
       cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
-      cx.fillStyle=`rgba(190,210,255,${s.a})`;cx.fill();
+      if(s.r>0.75&&s.a>0.28){
+        cx.shadowBlur=s.r*9;cx.shadowColor=`rgba(${s.rgb},${(s.a*0.55).toFixed(2)})`;
+      }
+      cx.fillStyle=`rgba(${s.rgb},${s.a})`;cx.fill();
+      cx.shadowBlur=0;
     });
     requestAnimationFrame(draw);
   };
@@ -1790,6 +1831,10 @@ function initTopView(){
     f.append('feGaussianBlur').attr('stdDeviation','4').attr('result','blur');
     const m=f.append('feMerge');m.append('feMergeNode').attr('in','blur');m.append('feMergeNode').attr('in','SourceGraphic');
   });
+  // Core glow filter (stronger blur for the central orb)
+  const cf=defs.append('filter').attr('id','gf-core').attr('x','-300%').attr('y','-300%').attr('width','700%').attr('height','700%');
+  cf.append('feGaussianBlur').attr('stdDeviation','10').attr('result','blur');
+  const cm=cf.append('feMerge');cm.append('feMergeNode').attr('in','blur');cm.append('feMergeNode').attr('in','SourceGraphic');
 
   // Zoom
   const zoom=d3.zoom().scaleExtent([0.1,8]).on('zoom',e=>tG?.attr('transform',e.transform));
@@ -1808,31 +1853,86 @@ function initConstellationCanvas(){
   if(!cv)return;
   const cx=cv.getContext('2d');
   const wrap=document.getElementById('top-view');
-
-  const resize=()=>{
-    cv.width=wrap.clientWidth||window.innerWidth;
-    cv.height=wrap.clientHeight||window.innerHeight;
-  };
+  const resize=()=>{cv.width=wrap.clientWidth||window.innerWidth;cv.height=wrap.clientHeight||window.innerHeight;};
   resize();
 
-  // Three layers of stars: distant (tiny, dim), mid, bright
-  const stars=Array.from({length:420},(_,i)=>{
-    const bright=i<40;const mid=i<140;
-    return{
-      x:Math.random()*cv.width, y:Math.random()*cv.height,
-      r:bright?(Math.random()*.9+.6):mid?(Math.random()*.6+.3):(Math.random()*.35+.1),
-      a:bright?(Math.random()*.55+.3):mid?(Math.random()*.45+.15):(Math.random()*.3+.08),
-      da:(Math.random()*.008+.002)*(Math.random()>.5?1:-1)
-    };
-  });
+  // Galaxy-distributed stars — denser near center
+  const stars=[];
+  for(let i=0;i<520;i++){
+    const t=Math.random();
+    const W=cv.width,H=cv.height;
+    let x,y,r,a,rgb;
+    if(t<0.14){
+      const ang=Math.random()*Math.PI*2;
+      const d=Math.pow(Math.random(),2)*Math.min(W,H)*0.09;
+      x=W/2+Math.cos(ang)*d;y=H/2+Math.sin(ang)*d;
+      r=Math.random()*1.1+0.45;a=Math.random()*0.55+0.3;rgb='225,232,255';
+    } else if(t<0.52){
+      const ang=Math.random()*Math.PI*2;
+      const d=Math.pow(Math.random(),0.55)*Math.min(W,H)*0.44;
+      x=W/2+Math.cos(ang)*d;y=H/2+Math.sin(ang)*d*0.65;
+      r=Math.random()*0.9+0.2;a=Math.random()*0.42+0.1;
+      const cr=Math.random();rgb=cr<0.6?'190,212,255':cr<0.8?'230,236,255':'255,225,175';
+    } else {
+      x=Math.random()*cv.width;y=Math.random()*cv.height;
+      r=Math.random()*0.55+0.1;a=Math.random()*0.22+0.06;rgb='190,212,255';
+    }
+    stars.push({x,y,r,a,rgb,da:(Math.random()*.008+.002)*(Math.random()>.5?1:-1)});
+  }
 
+  let frame=0;
   function draw(){
-    cx.clearRect(0,0,cv.width,cv.height);
-    stars.forEach(s=>{
-      s.a+=s.da;if(s.a>.92||s.a<.06)s.da*=-1;
-      cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
-      cx.fillStyle=`rgba(190,212,255,${s.a})`;cx.fill();
+    const W=cv.width,H=cv.height;
+    cx.clearRect(0,0,W,H);
+
+    // === GALAXY CORE GLOW (fixed at screen center) ===
+    // Outer halo
+    const halo=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.42);
+    halo.addColorStop(0,'rgba(190,165,255,0.18)');
+    halo.addColorStop(0.35,'rgba(120,140,255,0.08)');
+    halo.addColorStop(0.75,'rgba(60,80,200,0.03)');
+    halo.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=halo;cx.fillRect(0,0,W,H);
+    // Inner corona
+    const corona=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.13);
+    corona.addColorStop(0,'rgba(255,252,220,0.52)');
+    corona.addColorStop(0.3,'rgba(220,200,255,0.32)');
+    corona.addColorStop(0.7,'rgba(150,170,255,0.1)');
+    corona.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=corona;cx.fillRect(0,0,W,H);
+    // Pulsing bright nucleus
+    const pulse=Math.sin(frame*0.025)*0.12+0.82;
+    const nucleus=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,18);
+    nucleus.addColorStop(0,`rgba(255,255,255,${pulse})`);
+    nucleus.addColorStop(0.4,'rgba(255,248,220,0.65)');
+    nucleus.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=nucleus;cx.fillRect(0,0,W,H);
+    // Radiating spikes (4 light rays from core)
+    cx.save();
+    cx.translate(W/2,H/2);
+    const spikeA=pulse*0.18;
+    [0,90,45,135].forEach(deg=>{
+      const rad=deg*Math.PI/180;
+      const len=Math.min(W,H)*0.28;
+      const gr=cx.createLinearGradient(0,0,Math.cos(rad)*len,Math.sin(rad)*len);
+      gr.addColorStop(0,`rgba(255,250,220,${spikeA})`);
+      gr.addColorStop(1,'rgba(0,0,0,0)');
+      cx.strokeStyle=gr;cx.lineWidth=1.2;
+      cx.beginPath();cx.moveTo(0,0);cx.lineTo(Math.cos(rad)*len,Math.sin(rad)*len);cx.stroke();
+      cx.beginPath();cx.moveTo(0,0);cx.lineTo(-Math.cos(rad)*len,-Math.sin(rad)*len);cx.stroke();
     });
+    cx.restore();
+
+    // === STARS ===
+    stars.forEach(s=>{
+      s.a+=s.da;if(s.a>0.92||s.a<0.05)s.da*=-1;
+      cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      if(s.r>0.65&&s.a>0.22){cx.shadowBlur=s.r*8;cx.shadowColor=`rgba(${s.rgb},${(s.a*0.5).toFixed(2)})`;}
+      cx.fillStyle=`rgba(${s.rgb},${s.a})`;cx.fill();
+      cx.shadowBlur=0;
+    });
+
+    frame++;
     tCanvasFrame=requestAnimationFrame(draw);
   }
   draw();
@@ -1845,6 +1945,22 @@ function renderTopView(){
 
   const nodes=Object.values(DB.nodes);
   const paths=Object.values(DB.paths);
+
+  // ── GALAXY CORE (rendered first, behind links and nodes)
+  const svgEl=document.getElementById('tsvg');
+  const cX=(svgEl.clientWidth||800)/2, cY=(svgEl.clientHeight||600)/2;
+  const coreG=tG.append('g').attr('transform',`translate(${cX},${cY})`).attr('pointer-events','none');
+  // Layered glow rings
+  coreG.append('circle').attrs({r:110,fill:'rgba(170,150,255,0.07)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:60,fill:'rgba(210,190,255,0.13)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:28,fill:'rgba(255,248,215,0.32)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:8,fill:'rgba(255,252,230,0.92)',stroke:'none'}).style('filter','url(#gf-core)');
+  // Hard bright center
+  coreG.append('circle').attrs({r:3,fill:'white',opacity:1});
+  // Subtle ring
+  coreG.append('circle').attrs({r:14,fill:'none',stroke:'rgba(200,180,255,0.18)','stroke-width':0.8});
+  // Label
+  coreG.append('text').attrs({y:38,'text-anchor':'middle',fill:'rgba(200,178,255,0.38)','font-size':'8.5px','letter-spacing':'3px','font-weight':'300'}).text('CORE');
 
   // ── LINKS layer
   const lLayer=tG.append('g');
