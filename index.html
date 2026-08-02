@@ -1197,7 +1197,7 @@ function renderPanel(){
         </div>
         <div class="rte-wrap">
           ${_rteToolbarHtml('ptext')}
-          <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content… type $$x^2$$ for math" oninput="_rteAutoEq(this)"></div>
+          <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content… type $$x^2 then Enter for math" onkeydown="_rteEqOnEnter(this,event)"></div>
         </div>
         <div style="margin-bottom:7px;">
           <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;">
@@ -1282,7 +1282,7 @@ function _editPara(nodeId,paraId){
   </div>
     <div class="rte-wrap">
       ${_rteToolbarHtml('ep')}
-      <div id="ep" class="rte-editor" contenteditable="true" data-placeholder="Paragraph content… type $$x^2$$ for math" oninput="_rteAutoEq(this)"></div>
+      <div id="ep" class="rte-editor" contenteditable="true" data-placeholder="Paragraph content… type $$x^2 then Enter for math" onkeydown="_rteEqOnEnter(this,event)"></div>
     </div>
     <div style="flex-shrink:0;padding-top:10px;">
       <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
@@ -1355,7 +1355,7 @@ function _rteToolbarHtml(id){
     <div class="rte-sep"></div>
     <button class="rte-btn" onclick="_toggleHighlightMenu('${id}',this)" title="Highlight selected text"><span style="display:inline-block;width:9px;height:9px;background:#ffd700;border-radius:2px;vertical-align:middle;margin-right:2px;"></span>Mark</button>
     <div class="rte-sep"></div>
-    <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert equation (or just type $$x^2$$)">∑ Eq</button>
+    <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert equation (or type $$x^2 then Enter)">∑ Eq</button>
   </div>`;
 }
 
@@ -1503,24 +1503,25 @@ function _rteInsertEq(editorId){
   },0);
 }
 
-// Auto-render $$latex$$ as user types: detects closing $$ in the current text node
-function _rteAutoEq(el){
+// Render $$latex on Enter: type $$x^2 then press Enter to commit the equation
+function _rteEqOnEnter(el,e){
+  if(e.key!=='Enter')return;
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
+  if(!range.collapsed)return; // let normal Enter handle selections
   if(range.startContainer.nodeType!==Node.TEXT_NODE)return;
   const node=range.startContainer;
   const text=node.textContent;
   const pos=range.startOffset;
-  // Detect just-typed closing $$
-  if(pos<2||text.substring(pos-2,pos)!=='$$')return;
-  // Find the matching opening $$
-  const openIdx=text.lastIndexOf('$$',pos-3);
+  // Find last $$ before cursor
+  const openIdx=text.lastIndexOf('$$',pos-1);
   if(openIdx<0)return;
-  const latex=text.substring(openIdx+2,pos-2);
+  const latex=text.substring(openIdx+2,pos);
   if(!latex.trim())return;
   try{
     const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:false});
+    e.preventDefault();
     const before=text.substring(0,openIdx);
     const after=text.substring(pos);
     const parent=node.parentNode;
@@ -1533,7 +1534,8 @@ function _rteAutoEq(el){
     parent.replaceChild(afterNode,node);
     const nr=document.createRange();nr.setStart(afterNode,0);nr.collapse(true);
     sel.removeAllRanges();sel.addRange(nr);
-  }catch(e){}
+    el.focus();
+  }catch(err){}
 }
 
 // Inline paragraph editing — embed editor directly in the card
@@ -1558,7 +1560,7 @@ function _inlineEdit(nodeId,paraId){
   textDiv.contentEditable='true';
   textDiv.classList.add('rte-editor');
   textDiv.style.minHeight='70px';
-  textDiv.addEventListener('input',_rteAutoEqEvt);
+  textDiv.addEventListener('keydown',_rteEqKeydownEvt);
   textDiv.focus();
   // Inject save/cancel footer
   const footer=document.createElement('div');
@@ -1569,7 +1571,7 @@ function _inlineEdit(nodeId,paraId){
   textDiv.after(footer);
   paraDiv.classList.add('para-editing');
 }
-function _rteAutoEqEvt(e){_rteAutoEq(e.currentTarget);}
+function _rteEqKeydownEvt(e){_rteEqOnEnter(e.currentTarget,e);}
 function _saveInlineEdit(nodeId,paraId){
   const textDiv=document.getElementById('pt-'+paraId);
   if(!textDiv)return;
@@ -1590,7 +1592,7 @@ function _cancelInlineEdit(){
     textDiv.removeAttribute('contenteditable');
     textDiv.classList.remove('rte-editor');
     textDiv.style.minHeight='';
-    textDiv.removeEventListener('input',_rteAutoEqEvt);
+    textDiv.removeEventListener('keydown',_rteEqKeydownEvt);
   }
   const toolbar=document.getElementById('pie-toolbar-'+paraId);if(toolbar)toolbar.remove();
   const footer=document.getElementById('pie-footer-'+paraId);if(footer)footer.remove();
@@ -1604,7 +1606,7 @@ function _rteExpand(){
   showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <h3 style="margin:0;">Paragraph</h3>
       <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:11px;color:var(--dim);">Type <code style="font-size:10px;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">$$x^2$$</code> · dbl-click eq to edit</span>
+        <span style="font-size:11px;color:var(--dim);">Type <code style="font-size:10px;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">$$x^2</code> then Enter · dbl-click to re-edit</span>
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);">🔍
           <input type="range" min="12" max="28" value="15" style="width:72px;accent-color:var(--accent2);"
             oninput="document.getElementById('ptext-popup').style.fontSize=this.value+'px'">
@@ -1613,7 +1615,7 @@ function _rteExpand(){
     </div>
     <div class="rte-wrap">
       ${_rteToolbarHtml('ptext-popup')}
-      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — type $$x^2$$ for inline math, Mark to highlight…" oninput="_rteAutoEq(this)"></div>
+      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — type $$x^2 then Enter for math, Mark to highlight…" onkeydown="_rteEqOnEnter(this,event)"></div>
     </div>
     <div style="flex-shrink:0;display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border);">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
@@ -1679,7 +1681,7 @@ function cancelConnect(){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){cancelConnect();closeModal();_cancelInlineEdit();}});
 
-// Double-click a rendered equation inside an active editor → expand back to $$latex$$ for editing
+// Double-click a rendered equation inside an active editor → expand back to $$latex for editing (press Enter to re-render)
 document.addEventListener('dblclick',e=>{
   const span=e.target.closest('.rte-eq[data-latex]');
   if(!span)return;
@@ -1687,12 +1689,12 @@ document.addEventListener('dblclick',e=>{
   if(!editor)return; // not in an active editor (display-only)
   e.stopPropagation();
   const latex=span.dataset.latex;
-  const textNode=document.createTextNode('$$'+latex+'$$');
+  const textNode=document.createTextNode('$$'+latex);
   span.parentNode.replaceChild(textNode,span);
-  // Select just the latex part so user can immediately retype
+  // Place cursor at end so user can type more or press Enter to render
   const range=document.createRange();
-  range.setStart(textNode,2);
-  range.setEnd(textNode,2+latex.length);
+  range.setStart(textNode,textNode.length);
+  range.collapse(true);
   window.getSelection().removeAllRanges();
   window.getSelection().addRange(range);
   editor.focus();
