@@ -537,6 +537,21 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
 <!-- CONNECT MODE BANNER -->
 <div id="connect-banner">Click the SOURCE node, then the TARGET node — ESC to cancel</div>
 
+<!-- EQUATION PANEL -->
+<div id="eq-panel" style="display:none;position:fixed;z-index:700;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 6px 30px rgba(0,0,0,.6);width:340px;">
+  <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Insert Equation (LaTeX)</div>
+  <input id="eq-input" placeholder="e.g. \frac{a}{b} or x^2+y^2=r^2" autocomplete="off" spellcheck="false"
+    style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:5px;padding:7px 9px;color:var(--text);font-size:12px;outline:none;font-family:monospace;margin-bottom:8px;"
+    oninput="_eqPreview()" onkeydown="if(event.key==='Enter'){event.preventDefault();_eqInsert();}else if(event.key==='Escape')_eqClose();">
+  <div id="eq-preview" style="min-height:38px;padding:8px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:5px;text-align:center;margin-bottom:10px;overflow-x:auto;">
+    <span style="color:var(--dim);font-size:11px;">Preview appears here as you type…</span>
+  </div>
+  <div style="display:flex;gap:6px;justify-content:flex-end;">
+    <button class="btn btn-ghost btn-sm" onclick="_eqClose()">Cancel</button>
+    <button class="btn btn-sm" onclick="_eqInsert()">Insert</button>
+  </div>
+</div>
+
 <!-- TOOLTIP -->
 <div id="tip"></div>
 
@@ -1172,7 +1187,7 @@ function renderPanel(){
             <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
             <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
             <div class="rte-sep"></div>
-            <button class="rte-btn" onclick="_rteInsertEq('ptext')" title="Insert LaTeX equation">∑ Eq</button>
+            <button class="rte-btn" onclick="_rteInsertEq('ptext',event)" title="Insert LaTeX equation">∑ Eq</button>
           </div>
           <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content..."></div>
         </div>
@@ -1254,7 +1269,7 @@ function _editPara(nodeId,paraId){
           <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
           <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
           <div class="rte-sep"></div>
-          <button class="rte-btn" onclick="_rteInsertEq('ep')" title="Insert LaTeX equation">∑ Eq</button>
+          <button class="rte-btn" onclick="_rteInsertEq('ep',event)" title="Insert LaTeX equation">∑ Eq</button>
         </div>
         <div id="ep" class="rte-editor" style="min-height:150px;" contenteditable="true" data-placeholder="Paragraph content..."></div>
       </div></div>
@@ -1298,19 +1313,50 @@ function _saveEditPara(nodeId,paraId){
 }
 
 // ── RICH TEXT EDITOR HELPERS ───────────────────
-function _rteInsertEq(editorId){
-  const el=document.getElementById(editorId);if(!el)return;
-  const latex=prompt('Enter LaTeX (e.g.  x^2+y^2=r^2  or  \\frac{a}{b}):');
+let _eqEditorId=null, _eqSavedRange=null;
+
+function _rteInsertEq(editorId,evt){
+  _eqEditorId=editorId;
+  const sel=window.getSelection();
+  _eqSavedRange=sel.rangeCount>0?sel.getRangeAt(0).cloneRange():null;
+  const panel=document.getElementById('eq-panel');
+  const btn=evt.currentTarget||evt.target;
+  const r=btn.getBoundingClientRect();
+  panel.style.left=Math.min(r.left,window.innerWidth-356)+'px';
+  panel.style.top=(r.bottom+8)+'px';
+  panel.style.display='block';
+  const inp=document.getElementById('eq-input');
+  inp.value='';
+  document.getElementById('eq-preview').innerHTML='<span style="color:var(--dim);font-size:11px;">Preview appears here as you type…</span>';
+  setTimeout(()=>inp.focus(),0);
+}
+function _eqPreview(){
+  const latex=document.getElementById('eq-input').value;
+  const pre=document.getElementById('eq-preview');
+  if(!latex.trim()){pre.innerHTML='<span style="color:var(--dim);font-size:11px;">Preview appears here as you type…</span>';return;}
+  try{pre.innerHTML=katex.renderToString(latex,{throwOnError:false,displayMode:false});}
+  catch(e){pre.textContent='...';}
+}
+function _eqInsert(){
+  const latex=document.getElementById('eq-input').value.trim();
+  _eqClose();
   if(!latex)return;
+  const el=document.getElementById(_eqEditorId);if(!el)return;
   el.focus();
+  if(_eqSavedRange){const s=window.getSelection();s.removeAllRanges();s.addRange(_eqSavedRange);}
   try{
     const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:false});
-    const span=`<span class="rte-eq" contenteditable="false" data-latex="${esc(latex)}">${rendered}</span>`;
-    document.execCommand('insertHTML',false,span+'&#8203;');
-  }catch(e){
-    document.execCommand('insertText',false,`$${latex}$`);
-  }
+    document.execCommand('insertHTML',false,`<span class="rte-eq" contenteditable="false" data-latex="${esc(latex)}">${rendered}</span>&#8203;`);
+  }catch(e){document.execCommand('insertText',false,`$${latex}$`);}
 }
+function _eqClose(){
+  document.getElementById('eq-panel').style.display='none';
+  _eqSavedRange=null;
+}
+document.addEventListener('click',e=>{
+  const panel=document.getElementById('eq-panel');
+  if(panel&&panel.style.display!=='none'&&!panel.contains(e.target)&&!e.target.closest('.rte-toolbar'))_eqClose();
+});
 function _rteExpand(){
   const inline=document.getElementById('ptext');
   const curHtml=inline?inline.innerHTML:'';
@@ -1321,7 +1367,7 @@ function _rteExpand(){
         <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
         <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
         <div class="rte-sep"></div>
-        <button class="rte-btn" onclick="_rteInsertEq('ptext-popup')" title="Insert LaTeX equation">∑ Eq</button>
+        <button class="rte-btn" onclick="_rteInsertEq('ptext-popup',event)" title="Insert LaTeX equation">∑ Eq</button>
       </div>
       <div id="ptext-popup" class="rte-editor" style="min-height:300px;" contenteditable="true" data-placeholder="Write your paragraph here..."></div>
     </div>
