@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Research Forest</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -148,8 +150,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* ── PARAGRAPHS ── */
 .para{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;}
 .para-meta{font-size:10px;color:var(--dim);margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
-.para-text{font-size:13px;line-height:1.7;white-space:pre-wrap;}
+.para-text{font-size:13px;line-height:1.7;}
 .para-refs{font-size:11px;color:var(--dim);margin-top:5px;font-style:italic;}
+
+/* ── RICH TEXT EDITOR ── */
+.rte-wrap{border:1px solid var(--border);border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.04);margin-bottom:7px;}
+.rte-toolbar{display:flex;align-items:center;gap:2px;padding:4px 6px;border-bottom:1px solid var(--border);background:rgba(0,0,10,0.35);flex-wrap:wrap;}
+.rte-btn{background:none;border:1px solid transparent;border-radius:4px;color:var(--dim);cursor:pointer;font-size:12px;padding:3px 7px;line-height:1.4;transition:all .15s;font-family:inherit;}
+.rte-btn:hover,.rte-btn:focus{background:rgba(74,144,255,0.12);border-color:var(--border);color:var(--text);outline:none;}
+.rte-sep{width:1px;height:16px;background:var(--border);margin:0 3px;flex-shrink:0;}
+.rte-editor{min-height:90px;padding:8px 10px;color:var(--text);font-size:13px;line-height:1.7;outline:none;font-family:inherit;word-break:break-word;}
+.rte-editor:empty::before{content:attr(data-placeholder);color:var(--dim);pointer-events:none;}
+.rte-eq{display:inline-block;background:rgba(74,144,255,0.08);border:1px solid rgba(74,144,255,0.2);border-radius:3px;padding:0 3px;cursor:default;user-select:all;}
+.modal.wide{width:680px;}
 
 /* ── CONNECT MODE BANNER ── */
 #connect-banner{position:fixed;top:54px;left:50%;transform:translateX(-50%);background:rgba(255,170,68,0.12);border:1px solid rgba(255,170,68,0.35);border-radius:8px;padding:7px 18px;font-size:12px;color:#ffcc88;z-index:200;display:none;pointer-events:none;}
@@ -961,19 +974,19 @@ function _saveTaskName(id){
 }
 
 // ── PARAGRAPHS ─────────────────────────────────
-function addPara(nodeId,content,refKeys){
+function addPara(nodeId,content,refKeys,format){
   const n=DB.nodes[nodeId];if(!n)return;
   n.paragraphs=n.paragraphs||[];
-  n.paragraphs.push({id:uid(),content,refKeys:refKeys||[],at:new Date().toISOString()});
+  n.paragraphs.push({id:uid(),content,refKeys:refKeys||[],format:format||'text',at:new Date().toISOString()});
   save();renderPanel();
 }
 function deletePara(nodeId,paraId){
   const n=DB.nodes[nodeId];if(!n)return;
   n.paragraphs=(n.paragraphs||[]).filter(p=>p.id!==paraId);save();renderPanel();
 }
-function updatePara(nodeId,paraId,content,refKeys){
+function updatePara(nodeId,paraId,content,refKeys,format){
   const n=DB.nodes[nodeId];if(!n)return;
-  const p=n.paragraphs?.find(p=>p.id===paraId);if(p){p.content=content;p.refKeys=refKeys||[];}
+  const p=n.paragraphs?.find(p=>p.id===paraId);if(p){p.content=content;p.refKeys=refKeys||[];if(format)p.format=format;}
   save();renderPanel();
 }
 
@@ -1145,13 +1158,23 @@ function renderPanel(){
               <button class="icon-btn" onclick="deletePara('${n.id}','${p.id}')">✕</button>
             </div>
           </div>
-          <div class="para-text">${esc(p.content)}</div>
+          <div class="para-text">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>
           ${(p.refKeys||[]).length?`<div class="para-refs">${p.refKeys.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm">${esc(m?m.citation:k)}</span>`;}).join('')}</div>`:''}
         </div>`).join(''):'<div class="empty">No notes yet.<br>Write paragraphs for your thesis here.</div>'}
       <div class="tadd" style="margin-top:10px;">
-        <div class="tadd-title">Add Note / Paragraph</div>
-        <div class="fg" style="margin-bottom:7px;">
-          <textarea id="ptext" placeholder="Write paragraph content..." style="min-height:90px;width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        <div class="tadd-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Add Note / Paragraph</span>
+          <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
+        </div>
+        <div class="rte-wrap">
+          <div class="rte-toolbar" onmousedown="return false">
+            <button class="rte-btn" onclick="document.execCommand('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+            <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+            <div class="rte-sep"></div>
+            <button class="rte-btn" onclick="_rteInsertEq('ptext')" title="Insert LaTeX equation">∑ Eq</button>
+          </div>
+          <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content..."></div>
         </div>
         <div style="margin-bottom:7px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
@@ -1208,9 +1231,10 @@ function _submitTask(){
   _pendingZotItem=null;_zotResults=[];
 }
 function _submitPara(){
-  const txt=document.getElementById('ptext')?.value.trim();
-  if(!txt)return;
-  addPara(selNode,txt,[..._pendingRefKeys]);
+  const el=document.getElementById('ptext');
+  if(!el||!el.textContent.trim())return;
+  addPara(selNode,el.innerHTML,[..._pendingRefKeys],'html');
+  el.innerHTML='';
   _pendingRefKeys=[];
 }
 function _editPara(nodeId,paraId){
@@ -1224,7 +1248,16 @@ function _editPara(nodeId,paraId){
   });
   showModal(`<h3>Edit Paragraph</h3>
     <div class="fg"><label>Content</label>
-      <textarea id="ep" style="min-height:110px;">${esc(p.content)}</textarea></div>
+      <div class="rte-wrap">
+        <div class="rte-toolbar" onmousedown="return false">
+          <button class="rte-btn" onclick="document.execCommand('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+          <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+          <div class="rte-sep"></div>
+          <button class="rte-btn" onclick="_rteInsertEq('ep')" title="Insert LaTeX equation">∑ Eq</button>
+        </div>
+        <div id="ep" class="rte-editor" style="min-height:150px;" contenteditable="true" data-placeholder="Paragraph content..."></div>
+      </div></div>
     <div style="margin-bottom:10px;">
       <label style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:6px;">References</label>
       ${_editRefTasks.length
@@ -1235,7 +1268,11 @@ function _editPara(nodeId,paraId){
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
       <button class="btn btn-sm" onclick="_saveEditPara('${nodeId}','${paraId}')">Save</button>
     </div>`);
-  if(_editRefTasks.length)_renderEditRefPicker();
+  setTimeout(()=>{
+    const el=document.getElementById('ep');
+    if(el){if(p.format==='html')el.innerHTML=p.content;else el.textContent=p.content;}
+    if(_editRefTasks.length)_renderEditRefPicker();
+  },0);
 }
 function _editToggleRef(idx){
   const t=_editRefTasks[idx];if(!t||!t.zoteroData)return;
@@ -1254,9 +1291,54 @@ function _renderEditRefPicker(){
   }).join('');
 }
 function _saveEditPara(nodeId,paraId){
-  const c=document.getElementById('ep')?.value.trim();if(!c)return;
-  updatePara(nodeId,paraId,c,[..._pendingRefKeys]);
+  const el=document.getElementById('ep');
+  if(!el||!el.textContent.trim())return;
+  updatePara(nodeId,paraId,el.innerHTML,[..._pendingRefKeys],'html');
   _pendingRefKeys=[];_editRefTasks=[];closeModal();
+}
+
+// ── RICH TEXT EDITOR HELPERS ───────────────────
+function _rteInsertEq(editorId){
+  const el=document.getElementById(editorId);if(!el)return;
+  const latex=prompt('Enter LaTeX (e.g.  x^2+y^2=r^2  or  \\frac{a}{b}):');
+  if(!latex)return;
+  el.focus();
+  try{
+    const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:false});
+    const span=`<span class="rte-eq" contenteditable="false" data-latex="${esc(latex)}">${rendered}</span>`;
+    document.execCommand('insertHTML',false,span+'&#8203;');
+  }catch(e){
+    document.execCommand('insertText',false,`$${latex}$`);
+  }
+}
+function _rteExpand(){
+  const inline=document.getElementById('ptext');
+  const curHtml=inline?inline.innerHTML:'';
+  showModal(`<h3>Write Paragraph</h3>
+    <div class="rte-wrap" style="margin-bottom:10px;">
+      <div class="rte-toolbar" onmousedown="return false">
+        <button class="rte-btn" onclick="document.execCommand('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button class="rte-btn" onclick="document.execCommand('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button class="rte-btn" onclick="document.execCommand('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+        <div class="rte-sep"></div>
+        <button class="rte-btn" onclick="_rteInsertEq('ptext-popup')" title="Insert LaTeX equation">∑ Eq</button>
+      </div>
+      <div id="ptext-popup" class="rte-editor" style="min-height:300px;" contenteditable="true" data-placeholder="Write your paragraph here..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_rtePopupSubmit()">Add Paragraph</button>
+    </div>`,true);
+  setTimeout(()=>{const p=document.getElementById('ptext-popup');if(p){p.innerHTML=curHtml;p.focus();}},0);
+}
+function _rtePopupSubmit(){
+  const popup=document.getElementById('ptext-popup');
+  if(!popup||!popup.textContent.trim())return;
+  addPara(selNode,popup.innerHTML,[..._pendingRefKeys],'html');
+  _pendingRefKeys=[];
+  closeModal();
+  const inline=document.getElementById('ptext');
+  if(inline)inline.innerHTML='';
 }
 
 function gotoFront(id){frontNode=id;switchView('front');}
@@ -1343,11 +1425,16 @@ function _submitPath(src,tgt){
 }
 
 // ── MODAL ──────────────────────────────────────
-function showModal(html){
-  document.getElementById('modal-body').innerHTML=html;
+function showModal(html,wide){
+  const body=document.getElementById('modal-body');
+  body.innerHTML=html;
+  body.classList.toggle('wide',!!wide);
   document.getElementById('modal-wrap').classList.add('on');
 }
-function closeModal(){document.getElementById('modal-wrap').classList.remove('on');}
+function closeModal(){
+  document.getElementById('modal-wrap').classList.remove('on');
+  document.getElementById('modal-body').classList.remove('wide');
+}
 
 // ── STARFIELD (background) ─────────────────────
 function initStarfield(){
@@ -2491,7 +2578,7 @@ function _tNodeBlock(b,i){
       ${paras.map((p,pi)=>`
         <div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
           <span class="tpara-drag" draggable="true" title="Drag to reorder">⠿⠿</span>
-          <div class="tpara-body" contenteditable="true" data-nodeid="${esc(n.id)}" data-pi="${pi}" onblur="tSavePara(this)">${esc(p.content)}</div>
+          <div class="tpara-body" contenteditable="true" data-nodeid="${esc(n.id)}" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
           <button class="tpara-del" onclick="tDelPara('${esc(n.id)}',${pi})" title="Delete">✕</button>
         </div>`).join('')}
       <button class="tpara-add" onclick="tAddPara('${esc(n.id)}')">+ Add paragraph</button>
@@ -2630,7 +2717,10 @@ function _renderThesisDocView(doc){
   // Word count across paragraphs + freetext blocks
   let words=0;
   (DB.thesis_doc||[]).forEach(b=>{
-    if(b.type==='node')(DB.nodes[b.nodeId]?.paragraphs||[]).forEach(p=>{words+=(p.content||'').trim().split(/\s+/).filter(Boolean).length;});
+    if(b.type==='node')(DB.nodes[b.nodeId]?.paragraphs||[]).forEach(p=>{
+      const txt=(p.content||'').replace(/<[^>]*>/g,'');
+      words+=txt.trim().split(/\s+/).filter(Boolean).length;
+    });
     else if(b.type==='freetext')words+=(b.content||'').trim().split(/\s+/).filter(Boolean).length;
   });
 
@@ -2638,13 +2728,17 @@ function _renderThesisDocView(doc){
   (DB.thesis_doc||[]).forEach(b=>{
     if(b.type==='node'){
       const n=DB.nodes[b.nodeId];if(!n)return;
-      const paras=(n.paragraphs||[]).filter(p=>p.content&&p.content.trim());
+      const paras=(n.paragraphs||[]).filter(p=>{
+        if(!p.content)return false;
+        const txt=p.format==='html'?p.content.replace(/<[^>]*>/g,'').trim():p.content.trim();
+        return txt.length>0;
+      });
       if(!paras.length)return; // skip empty nodes in view mode
       const col=statusColor(n.status);
       body+=`<div class="tvdoc-section">
         <h2 class="tvdoc-node-hd"><span style="color:${col};font-size:0.7em;margin-right:5px;">●</span>${esc(n.name)}</h2>
         ${n.description?`<div class="tvdoc-desc">${esc(n.description)}</div>`:''}
-        ${paras.map(p=>`<p class="tvdoc-para">${esc(p.content)}${renderCites(p)}</p>`).join('')}
+        ${paras.map(p=>`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}${renderCites(p)}</p>`).join('')}
       </div>`;
     } else if(b.type==='heading'){
       const lvl=b.level||1;
@@ -2710,7 +2804,8 @@ function tSavePara(el){
   const pi=parseInt(el.dataset.pi);
   const n=DB.nodes[nodeId];
   if(!n||!n.paragraphs||!n.paragraphs[pi])return;
-  n.paragraphs[pi].content=el.innerText.trim();
+  n.paragraphs[pi].content=el.innerHTML;
+  n.paragraphs[pi].format='html';
   save();
 }
 
