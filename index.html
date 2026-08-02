@@ -148,9 +148,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .tadd-title{font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:9px;}
 
 /* ── PARAGRAPHS ── */
-.para{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;}
+.para{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;transition:border-color .15s;}
+.para.para-editing{border-color:rgba(74,144,255,0.45);padding:8px;}
 .para-meta{font-size:10px;color:var(--dim);margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
 .para-text{font-size:13px;line-height:1.7;}
+.para-edit-footer{display:flex;gap:6px;justify-content:flex-end;padding-top:6px;margin-top:2px;}
 .para-refs{font-size:11px;color:var(--dim);margin-top:5px;font-style:italic;}
 
 /* ── RICH TEXT EDITOR ── */
@@ -1174,15 +1176,15 @@ function renderPanel(){
     const gRefMap=_buildGlobalRefMap();
     c.innerHTML=`
       ${paras.length?paras.map((p,i)=>`
-        <div class="para">
+        <div class="para" data-paraid="${p.id}" data-nodeid="${n.id}">
           <div class="para-meta">
             <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
             <div style="display:flex;gap:3px;">
-              <button class="icon-btn" onclick="_editPara('${n.id}','${p.id}')">✎</button>
-              <button class="icon-btn" onclick="deletePara('${n.id}','${p.id}')">✕</button>
+              <button class="icon-btn" title="Edit paragraph" onclick="_inlineEdit('${n.id}','${p.id}')">✎</button>
+              <button class="icon-btn" title="Delete paragraph" onclick="deletePara('${n.id}','${p.id}')">✕</button>
             </div>
           </div>
-          <div class="para-text">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>
+          <div class="para-text" id="pt-${p.id}">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>
           ${(()=>{const zk=p.refKeys||[];const cr=p.customRefs||[];if(!zk.length&&!cr.length)return'';
             return`<div class="para-refs">${zk.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm"><span class="zot-badge" style="margin-right:2px;font-size:8px;">Z</span>${esc(m?m.citation:k)}</span>`;}).join('')}${cr.map(r=>r.type==='link'?`<a class="ref-chip-sm ref-link" href="${esc(r.url||'')}" target="_blank" rel="noopener">🔗 ${esc(r.label||r.url)}</a>`:`<span class="ref-chip-sm ref-file">📎 ${esc(r.label)}</span>`).join('')}</div>`;
           })()}
@@ -1194,7 +1196,7 @@ function renderPanel(){
         </div>
         <div class="rte-wrap">
           ${_rteToolbarHtml('ptext')}
-          <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content..."></div>
+          <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content… type $$x^2$$ for math" oninput="_rteAutoEq(this)"></div>
         </div>
         <div style="margin-bottom:7px;">
           <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;">
@@ -1273,7 +1275,7 @@ function _editPara(nodeId,paraId){
   showModal(`<div style="flex-shrink:0;margin-bottom:10px;"><h3 style="margin:0;">Edit Paragraph</h3></div>
     <div class="rte-wrap">
       ${_rteToolbarHtml('ep')}
-      <div id="ep" class="rte-editor" contenteditable="true" data-placeholder="Paragraph content..."></div>
+      <div id="ep" class="rte-editor" contenteditable="true" data-placeholder="Paragraph content… type $$x^2$$ for math" oninput="_rteAutoEq(this)"></div>
     </div>
     <div style="flex-shrink:0;padding-top:10px;">
       <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
@@ -1342,7 +1344,7 @@ function _rteToolbarHtml(id){
     <div class="rte-sep"></div>
     <button class="rte-btn" onclick="_toggleHighlightMenu('${id}',this)" title="Highlight selected text"><span style="display:inline-block;width:9px;height:9px;background:#ffd700;border-radius:2px;vertical-align:middle;margin-right:2px;"></span>Mark</button>
     <div class="rte-sep"></div>
-    <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert inline equation (LaTeX)">∑ Eq</button>
+    <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert equation (or just type $$x^2$$)">∑ Eq</button>
   </div>`;
 }
 
@@ -1490,16 +1492,111 @@ function _rteInsertEq(editorId){
   },0);
 }
 
+// Auto-render $$latex$$ as user types: detects closing $$ in the current text node
+function _rteAutoEq(el){
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount)return;
+  const range=sel.getRangeAt(0);
+  if(range.startContainer.nodeType!==Node.TEXT_NODE)return;
+  const node=range.startContainer;
+  const text=node.textContent;
+  const pos=range.startOffset;
+  // Detect just-typed closing $$
+  if(pos<2||text.substring(pos-2,pos)!=='$$')return;
+  // Find the matching opening $$
+  const openIdx=text.lastIndexOf('$$',pos-3);
+  if(openIdx<0)return;
+  const latex=text.substring(openIdx+2,pos-2);
+  if(!latex.trim())return;
+  try{
+    const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:false});
+    const before=text.substring(0,openIdx);
+    const after=text.substring(pos);
+    const parent=node.parentNode;
+    const span=document.createElement('span');
+    span.className='rte-eq';span.contentEditable='false';span.dataset.latex=latex;span.innerHTML=rendered;
+    const beforeNode=before?document.createTextNode(before):null;
+    const afterNode=document.createTextNode(after||'​');
+    if(beforeNode)parent.insertBefore(beforeNode,node);
+    parent.insertBefore(span,node);
+    parent.replaceChild(afterNode,node);
+    const nr=document.createRange();nr.setStart(afterNode,0);nr.collapse(true);
+    sel.removeAllRanges();sel.addRange(nr);
+  }catch(e){}
+}
+
+// Inline paragraph editing — embed editor directly in the card
+let _inlineEditId=null;
+function _inlineEdit(nodeId,paraId){
+  if(_inlineEditId===paraId)return; // already editing this one
+  if(_inlineEditId)_cancelInlineEdit(); // cancel any other open editor
+  _inlineEditId=paraId;
+  const paraDiv=document.querySelector(`.para[data-paraid="${paraId}"]`);
+  if(!paraDiv)return;
+  const textDiv=document.getElementById('pt-'+paraId);
+  if(!textDiv)return;
+  // Store original for cancel
+  textDiv.dataset.orig=textDiv.innerHTML;
+  // Inject toolbar above the text
+  const toolbarEl=document.createElement('div');
+  toolbarEl.innerHTML=_rteToolbarHtml('pt-'+paraId);
+  const toolbar=toolbarEl.firstElementChild;
+  toolbar.id='pie-toolbar-'+paraId;
+  paraDiv.insertBefore(toolbar,textDiv);
+  // Make text div a live editor
+  textDiv.contentEditable='true';
+  textDiv.classList.add('rte-editor');
+  textDiv.style.minHeight='70px';
+  textDiv.addEventListener('input',_rteAutoEqEvt);
+  textDiv.focus();
+  // Inject save/cancel footer
+  const footer=document.createElement('div');
+  footer.className='para-edit-footer';
+  footer.id='pie-footer-'+paraId;
+  footer.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="_cancelInlineEdit()">Cancel</button>`+
+    `<button class="btn btn-sm" onclick="_saveInlineEdit('${nodeId}','${paraId}')">Save</button>`;
+  textDiv.after(footer);
+  paraDiv.classList.add('para-editing');
+}
+function _rteAutoEqEvt(e){_rteAutoEq(e.currentTarget);}
+function _saveInlineEdit(nodeId,paraId){
+  const textDiv=document.getElementById('pt-'+paraId);
+  if(!textDiv)return;
+  const html=textDiv.innerHTML;
+  const n=DB.nodes[nodeId];const p=n?.paragraphs?.find(x=>x.id===paraId);
+  if(p){p.content=html;p.format='html';p.at=new Date().toISOString();save();}
+  _inlineEditId=null;
+  renderPanel();
+}
+function _cancelInlineEdit(){
+  const paraId=_inlineEditId;
+  if(!paraId)return;
+  _inlineEditId=null;
+  const textDiv=document.getElementById('pt-'+paraId);
+  if(textDiv){
+    textDiv.innerHTML=textDiv.dataset.orig||'';
+    delete textDiv.dataset.orig;
+    textDiv.removeAttribute('contenteditable');
+    textDiv.classList.remove('rte-editor');
+    textDiv.style.minHeight='';
+    textDiv.removeEventListener('input',_rteAutoEqEvt);
+  }
+  const toolbar=document.getElementById('pie-toolbar-'+paraId);if(toolbar)toolbar.remove();
+  const footer=document.getElementById('pie-footer-'+paraId);if(footer)footer.remove();
+  const paraDiv=document.querySelector(`.para[data-paraid="${paraId}"]`);
+  if(paraDiv)paraDiv.classList.remove('para-editing');
+}
+
 function _rteExpand(){
   const inline=document.getElementById('ptext');
   const curHtml=inline?inline.innerHTML:'';
   showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <h3 style="margin:0;">Paragraph</h3>
-      <span style="font-size:11px;color:var(--dim);">∑ Eq inline · Mark to highlight</span>
+      <span style="font-size:11px;color:var(--dim);">Type <code style="font-size:10px;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">$$x^2$$</code> for math · Mark to highlight</span>
     </div>
     <div class="rte-wrap">
       ${_rteToolbarHtml('ptext-popup')}
-      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — bold, italic, bullets, equations, highlights…"></div>
+      <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — type $$x^2$$ for inline math, Mark to highlight…" oninput="_rteAutoEq(this)"></div>
     </div>
     <div style="flex-shrink:0;display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border);">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
@@ -1563,7 +1660,26 @@ function cancelConnect(){
   document.getElementById('connect-banner').style.display='none';
   renderTopView();
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){cancelConnect();closeModal();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){cancelConnect();closeModal();_cancelInlineEdit();}});
+
+// Click a rendered equation inside an active editor → expand back to $$latex$$ for editing
+document.addEventListener('click',e=>{
+  const span=e.target.closest('.rte-eq[data-latex]');
+  if(!span)return;
+  const editor=span.closest('[contenteditable="true"]');
+  if(!editor)return; // not in an active editor (display-only)
+  e.stopPropagation();
+  const latex=span.dataset.latex;
+  const textNode=document.createTextNode('$$'+latex+'$$');
+  span.parentNode.replaceChild(textNode,span);
+  // Select just the latex part so user can immediately retype
+  const range=document.createRange();
+  range.setStart(textNode,2);
+  range.setEnd(textNode,2+latex.length);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  editor.focus();
+});
 
 function handleConnectClick(id){
   if(!connectSrc){
