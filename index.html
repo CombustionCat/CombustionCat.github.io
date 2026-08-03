@@ -2307,7 +2307,12 @@ function renderTopView(){
     const col=pathColor(p.status);
     const abandoned=p.status==='abandoned';
     const isSel=selPath===p.id;
-    const getD=()=>_pathBezierD(s.x,s.y,t.x,t.y,p.cp);
+    // Always read live coordinates so stale closures can't cause detached paths
+    const getD=()=>{
+      const src=DB.nodes[p.source],tgt=DB.nodes[p.target];
+      if(!src||!tgt)return'';
+      return _pathBezierD(src.x,src.y,tgt.x,tgt.y,p.cp);
+    };
     const d=getD();
 
     const glow=lLayer.append('path')
@@ -2325,13 +2330,14 @@ function renderTopView(){
       });
 
     const mid=_pathMidpoint(s.x,s.y,t.x,t.y,p.cp);
+    let pathLabel=null;
     if(p.name){
-      lLayer.append('text')
+      pathLabel=lLayer.append('text')
         .attrs({x:mid.x,y:mid.y-7,'text-anchor':'middle',fill:'rgba(180,200,255,0.4)','font-size':'9.5px'})
         .text(p.name.length>20?p.name.slice(0,18)+'…':p.name);
     }
 
-    linkRefs[p.id]={glow,line,hit,getD,p};
+    linkRefs[p.id]={glow,line,hit,getD,p,pathLabel};
 
     // Control point handle — shown only when this path is selected
     if(isSel){
@@ -2399,19 +2405,24 @@ function renderTopView(){
       .on('drag',function(e,_d){
         n.x=e.x;n.y=e.y;
         d3.select(this).attr('transform',`translate(${e.x},${e.y})`);
-        Object.values(linkRefs).forEach(({glow,line,hit,getD,p})=>{
+        Object.values(linkRefs).forEach(({glow,line,hit,getD,p,pathLabel})=>{
           if(p.source===n.id||p.target===n.id){
             const d=getD();
+            if(!d)return;
             glow.attr('d',d);line.attr('d',d);hit.attr('d',d);
+            if(pathLabel){
+              const src=DB.nodes[p.source],tgt=DB.nodes[p.target];
+              if(src&&tgt){const m=_pathMidpoint(src.x,src.y,tgt.x,tgt.y,p.cp);pathLabel.attrs({x:m.x,y:m.y-7});}
+            }
           }
         });
-        // Update core path endpoint if this node has one
+        // Update core path lines for this node
         if(corePathRefs[n.id]){
           corePathRefs[n.id].glow.attr('x2',n.x).attr('y2',n.y);
           corePathRefs[n.id].cline.attr('x2',n.x).attr('y2',n.y);
         }
       })
-      .on('end',()=>save())
+      .on('end',()=>{save();renderTopView();})
     );
   });
 }
