@@ -2047,8 +2047,11 @@ function initTopView(){
   const cm=cf.append('feMerge');cm.append('feMergeNode').attr('in','blur');cm.append('feMergeNode').attr('in','SourceGraphic');
 
   // Zoom — D3 default: drag pans, scroll zooms
+  // Apply the same transform to the canvas so background + nodes move as one scene
   const zoom=d3.zoom().scaleExtent([0.1,8]).on('zoom',e=>{
     tG?.attr('transform',e.transform);
+    const cv=document.getElementById('tcanvas');
+    if(cv)cv.style.transform=`translate(${e.transform.x}px,${e.transform.y}px) scale(${e.transform.k})`;
   });
   tSvg.call(zoom);
 
@@ -2066,6 +2069,7 @@ function initConstellationCanvas(){
   const cx=cv.getContext('2d');
   const wrap=document.getElementById('top-view');
   const resize=()=>{cv.width=wrap.clientWidth||window.innerWidth;cv.height=wrap.clientHeight||window.innerHeight;};
+  cv.style.transformOrigin='0 0'; // anchor CSS pan/zoom at same origin as SVG tG
   resize();
 
   // Galaxy-distributed stars — disk + dense background scatter
@@ -2123,12 +2127,6 @@ function initConstellationCanvas(){
     nucleus.addColorStop(0.45,`rgba(220,210,255,${pulse*0.5})`);
     nucleus.addColorStop(1,'rgba(0,0,0,0)');
     cx.fillStyle=nucleus;cx.fillRect(0,0,W,H);
-    // Tilted galactic band — faint dust lane across the field
-    cx.save();cx.translate(W/2,H/2);cx.rotate(0.42);
-    const band=cx.createRadialGradient(0,0,0,0,0,Math.min(W,H)*0.52);
-    band.addColorStop(0,'rgba(155,140,255,0.05)');band.addColorStop(0.5,'rgba(120,110,220,0.025)');band.addColorStop(1,'rgba(0,0,0,0)');
-    cx.beginPath();cx.ellipse(0,0,Math.min(W,H)*0.52,Math.min(W,H)*0.09,0,0,Math.PI*2);
-    cx.fillStyle=band;cx.fill();cx.restore();
 
     // === STARS ===
     stars.forEach(s=>{
