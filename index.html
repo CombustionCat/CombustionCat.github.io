@@ -3623,10 +3623,11 @@ async function _compressImage(file){
   });
 }
 
-function addNodeImage(){
+function addNodeImage(useCamera){
   if(!selNode||selNode==='__core__')return;
   const inp=document.createElement('input');
-  inp.type='file';inp.accept='image/*';inp.capture='environment';
+  inp.type='file';inp.accept='image/*';
+  if(useCamera)inp.capture='environment';
   inp.onchange=async e=>{
     const file=e.target.files[0];if(!file)return;
     const data=await _compressImage(file);
@@ -3661,7 +3662,8 @@ function _renderNodeImagesPanel(n){
   return`<div class="node-imgs-section">
     <div class="node-imgs-header">
       <span style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;">Photos &amp; Images</span>
-      <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;" onclick="addNodeImage()">📷 Add</button>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="addNodeImage(true)">📷 Camera</button>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="addNodeImage(false)">🖼 Gallery</button>
     </div>
     ${imgs.length?`<div class="node-imgs-grid">
       ${imgs.map(img=>`<div class="node-img-item">
