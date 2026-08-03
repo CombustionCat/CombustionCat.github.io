@@ -2107,14 +2107,22 @@ function initConstellationCanvas(){
     cx.beginPath();cx.ellipse(0,0,Math.min(W,H)*0.52,Math.min(W,H)*0.09,0,0,Math.PI*2);
     cx.fillStyle=band;cx.fill();cx.restore();
 
-    // === STARS ===
-    stars.forEach(s=>{
-      s.a+=s.da;if(s.a>0.92||s.a<0.05)s.da*=-1;
-      cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
-      if(s.r>0.65&&s.a>0.22){cx.shadowBlur=s.r*8;cx.shadowColor=`rgba(${s.rgb},${(s.a*0.5).toFixed(2)})`;}
-      cx.fillStyle=`rgba(${s.rgb},${s.a})`;cx.fill();
-      cx.shadowBlur=0;
-    });
+    // === STARS (update animation, then draw tiled with pan offset) ===
+    stars.forEach(s=>{s.a+=s.da;if(s.a>0.92||s.a<0.05)s.da*=-1;});
+    // Tile stars so they scroll with pan instead of sitting on a fixed backdrop
+    const {x:ptx,y:pty}=_coreZoomTransform;
+    const ox=((ptx%W)+W)%W, oy=((pty%H)+H)%H;
+    const dxs=ox>0?[-1,0]:[0], dys=oy>0?[-1,0]:[0];
+    for(const dx of dxs){for(const dy of dys){
+      cx.save();cx.translate(ox+dx*W,oy+dy*H);
+      stars.forEach(s=>{
+        cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        if(s.r>0.65&&s.a>0.22){cx.shadowBlur=s.r*8;cx.shadowColor=`rgba(${s.rgb},${(s.a*0.5).toFixed(2)})`;}
+        cx.fillStyle=`rgba(${s.rgb},${s.a})`;cx.fill();
+        cx.shadowBlur=0;
+      });
+      cx.restore();
+    }}
 
     frame++;
     tCanvasFrame=requestAnimationFrame(draw);
