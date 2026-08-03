@@ -306,6 +306,24 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 /* ── THESIS CORE BLOCK ── */
 .tblock-core{border-left:2px solid rgba(180,150,255,0.45);background:rgba(170,150,255,0.04);}
 .tvdoc-core-section{border-left:3px solid rgba(180,150,255,0.35);padding-left:16px;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid rgba(200,200,255,0.08);}
+/* ── SEARCH ── */
+#search-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:2000;background:rgba(0,0,0,0.65);display:none;align-items:flex-start;justify-content:center;padding-top:72px;}
+#search-overlay.on{display:flex;}
+#search-box{background:var(--panel2);border:1px solid rgba(100,120,255,0.3);border-radius:12px;width:100%;max-width:660px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
+#search-input{width:100%;box-sizing:border-box;background:none;border:none;padding:15px 18px;font-size:15px;color:var(--text);outline:none;font-family:inherit;}
+#search-input::placeholder{color:var(--dim);}
+#search-results{max-height:500px;overflow-y:auto;border-top:1px solid var(--border);}
+.sr-group-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 7px;background:rgba(0,0,0,0.25);cursor:pointer;user-select:none;font-size:11px;letter-spacing:.06em;color:var(--dim);text-transform:uppercase;}
+.sr-group-hd:hover{background:rgba(0,0,0,0.35);}
+.sr-group-toggle{font-size:10px;opacity:.6;}
+.sr-item{padding:9px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.035);}
+.sr-item:hover{background:rgba(80,120,255,0.1);}
+.sr-item:last-child{border-bottom:none;}
+.sr-item-title{font-size:13px;color:var(--text);line-height:1.3;}
+.sr-item-meta{font-size:10.5px;color:var(--dim);margin-top:2px;}
+.sr-item-snippet{font-size:11.5px;color:rgba(200,210,255,0.55);margin-top:4px;line-height:1.55;}
+.sr-hl{color:rgba(140,180,255,1);font-weight:600;}
+.sr-empty{padding:24px 18px;color:var(--dim);font-size:13px;text-align:center;}
 .rl-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
 .rl-sort-btn{background:none;border:1px solid var(--border);border-radius:5px;color:var(--dim);cursor:pointer;font-size:11px;padding:3px 10px;font-family:inherit;transition:all .15s;}
 .rl-sort-btn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -484,6 +502,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
     </div>
     <div class="spacer"></div>
     <div class="right">
+      <button class="btn btn-ghost btn-sm" onclick="openSearch()" title="Search (Ctrl+K)">⌕ Search</button>
       <button class="btn btn-ghost btn-sm" onclick="showSettings()">⚙ Zotero</button>
       <button class="btn btn-ghost btn-sm" onclick="doExport()">Export</button>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp').click()">Import</button>
@@ -597,6 +616,15 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   <button class="mob-tab" id="mtab-nodes" onclick="toggleSidebar()">
     <span class="mti">⊞</span><span>Nodes</span>
   </button>
+</div>
+
+<!-- SEARCH OVERLAY -->
+<div id="search-overlay" onclick="if(event.target===this)closeSearch()">
+  <div id="search-box">
+    <input id="search-input" type="text" placeholder="Search tasks and notes…" autocomplete="off"
+      oninput="runSearch(this.value)" onkeydown="onSearchKey(event)">
+    <div id="search-results"></div>
+  </div>
 </div>
 
 <!-- FAB (mobile quick-add) -->
@@ -4386,6 +4414,174 @@ window.addEventListener('beforeunload',e=>{
     initStarfield();
   }
 })();
+
+// ── SEARCH ─────────────────────────────────────
+let _searchCollapsed={tasks:false,notes:false};
+
+function openSearch(){
+  document.getElementById('search-overlay').classList.add('on');
+  const inp=document.getElementById('search-input');
+  inp.value='';
+  document.getElementById('search-results').innerHTML='';
+  setTimeout(()=>inp.focus(),40);
+}
+function closeSearch(){
+  document.getElementById('search-overlay').classList.remove('on');
+}
+function onSearchKey(e){
+  if(e.key==='Escape'){closeSearch();return;}
+  if(e.key==='Enter'){const f=document.querySelector('.sr-item');if(f)f.click();}
+}
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();openSearch();}
+});
+
+function _srHighlight(text,q){
+  if(!q||!text)return esc(text||'');
+  const re=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
+  return esc(text).replace(re,m=>`<span class="sr-hl">${m}</span>`);
+}
+function _srSnippet(raw,q,len=130){
+  const plain=(raw||'').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+  if(!plain)return'';
+  const idx=plain.toLowerCase().indexOf((q||'').toLowerCase());
+  if(idx===-1)return _srHighlight(plain.slice(0,len),q)+(plain.length>len?'…':'');
+  const s=Math.max(0,idx-45),e2=Math.min(plain.length,idx+q.length+85);
+  return(s>0?'…':'')+_srHighlight(plain.slice(s,e2),q)+(e2<plain.length?'…':'');
+}
+
+function runSearch(raw){
+  const el=document.getElementById('search-results');
+  const q=raw.trim();
+  if(!q){el.innerHTML='';return;}
+  const ql=q.toLowerCase();
+
+  // ── Tasks
+  const taskHits=Object.values(DB.tasks).filter(t=>{
+    return (t.name||'').toLowerCase().includes(ql)||(t.description||'').toLowerCase().includes(ql);
+  });
+
+  // ── Notes: node paragraphs + node name/desc + core paragraphs + thoughts
+  const noteHits=[];
+  Object.values(DB.nodes).forEach(n=>{
+    const nameHit=(n.name||'').toLowerCase().includes(ql);
+    const descHit=(n.description||'').toLowerCase().includes(ql);
+    const paraHits=(n.paragraphs||[]).filter(p=>(p.content||'').replace(/<[^>]*>/g,'').toLowerCase().includes(ql));
+    if(nameHit||descHit){
+      noteHits.push({kind:'node-meta',nodeId:n.id,nodeName:n.name,snippet:_srSnippet(n.description||n.name,q)});
+    }
+    paraHits.forEach(p=>{
+      noteHits.push({kind:'node-para',nodeId:n.id,nodeName:n.name,snippet:_srSnippet(p.content,q)});
+    });
+  });
+  if(DB.core){
+    (DB.core.paragraphs||[]).filter(p=>(p.content||'').replace(/<[^>]*>/g,'').toLowerCase().includes(ql)).forEach(p=>{
+      noteHits.push({kind:'core',snippet:_srSnippet(p.content,q)});
+    });
+  }
+  (DB.thoughts||[]).filter(t=>(t.content||'').toLowerCase().includes(ql)).forEach(t=>{
+    noteHits.push({kind:'thought',id:t.id,at:t.at,snippet:_srSnippet(t.content,q)});
+  });
+
+  if(!taskHits.length&&!noteHits.length){
+    el.innerHTML=`<div class="sr-empty">No results for "<strong>${esc(q)}</strong>"</div>`;
+    return;
+  }
+
+  let html='';
+
+  // ── Tasks section
+  if(taskHits.length){
+    const col=_searchCollapsed.tasks;
+    html+=`<div class="sr-group-hd" onclick="_srToggle('tasks')">
+      <span>Tasks &nbsp;<span style="opacity:.45;">${taskHits.length}</span></span>
+      <span class="sr-group-toggle">${col?'▸ show':'▾ hide'}</span>
+    </div>`;
+    if(!col){
+      taskHits.forEach(t=>{
+        const nodeNames=(t.nodeIds||[]).map(id=>DB.nodes[id]?.name).filter(Boolean).join(', ');
+        const badge=`<span style="background:rgba(80,120,255,0.15);border-radius:3px;padding:0 5px;margin-right:4px;">${esc(t.type||'task')}</span>`;
+        const status=t.status==='done'?'<span style="color:#44ff88;">✓ done</span>':'<span style="color:var(--amber);">pending</span>';
+        html+=`<div class="sr-item" onclick="_srGoTask('${esc(t.id)}')">
+          <div class="sr-item-title">${_srHighlight(t.name||'Untitled',q)}</div>
+          <div class="sr-item-meta">${badge}${status}${nodeNames?' &nbsp;·&nbsp; '+esc(nodeNames):''}</div>
+          ${t.description?`<div class="sr-item-snippet">${_srSnippet(t.description,q)}</div>`:''}
+        </div>`;
+      });
+    }
+  }
+
+  // ── Notes section
+  if(noteHits.length){
+    const col=_searchCollapsed.notes;
+    html+=`<div class="sr-group-hd" onclick="_srToggle('notes')">
+      <span>Notes &nbsp;<span style="opacity:.45;">${noteHits.length}</span></span>
+      <span class="sr-group-toggle">${col?'▸ show':'▾ hide'}</span>
+    </div>`;
+    if(!col){
+      noteHits.forEach(r=>{
+        if(r.kind==='node-meta'){
+          html+=`<div class="sr-item" onclick="_srGoNode('${esc(r.nodeId)}','info')">
+            <div class="sr-item-title">${_srHighlight(r.nodeName||'',q)} <span style="opacity:.4;font-size:10px;">node</span></div>
+            ${r.snippet?`<div class="sr-item-snippet">${r.snippet}</div>`:''}
+          </div>`;
+        } else if(r.kind==='node-para'){
+          html+=`<div class="sr-item" onclick="_srGoNode('${esc(r.nodeId)}','notes')">
+            <div class="sr-item-title">${esc(r.nodeName)} <span style="opacity:.4;font-size:10px;">note</span></div>
+            <div class="sr-item-snippet">${r.snippet}</div>
+          </div>`;
+        } else if(r.kind==='core'){
+          html+=`<div class="sr-item" onclick="_srGoCore()">
+            <div class="sr-item-title">Research Core <span style="opacity:.4;font-size:10px;">note</span></div>
+            <div class="sr-item-snippet">${r.snippet}</div>
+          </div>`;
+        } else if(r.kind==='thought'){
+          const d=new Date(r.at).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+          html+=`<div class="sr-item" onclick="_srGoThought('${esc(r.id)}')">
+            <div class="sr-item-title">💭 Thought <span style="opacity:.4;font-size:10px;">${d}</span></div>
+            <div class="sr-item-snippet">${r.snippet}</div>
+          </div>`;
+        }
+      });
+    }
+  }
+
+  el.innerHTML=html;
+}
+
+function _srToggle(group){
+  _searchCollapsed[group]=!_searchCollapsed[group];
+  runSearch(document.getElementById('search-input').value);
+}
+function _srGoTask(id){
+  closeSearch();
+  switchView('tasks');
+  setTimeout(()=>{
+    const el=document.querySelector(`[data-tid="${id}"]`);
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});
+      el.style.outline='1px solid rgba(80,120,255,0.6)';
+      setTimeout(()=>el.style.outline='',2000);}
+  },250);
+}
+function _srGoNode(nodeId,tab){
+  closeSearch();
+  switchView('top');
+  selectNode(nodeId);
+  if(tab)setTimeout(()=>switchTab(tab),80);
+}
+function _srGoCore(){
+  closeSearch();
+  switchView('top');
+  selectCore();
+}
+function _srGoThought(id){
+  closeSearch();
+  switchView('thoughts');
+  setTimeout(()=>{
+    const el=document.getElementById('tc-'+id);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+  },250);
+}
 
 </script>
 </body>
