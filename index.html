@@ -2172,9 +2172,7 @@ function initConstellationCanvas(){
   if(!cv)return;
   const cx=cv.getContext('2d');
   const wrap=document.getElementById('top-view');
-  const resize=()=>{cv.width=wrap.clientWidth||window.innerWidth;cv.height=wrap.clientHeight||window.innerHeight;};
   cv.style.transformOrigin='0 0'; // anchor CSS pan/zoom at same origin as SVG tG
-  resize();
 
   let stars=[];
   const buildStars=()=>{
