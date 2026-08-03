@@ -2301,7 +2301,8 @@ function renderTopView(){
   const coreG=tG.append('g')
     .attr('transform',`translate(${coreX},${coreY})`)
     .attr('cursor','pointer')
-    .on('click',function(e){e.stopPropagation();connectMode?handleConnectClick('__core__'):selectCore();})
+    .on('click',function(e){e.stopPropagation();if(connectMode)handleConnectClick('__core__');else selectCore();})
+    .on('touchend',function(e){e.stopPropagation();e.preventDefault();if(connectMode)handleConnectClick('__core__');else selectCore();})
     .on('mouseenter',e=>showTip(e,(DB.core.name||'Research Core')+'\nProblem statements & motivations'))
     .on('mouseleave',()=>hideTip());
   coreG.append('circle').attrs({r:100,fill:'rgba(170,150,255,0.07)',stroke:'none'}).style('filter','url(#gf-core)');
@@ -2412,7 +2413,6 @@ function renderTopView(){
       .attr('transform',`translate(${n.x},${n.y})`)
       .attr('cursor','pointer')
       .attr('class','ngrp')
-      .on('click',function(e){e.stopPropagation();connectMode?handleConnectClick(n.id):selectNode(n.id);})
       .on('mouseenter',function(e){showTip(e,n.name+(tasks.length?`\n${done}/${tasks.length} tasks`:''));})
       .on('mouseleave',()=>hideTip());
 
@@ -2431,9 +2431,11 @@ function renderTopView(){
     g.append('text').attrs({y:tasks.length?33:22,'text-anchor':'middle',fill:isSel?'#fff':'rgba(200,218,255,0.88)','font-size':isSel?'11.5px':'10.5px','font-weight':isSel?'600':'normal'})
       .text(short);
 
+    let _nodeMoved=false;
     g.call(d3.drag()
-      .on('start',function(e){e.sourceEvent.stopPropagation();})
+      .on('start',function(e){e.sourceEvent.stopPropagation();_nodeMoved=false;})
       .on('drag',function(e,_d){
+        _nodeMoved=true;
         n.x=e.x;n.y=e.y;
         d3.select(this).attr('transform',`translate(${e.x},${e.y})`);
         Object.values(linkRefs).forEach(({glow,line,hit,getD,p,pathLabel})=>{
@@ -2447,13 +2449,20 @@ function renderTopView(){
             }
           }
         });
-        // Update core path lines for this node
         if(corePathRefs[n.id]){
           corePathRefs[n.id].glow.attr('x2',n.x).attr('y2',n.y);
           corePathRefs[n.id].cline.attr('x2',n.x).attr('y2',n.y);
         }
       })
-      .on('end',()=>{save();renderTopView();})
+      .on('end',function(){
+        if(_nodeMoved){
+          save();renderTopView();
+        } else {
+          // tap (no movement) — D3 suppresses click on mobile, so handle it here
+          if(connectMode) handleConnectClick(n.id);
+          else selectNode(n.id);
+        }
+      })
     );
   });
 }
