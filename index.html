@@ -434,6 +434,8 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   #panel.on{display:flex;animation:mob-panel-in .28s cubic-bezier(.4,0,.2,1);}
 }
 @keyframes mob-panel-in{from{transform:translateX(100%);}to{transform:translateX(0);}}
+@keyframes bgNucPulse{0%,100%{opacity:.85}50%{opacity:1}}
+.bg-nuc-pulse{animation:bgNucPulse 5s ease-in-out infinite}
 @media(max-width:720px){
 
   /* Views don't hide behind tab bar */
@@ -1690,6 +1692,30 @@ function _rteRemoveHighlight(editorId){
 }
 
 // ── RICH TEXT EDITOR HELPERS ───────────────────
+
+// Auto-fraction: converts "a/b" → "\frac{a}{b}" when space is pressed in the equation input.
+// Handles plain tokens (x, \alpha, x^2) and parenthesised groups (a+b)/c → \frac{a+b}{c}.
+function _eqAutoFrac(inp){
+  const cursor=inp.selectionStart;
+  if(cursor!==inp.selectionEnd)return false;
+  const before=inp.value.substring(0,cursor);
+  const after=inp.value.substring(cursor);
+  // Match: (paren-group OR token) / (paren-group OR token) at end of "before"
+  const m=/((?:\([^()]*\)|[^\s\/()]+))\/([^\s\/()]+|\([^()]*\))$/.exec(before);
+  if(!m)return false;
+  let num=m[1],den=m[2];
+  // Strip wrapping parens so (a+b) → a+b inside \frac
+  if(num.startsWith('(')&&num.endsWith(')'))num=num.slice(1,-1);
+  if(den.startsWith('(')&&den.endsWith(')'))den=den.slice(1,-1);
+  const frac=`\\frac{${num}}{${den}}`;
+  const prefix=before.substring(0,before.length-m[0].length);
+  inp.value=prefix+frac+' '+after;
+  const pos=(prefix+frac).length+1;
+  inp.setSelectionRange(pos,pos);
+  inp.dispatchEvent(new Event('input')); // update the live preview
+  return true;
+}
+
 // Inline equation editor — inserts a live-editing widget right at the cursor.
 // Type LaTeX, see it render beside your input, Enter to commit, Escape to cancel.
 function _rteInsertEq(editorId){
@@ -1741,6 +1767,7 @@ function _rteInsertEq(editorId){
 
     inp.addEventListener('blur',finalize);
     inp.addEventListener('keydown',e=>{
+      if(e.key===' '&&_eqAutoFrac(inp)){e.preventDefault();return;}
       if(e.key==='Enter'){e.preventDefault();finalize();}
       if(e.key==='Escape'){e.preventDefault();if(done)return;done=true;const w=document.getElementById(eqId);if(w)w.remove();editor.focus();}
     });
@@ -2104,6 +2131,12 @@ function initTopView(){
   cf.append('feGaussianBlur').attr('stdDeviation','10').attr('result','blur');
   const cm=cf.append('feMerge');cm.append('feMergeNode').attr('in','blur');cm.append('feMergeNode').attr('in','SourceGraphic');
 
+  // Radial gradient defs for background glow (objectBoundingBox so they adapt to any circle radius)
+  const mkGrad=(id,stops)=>{const g=defs.append('radialGradient').attr('id',id);stops.forEach(([o,c])=>g.append('stop').attrs({offset:o,'stop-color':c}));};
+  mkGrad('bg-halo',[['0%','rgba(190,165,255,0.18)'],['35%','rgba(120,140,255,0.08)'],['75%','rgba(60,80,200,0.03)'],['100%','rgba(0,0,0,0)']]);
+  mkGrad('bg-corona',[['0%','rgba(255,252,230,0.22)'],['25%','rgba(220,205,255,0.12)'],['60%','rgba(150,160,255,0.04)'],['100%','rgba(0,0,0,0)']]);
+  mkGrad('bg-nucleus',[['0%','rgba(255,250,235,0.30)'],['45%','rgba(220,210,255,0.15)'],['100%','rgba(0,0,0,0)']]);
+
   // Zoom — D3 default: drag pans, scroll zooms
   // Apply the same transform to the canvas so background + nodes move as one scene
   const zoom=d3.zoom().scaleExtent([0.1,8]).on('zoom',e=>{
@@ -2163,29 +2196,6 @@ function initConstellationCanvas(){
     const W=cv.width,H=cv.height;
     cx.clearRect(0,0,W,H);
 
-    // === GALAXY CORE GLOW (fixed at screen center) ===
-    // Outer halo
-    const halo=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.42);
-    halo.addColorStop(0,'rgba(190,165,255,0.18)');
-    halo.addColorStop(0.35,'rgba(120,140,255,0.08)');
-    halo.addColorStop(0.75,'rgba(60,80,200,0.03)');
-    halo.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=halo;cx.fillRect(0,0,W,H);
-    // Inner corona — soft and diffuse, no hard center
-    const corona=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.22);
-    corona.addColorStop(0,'rgba(255,252,230,0.22)');
-    corona.addColorStop(0.25,'rgba(220,205,255,0.12)');
-    corona.addColorStop(0.6,'rgba(150,160,255,0.04)');
-    corona.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=corona;cx.fillRect(0,0,W,H);
-    // Gentle pulsing nebular glow — no bright point, just a diffuse cloud
-    const pulse=Math.sin(frame*0.02)*0.05+0.28;
-    const nucleus=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,42);
-    nucleus.addColorStop(0,`rgba(255,250,235,${pulse})`);
-    nucleus.addColorStop(0.45,`rgba(220,210,255,${pulse*0.5})`);
-    nucleus.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=nucleus;cx.fillRect(0,0,W,H);
-
     // === STARS ===
     stars.forEach(s=>{
       s.a+=s.da;if(s.a>0.92||s.a<0.05)s.da*=-1;
@@ -2219,17 +2229,28 @@ function renderTopView(){
   const nodes=Object.values(DB.nodes);
   const paths=Object.values(DB.paths);
 
-  // Ensure DB.core is initialized
-  if(!DB.core){
+  // Ensure DB.core is initialized (including x/y which may be absent in older saved data)
+  {
     const svgEl=document.getElementById('tsvg');
-    const W=svgEl.clientWidth||800, H=svgEl.clientHeight||600;
-    DB.core={name:'Research Core',description:'',paragraphs:[],x:W/2,y:H/2};
-    save();
+    const vW=svgEl.clientWidth||800, vH=svgEl.clientHeight||600;
+    if(!DB.core){DB.core={name:'Research Core',description:'',paragraphs:[],x:vW/2,y:vH/2};save();}
+    else{if(DB.core.x==null){DB.core.x=vW/2;save();}if(DB.core.y==null){DB.core.y=vH/2;save();}}
   }
 
-  // ── CORE PATHS layer (world space, behind everything)
-  const cpLayer=tG.append('g');
   const coreX=DB.core.x, coreY=DB.core.y;
+
+  // ── BACKGROUND GLOW (first = behind everything; in tG so it's guaranteed on the core node)
+  {
+    const svgEl=document.getElementById('tsvg');
+    const vW=svgEl.clientWidth||800, vH=svgEl.clientHeight||600;
+    const bgG=tG.append('g');
+    bgG.append('circle').attrs({cx:coreX,cy:coreY,r:Math.min(vW,vH)*0.42,fill:'url(#bg-halo)',stroke:'none'});
+    bgG.append('circle').attrs({cx:coreX,cy:coreY,r:Math.min(vW,vH)*0.22,fill:'url(#bg-corona)',stroke:'none'});
+    bgG.append('circle').attrs({cx:coreX,cy:coreY,r:42,fill:'url(#bg-nucleus)',stroke:'none',class:'bg-nuc-pulse'});
+  }
+
+  // ── CORE PATHS layer (world space, behind nodes)
+  const cpLayer=tG.append('g');
   Object.values(DB.corePaths).forEach(cp=>{
     const tgt=DB.nodes[cp.target];if(!tgt)return;
     const glow=cpLayer.append('line')
