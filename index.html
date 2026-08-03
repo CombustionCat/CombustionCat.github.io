@@ -76,6 +76,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .sb-cat{border-bottom:1px solid rgba(255,255,255,0.04);}
 .sb-cat-hd{display:flex;align-items:center;gap:5px;padding:6px 11px;font-size:10px;letter-spacing:.7px;color:var(--dim);text-transform:uppercase;cursor:pointer;transition:background .13s;user-select:none;}
 .sb-cat-hd:hover{background:rgba(255,255,255,0.04);}
+.sb-cat-hd.drag-over{background:rgba(74,144,255,0.18);outline:1px dashed rgba(74,144,255,0.5);border-radius:4px;}
+.n-item[draggable="true"]{cursor:grab;}
+.n-item[draggable="true"]:active{cursor:grabbing;}
 .sb-cat-arrow{font-size:8px;width:10px;flex-shrink:0;opacity:.6;}
 .sb-cat-label{flex:1;}
 .sb-cat-count{font-size:9px;color:rgba(120,150,200,0.45);background:rgba(74,144,255,0.08);padding:1px 5px;border-radius:3px;}
@@ -1125,9 +1128,42 @@ function updatePara(nodeId,paraId,content,refKeys,format,customRefs){
 
 // ── SIDEBAR ────────────────────────────────────
 const _sbOpen = {}; // category key -> bool (true = expanded)
+let _sbDragNodeId = null;
+
+function _sbDragStart(id, e){
+  _sbDragNodeId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+}
+function _sbDragEnd(){
+  _sbDragNodeId = null;
+  document.querySelectorAll('.sb-cat-hd').forEach(el=>el.classList.remove('drag-over'));
+}
+function _sbDragOverCat(e){
+  if(!_sbDragNodeId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.sb-cat-hd').forEach(el=>el.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function _sbDragLeaveCat(e){
+  if(!e.currentTarget.contains(e.relatedTarget))
+    e.currentTarget.classList.remove('drag-over');
+}
+function _sbDropCat(e){
+  e.preventDefault();
+  const hd = e.currentTarget;
+  hd.classList.remove('drag-over');
+  const cat = hd.dataset.cat;
+  const nodeId = _sbDragNodeId;
+  _sbDragNodeId = null;
+  if(!nodeId || !DB.nodes[nodeId]) return;
+  DB.nodes[nodeId].category = cat;
+  save(); renderSidebar();
+}
 
 function _sbNodeItem(n){
-  return`<div class="n-item s-${n.status}${n.id===selNode?' sel':''}" onclick="selectNode('${n.id}')">
+  return`<div class="n-item s-${n.status}${n.id===selNode?' sel':''}" draggable="true" ondragstart="_sbDragStart('${esc(n.id)}',event)" ondragend="_sbDragEnd()" onclick="selectNode('${esc(n.id)}')">
     <div class="ndot"></div>
     <span class="nname">${esc(n.name)}</span>
     <span class="nbadge bg-${n.status}">${n.status.slice(0,4)}</span>
@@ -1173,7 +1209,7 @@ function renderSidebar(){
     const open=_sbOpen[key]??true;
     const label=cat||'Uncategorised';
     html+=`<div class="sb-cat">
-      <div class="sb-cat-hd" onclick="_toggleSbCat('${esc(key)}')">
+      <div class="sb-cat-hd" data-cat="${esc(cat)}" onclick="_toggleSbCat('${esc(key)}')" ondragover="_sbDragOverCat(event)" ondragleave="_sbDragLeaveCat(event)" ondrop="_sbDropCat(event)">
         <span class="sb-cat-arrow">${open?'▾':'▸'}</span>
         <span class="sb-cat-label">${esc(label)}</span>
         <span class="sb-cat-count">${cats[cat].length}</span>
