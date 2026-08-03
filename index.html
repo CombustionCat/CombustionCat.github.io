@@ -2447,21 +2447,15 @@ function renderFrontView(){
         });
     }
   }
-  const allEdgeIds=Object.values(tN).filter(d=>d.parentId).map(d=>d.parentId+'→'+d.node.id);
-
   // ── ASSIGN SCREEN POSITIONS (layout) ─────────────
-  // depth → Y: perspective foreshortening, deeper = higher (closer to horizon)
   function depthToY(d){
-    if(d===0) return H+80; // current node: below visible screen ("at viewer's feet")
+    if(d===0) return H+80;
     const t=1-1/(1+d*0.46);
     return H-t*(H-hY);
   }
-  // Recursive horizontal layout — divide the x-slice evenly among siblings
-  function assignLayout(id, xL, xR, depth){
-    const d=tN[id];
-    d.x=(xL+xR)/2; d.y=depthToY(depth);
-    const ch=d.children;
-    if(!ch.length) return;
+  function assignLayout(id,xL,xR,depth){
+    const d=tN[id]; d.x=(xL+xR)/2; d.y=depthToY(depth);
+    const ch=d.children; if(!ch.length)return;
     const slice=(xR-xL)/ch.length;
     ch.forEach((cid,i)=>assignLayout(cid,xL+i*slice,xL+(i+1)*slice,depth+1));
   }
@@ -2469,27 +2463,72 @@ function renderFrontView(){
   const initSpread=Math.min(W*0.88,Math.max(rootCh.length*240,280));
   assignLayout(nid,vpX-initSpread/2,vpX+initSpread/2,0);
 
-  // Pre-compute bezier control point for each edge (winding road shape)
-  const edgeList=[]; // [{from, to, path, cpx, cpy, rgb, aban}]
-  Object.values(tN).forEach(d=>{
-    if(!d.parentId) return;
-    const fd=tN[d.parentId];
-    const x0=fd.x,y0=Math.min(fd.y,H+80),x1=d.x,y1=d.y;
-    const chordLen=Math.hypot(x1-x0,y1-y0);
-    const windAmt=Math.min(chordLen*0.38,W*0.12)*d.windPhase;
-    const cpx=(x0+x1)/2+windAmt, cpy=(y0+y1)/2;
-    const aban=d.path.status==='abandoned';
-    edgeList.push({from:d.parentId,to:d.node.id,path:d.path,cpx,cpy,
-      x0,y0,x1,y1,aban,rgb:aban?'255,90,90':'200,220,255'});
-  });
-  // Sort edges: draw deepest first (painter's algo — far before near)
-  edgeList.sort((a,b)=>tN[b.to].depth-tN[a.to].depth);
+  // ── ENUMERATE ROOT-TO-LEAF CHAINS (DFS) ──────────
+  // Each chain is drawn as ONE continuous winding road
+  const chains=[];
+  (function dfs(id,path){
+    path.push(id);
+    const ch=tN[id].children;
+    if(!ch.length) chains.push([...path]);
+    else ch.forEach(cid=>dfs(cid,path));
+    path.pop();
+  })(nid,[]);
 
-  // ── SPARKLES per edge ─────────────────────────────
-  const edgeSparkles=edgeList.map(()=>
-    Array.from({length:22},()=>({
-      t:Math.random(), dt:0.0025+Math.random()*0.004,
-      off:(Math.random()-.5)*14,
+  // ── BUILD CATMULL-ROM SPLINE PER CHAIN ───────────
+  // Width of road at screen y: wide at bottom, zero at horizon
+  function yToW(y){return Math.max(2,64*Math.max(0,(Math.min(y,H)-hY)/(H-hY)));}
+
+  // Catmull-Rom interpolation through an array of {x,y} keypoints
+  function catmullRom(kp,segs=20){
+    const out=[];
+    for(let i=0;i<kp.length-1;i++){
+      const p0=kp[Math.max(0,i-1)],p1=kp[i],p2=kp[i+1],p3=kp[Math.min(kp.length-1,i+2)];
+      for(let j=0;j<segs;j++){
+        const t=j/segs,t2=t*t,t3=t2*t;
+        out.push({
+          x:.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+          y:.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
+        });
+      }
+    }
+    out.push(kp[kp.length-1]); return out;
+  }
+  // Attach left-normal vectors to sampled points (for road width offset)
+  function withNormals(pts){
+    return pts.map((p,i)=>{
+      const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];
+      const tx=b.x-a.x,ty=b.y-a.y,tl=Math.hypot(tx,ty)||1;
+      return{...p,nx:-ty/tl,ny:tx/tl};
+    });
+  }
+
+  // For each chain: interleave node keypoints with winding offset waypoints
+  // then run Catmull-Rom → one smooth continuous road per chain
+  const chainData=chains.filter(c=>c.length>1).map(chain=>{
+    const kp=[];
+    chain.forEach((id,i)=>{
+      const d=tN[id];
+      kp.push({x:d.x, y:Math.min(d.y,H+80)});
+      if(i<chain.length-1){
+        const dn=tN[chain[i+1]];
+        const x0=d.x,y0=Math.min(d.y,H+80),x1=dn.x,y1=dn.y;
+        const segLen=Math.hypot(x1-x0,y1-y0);
+        // Winding waypoint: horizontally offset at segment midpoint
+        const windAmt=Math.min(segLen*0.32,W*0.10)*dn.windPhase;
+        kp.push({x:(x0+x1)/2+windAmt, y:(y0+y1)/2});
+      }
+    });
+    const spline=withNormals(catmullRom(kp,22));
+    // Colour: red if any path in chain is abandoned
+    let aban=false;
+    for(let i=1;i<chain.length;i++){if(tN[chain[i]].path?.status==='abandoned'){aban=true;break;}}
+    return{chain,spline,rgb:aban?'255,90,90':'200,220,255',aban};
+  });
+
+  // ── SPARKLES per chain ────────────────────────────
+  const chainSparkles=chainData.map(()=>
+    Array.from({length:26},()=>({
+      t:Math.random(), dt:0.0018+Math.random()*0.003,
       size:0.5+Math.random()*1.6,
       a:Math.random(), da:(0.018+Math.random()*0.035)*(Math.random()>.5?1:-1)
     }))
@@ -2502,27 +2541,13 @@ function renderFrontView(){
     da:(Math.random()*.012+.004)*(Math.random()>.5?1:-1)
   }));
 
-  // ── HELPERS ───────────────────────────────────────
-  function bezPt(t,x0,y0,cx,cy,x1,y1){
-    const mt=1-t;
-    return{x:mt*mt*x0+2*mt*t*cx+t*t*x1, y:mt*mt*y0+2*mt*t*cy+t*t*y1};
-  }
-  function sampleBez(x0,y0,cx,cy,x1,y1,N=28){
-    return Array.from({length:N+1},(_,i)=>{
-      const t=i/N, p=bezPt(t,x0,y0,cx,cy,x1,y1);
-      const t2=Math.min(t+0.01,1), p2=bezPt(t2,x0,y0,cx,cy,x1,y1);
-      const tl=Math.hypot(p2.x-p.x,p2.y-p.y)||1;
-      return{...p, t, nx:-(p2.y-p.y)/tl, ny:(p2.x-p.x)/tl};
-    });
-  }
-  // Width of road at a given y: wide near bottom, zero at horizon
-  function yToW(y){return Math.max(2,64*Math.max(0,(Math.min(y,H)-hY)/(H-hY)));}
-
-  function drawRoad(x0,y0,cx,cy,x1,y1,rgb,aban){
-    const pts=sampleBez(x0,y0,cx,cy,x1,y1);
+  // Draw one continuous road from a pre-built spline array
+  function drawChainRoad(spline,rgb,aban){
+    if(spline.length<2)return;
     const left=[],right=[];
-    pts.forEach(p=>{const w=yToW(p.y);left.push({x:p.x+p.nx*w,y:p.y+p.ny*w});right.push({x:p.x-p.nx*w,y:p.y-p.ny*w});});
-    // Fill surface
+    spline.forEach(p=>{const w=yToW(p.y);left.push({x:p.x+p.nx*w,y:p.y+p.ny*w});right.push({x:p.x-p.nx*w,y:p.y-p.ny*w});});
+    const y0=spline[0].y, y1=spline[spline.length-1].y;
+    // Fill
     fCtx.beginPath();
     left.forEach((p,i)=>i?fCtx.lineTo(p.x,p.y):fCtx.moveTo(p.x,p.y));
     [...right].reverse().forEach(p=>fCtx.lineTo(p.x,p.y));
@@ -2530,16 +2555,14 @@ function renderFrontView(){
     const fg=fCtx.createLinearGradient(0,y0,0,y1);
     fg.addColorStop(0,`rgba(${rgb},0.17)`);fg.addColorStop(1,`rgba(${rgb},0.04)`);
     fCtx.fillStyle=fg;fCtx.fill();
-    // Edges + centre line
-    [[left,'edge1'],[right,'edge2'],[pts,'centre']].forEach(([arr,role])=>{
+    // Edges + centre lane
+    [[left,'e'],[right,'e'],[spline,'c']].forEach(([arr,role])=>{
       fCtx.beginPath();
       arr.forEach((p,i)=>i?fCtx.lineTo(p.x,p.y):fCtx.moveTo(p.x,p.y));
       const lg=fCtx.createLinearGradient(0,y0,0,y1);
-      lg.addColorStop(0,`rgba(${rgb},${role==='centre'?0.2:0.16})`);
-      lg.addColorStop(1,`rgba(${rgb},0.02)`);
-      if(aban&&role!=='centre')fCtx.setLineDash([10,9]);
-      fCtx.strokeStyle=lg;fCtx.lineWidth=role==='centre'?1:1.4;fCtx.stroke();
-      fCtx.setLineDash([]);
+      lg.addColorStop(0,`rgba(${rgb},${role==='c'?0.2:0.17})`);lg.addColorStop(1,`rgba(${rgb},0.02)`);
+      if(aban&&role!=='c')fCtx.setLineDash([10,9]);
+      fCtx.strokeStyle=lg;fCtx.lineWidth=role==='c'?1:1.5;fCtx.stroke();fCtx.setLineDash([]);
     });
   }
 
@@ -2575,32 +2598,25 @@ function renderFrontView(){
 
     fHitAreas=[];
 
-    // ── ROADS (deepest first) ──────────────────────────
-    edgeList.forEach(({x0,y0,x1,y1,cpx,cpy,rgb,aban,path},ei)=>{
-      drawRoad(x0,y0,cpx,cpy,x1,y1,rgb,aban);
+    // ── ROADS: one continuous winding road per chain ──
+    // Sort so shortest (deepest-leaf) chains draw first — longer chains on top
+    [...chainData].sort((a,b)=>tN[b.chain[b.chain.length-1]].depth-tN[a.chain[a.chain.length-1]].depth)
+      .forEach(({spline,rgb,aban},ci)=>{
+        drawChainRoad(spline,rgb,aban);
 
-      // Path name label (midpoint along road)
-      if(path.name){
-        const mp=bezPt(0.5,x0,y0,cpx,cpy,x1,y1);
-        fCtx.font='10px Segoe UI, sans-serif';fCtx.textAlign='center';
-        fCtx.fillStyle=`rgba(${rgb},0.28)`;
-        fCtx.fillText(path.name,mp.x,mp.y-10);
-      }
-
-      // Sparkles traveling along road
-      edgeSparkles[ei].forEach(sp=>{
-        sp.t=(sp.t+sp.dt)%1;
-        sp.a+=sp.da;if(sp.a>.9||sp.a<.07)sp.da*=-1;
-        const bp=bezPt(sp.t,x0,y0,cpx,cpy,x1,y1);
-        const sz=sp.size*(0.35+0.65*(1-sp.t));
-        const sg=fCtx.createRadialGradient(bp.x,bp.y,0,bp.x,bp.y,sz*5);
-        sg.addColorStop(0,`rgba(${rgb},${sp.a*0.5})`);
-        sg.addColorStop(1,`rgba(${rgb},0)`);
-        fCtx.beginPath();fCtx.arc(bp.x,bp.y,sz*5,0,Math.PI*2);fCtx.fillStyle=sg;fCtx.fill();
-        fCtx.beginPath();fCtx.arc(bp.x,bp.y,sz,0,Math.PI*2);
-        fCtx.fillStyle=`rgba(${rgb},${sp.a})`;fCtx.fill();
+        // Sparkles travel along full chain spline
+        chainSparkles[ci]?.forEach(sp=>{
+          sp.t=(sp.t+sp.dt)%1;
+          sp.a+=sp.da;if(sp.a>.9||sp.a<.07)sp.da*=-1;
+          const bp=spline[Math.min(spline.length-1,Math.floor(sp.t*spline.length))];
+          const sz=sp.size*(0.35+0.65*(1-sp.t));
+          const sg=fCtx.createRadialGradient(bp.x,bp.y,0,bp.x,bp.y,sz*5);
+          sg.addColorStop(0,`rgba(${rgb},${sp.a*0.5})`);sg.addColorStop(1,`rgba(${rgb},0)`);
+          fCtx.beginPath();fCtx.arc(bp.x,bp.y,sz*5,0,Math.PI*2);fCtx.fillStyle=sg;fCtx.fill();
+          fCtx.beginPath();fCtx.arc(bp.x,bp.y,sz,0,Math.PI*2);
+          fCtx.fillStyle=`rgba(${rgb},${sp.a})`;fCtx.fill();
+        });
       });
-    });
 
     // ── NODES (deepest first, so near nodes render on top) ──
     Object.values(tN)
