@@ -416,8 +416,10 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   #hamburger{display:block;}
   .vtabs{display:none;}
   #topbar .logo{font-size:11px;letter-spacing:1.5px;}
-  .btn-ghost.btn-sm:not(#sync-btn):not(#logout-btn):not(#marvin-btn){display:none;}
+  /* Only hide topbar ghost buttons — modals/panels must keep their buttons */
+  #topbar .btn-ghost.btn-sm:not(#sync-btn):not(#pull-btn):not(#logout-btn):not(#marvin-btn){display:none;}
   #logout-btn{display:inline-flex;}
+  #pull-btn{display:inline-flex;}
 
   /* Sidebar becomes a drawer overlay */
   #sidebar{position:absolute;top:0;bottom:0;left:0;z-index:20;transform:translateX(-210px);transition:transform .25s cubic-bezier(.4,0,.2,1);}
@@ -529,6 +531,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp').click()">Import</button>
       <input id="imp" type="file" accept=".json" style="display:none" onchange="doImport(event)">
       <button class="btn btn-ghost btn-sm" id="sync-btn" onclick="showGistModal()">☁ Sync</button>
+      <button class="btn btn-ghost btn-sm" id="pull-btn" onclick="gistPull()" title="Pull from Gist" style="display:none;">☁ Pull</button>
       <button class="btn btn-ghost btn-sm" id="marvin-btn" onclick="showMarvinModal()">⊕ Marvin</button>
       <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="doLogout()">Logout</button>
     </div>
