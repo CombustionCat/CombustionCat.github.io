@@ -1180,7 +1180,7 @@ function selectCore(){
   selPath=null;selNode='__core__';
   if(curTab==='tasks'||curTab==='paths')curTab='info';
   renderSidebar();openPanel();renderPanel();
-  if(curView==='top'){renderTopView();_renderCoreOverlay();}
+  if(curView==='top')renderTopView();
   closeSidebar();
 }
 
@@ -2024,10 +2024,8 @@ function initStarfield(){
 }
 
 // ── TOP VIEW (D3 Constellation) ─────────────────
-let tSvg, tG, tCoreOverlay=null, linkRefs={}, tCanvasFrame=null;
+let tSvg, tG, linkRefs={}, corePathRefs={}, tCanvasFrame=null;
 let selPath=null;
-let _coreZoomTransform=d3.zoomIdentity;
-let _corePathLineEls={};
 
 function initTopView(){
   initConstellationCanvas();
@@ -2048,40 +2046,16 @@ function initTopView(){
   cf.append('feGaussianBlur').attr('stdDeviation','10').attr('result','blur');
   const cm=cf.append('feMerge');cm.append('feMergeNode').attr('in','blur');cm.append('feMergeNode').attr('in','SourceGraphic');
 
-  // Zoom — scroll-wheel only; pan is handled separately with inverted direction
-  const zoom=d3.zoom().scaleExtent([0.1,8])
-    .filter(e=>e.type==='wheel')
-    .on('zoom',e=>{
-      tG?.attr('transform',e.transform);
-      _coreZoomTransform=e.transform;
-      _refreshCoreOverlay();
-    });
+  // Zoom — D3 default: drag pans, scroll zooms
+  const zoom=d3.zoom().scaleExtent([0.1,8]).on('zoom',e=>{
+    tG?.attr('transform',e.transform);
+  });
   tSvg.call(zoom);
 
-  // Camera-style pan: drag direction = viewport movement direction
-  // (drag right → view moves right → constellation scrolls left, opposite of pull-canvas)
-  let _pan=null,_panMoved=false;
-  tSvg
-    .on('mousedown.pan',function(e){
-      if(e.button!==0||connectMode)return;
-      _pan={sx:e.clientX,sy:e.clientY,tx:_coreZoomTransform.x,ty:_coreZoomTransform.y};
-      _panMoved=false;
-    })
-    .on('mousemove.pan',function(e){
-      if(!_pan)return;
-      const dx=e.clientX-_pan.sx, dy=e.clientY-_pan.sy;
-      if(Math.abs(dx)>2||Math.abs(dy)>2)_panMoved=true;
-      const nt=d3.zoomIdentity.translate(_pan.tx-dx,_pan.ty-dy).scale(_coreZoomTransform.k);
-      tSvg.call(zoom.transform,nt);
-    })
-    .on('mouseup.pan',()=>_pan=null)
-    .on('mouseleave.pan',()=>_pan=null);
-
-  // Dismiss click — suppressed if a pan drag occurred
-  tSvg.on('click',()=>{if(!connectMode&&!_panMoved){selPath=null;closePanel();}});
+  // Dismiss click
+  tSvg.on('click',()=>{if(!connectMode){selPath=null;closePanel();}});
 
   tG=tSvg.append('g');
-  tCoreOverlay=tSvg.append('g').attr('class','core-overlay');
   renderTopView();
 }
 
@@ -2184,7 +2158,7 @@ function _pathMidpoint(sx,sy,tx,ty,cp){
 function renderTopView(){
   if(!tG)return;
   tG.selectAll('*').remove();
-  linkRefs={};
+  linkRefs={};corePathRefs={};
 
   const nodes=Object.values(DB.nodes);
   const paths=Object.values(DB.paths);
@@ -2196,6 +2170,47 @@ function renderTopView(){
     DB.core={name:'Research Core',description:'',paragraphs:[],x:W/2,y:H/2};
     save();
   }
+
+  // ── CORE PATHS layer (world space, behind everything)
+  const cpLayer=tG.append('g');
+  const coreX=DB.core.x, coreY=DB.core.y;
+  Object.values(DB.corePaths).forEach(cp=>{
+    const tgt=DB.nodes[cp.target];if(!tgt)return;
+    const glow=cpLayer.append('line')
+      .attrs({x1:coreX,y1:coreY,x2:tgt.x,y2:tgt.y,stroke:'rgba(180,150,255,0.10)','stroke-width':8,opacity:1});
+    const cline=cpLayer.append('line')
+      .attrs({x1:coreX,y1:coreY,x2:tgt.x,y2:tgt.y,stroke:'rgba(180,150,255,0.45)','stroke-width':1.2,opacity:.6})
+      .style('stroke-dasharray','5,6');
+    corePathRefs[cp.target]={glow,cline};
+    if(cp.name){
+      cpLayer.append('text')
+        .attrs({x:(coreX+tgt.x)/2,y:(coreY+tgt.y)/2-7,'text-anchor':'middle',fill:'rgba(180,150,255,0.38)','font-size':'9px'})
+        .text(cp.name.length>18?cp.name.slice(0,16)+'…':cp.name);
+    }
+  });
+
+  // ── CORE NODE (world space, not draggable)
+  const isCoreSelected=selNode==='__core__';
+  const isCoreConnectSrc=connectSrc==='__core__';
+  const coreG=tG.append('g')
+    .attr('transform',`translate(${coreX},${coreY})`)
+    .attr('cursor','pointer')
+    .on('click',function(e){e.stopPropagation();connectMode?handleConnectClick('__core__'):selectCore();})
+    .on('mouseenter',e=>showTip(e,(DB.core.name||'Research Core')+'\nProblem statements & motivations'))
+    .on('mouseleave',()=>hideTip());
+  coreG.append('circle').attrs({r:100,fill:'rgba(170,150,255,0.07)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:55,fill:'rgba(210,190,255,0.11)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:isCoreSelected?32:25,fill:'rgba(255,248,215,0.28)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:isCoreSelected?10:7,fill:'rgba(255,252,230,0.88)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:2.5,fill:'white',opacity:1});
+  coreG.append('circle').attrs({
+    r:isCoreSelected?20:isCoreConnectSrc?18:13,fill:'none',
+    stroke:isCoreConnectSrc?'#ffaa44':isCoreSelected?'rgba(220,200,255,0.55)':'rgba(200,180,255,0.2)',
+    'stroke-width':isCoreSelected||isCoreConnectSrc?1.5:0.8
+  });
+  const coreLbl=DB.core.name||'CORE';
+  coreG.append('text').attrs({y:38,'text-anchor':'middle',fill:isCoreSelected?'rgba(220,200,255,0.7)':'rgba(200,178,255,0.4)','font-size':'8.5px','letter-spacing':'1.5px','font-weight':isCoreSelected?'500':'300'})
+    .text(coreLbl.length>14?coreLbl.slice(0,12)+'…':coreLbl);
 
   // ── LINKS layer (bezier paths)
   const lLayer=tG.append('g');
@@ -2304,71 +2319,15 @@ function renderTopView(){
             glow.attr('d',d);line.attr('d',d);hit.attr('d',d);
           }
         });
-        _refreshCoreOverlay();
+        // Update core path endpoint if this node has one
+        if(corePathRefs[n.id]){
+          corePathRefs[n.id].glow.attr('x2',n.x).attr('y2',n.y);
+          corePathRefs[n.id].cline.attr('x2',n.x).attr('y2',n.y);
+        }
       })
       .on('end',()=>save())
     );
   });
-
-  // Draw core in screen-fixed overlay
-  _renderCoreOverlay();
-}
-
-function _renderCoreOverlay(){
-  if(!tCoreOverlay||!DB.core)return;
-  tCoreOverlay.selectAll('*').remove();
-  _corePathLineEls={};
-
-  const svgEl=document.getElementById('tsvg');
-  if(!svgEl)return;
-  const W=svgEl.clientWidth||800, H=svgEl.clientHeight||600;
-  const cx=W/2, cy=H/2;
-  const {x:tx,y:ty,k}=_coreZoomTransform;
-  const isCoreSelected=selNode==='__core__';
-  const isCoreConnectSrc=connectSrc==='__core__';
-
-  // Core paths (screen-space: fixed center → transformed node position)
-  Object.values(DB.corePaths).forEach(cp=>{
-    const node=DB.nodes[cp.target];if(!node)return;
-    const nx=tx+node.x*k, ny=ty+node.y*k;
-    const glow=tCoreOverlay.append('line')
-      .attrs({x1:cx,y1:cy,x2:nx,y2:ny,stroke:'rgba(180,150,255,0.10)','stroke-width':8,opacity:1});
-    const cline=tCoreOverlay.append('line')
-      .attrs({x1:cx,y1:cy,x2:nx,y2:ny,stroke:'rgba(180,150,255,0.45)','stroke-width':1.2,opacity:.6})
-      .style('stroke-dasharray','5,6');
-    _corePathLineEls[cp.id]={glow,line:cline};
-    if(cp.name){
-      tCoreOverlay.append('text')
-        .attrs({x:(cx+nx)/2,y:(cy+ny)/2-7,'text-anchor':'middle',fill:'rgba(180,150,255,0.38)','font-size':'9px'})
-        .text(cp.name.length>18?cp.name.slice(0,16)+'…':cp.name);
-    }
-  });
-
-  // Core node visual at screen center
-  const coreG=tCoreOverlay.append('g')
-    .attr('transform',`translate(${cx},${cy})`)
-    .attr('cursor','pointer')
-    .on('click',function(e){e.stopPropagation();connectMode?handleConnectClick('__core__'):selectCore();})
-    .on('mouseenter',e=>showTip(e,(DB.core.name||'Research Core')+'\nProblem statements & motivations'))
-    .on('mouseleave',()=>hideTip());
-
-  coreG.append('circle').attrs({r:100,fill:'rgba(170,150,255,0.07)',stroke:'none'}).style('filter','url(#gf-core)');
-  coreG.append('circle').attrs({r:55,fill:'rgba(210,190,255,0.11)',stroke:'none'}).style('filter','url(#gf-core)');
-  coreG.append('circle').attrs({r:isCoreSelected?32:25,fill:'rgba(255,248,215,0.28)',stroke:'none'}).style('filter','url(#gf-core)');
-  coreG.append('circle').attrs({r:isCoreSelected?10:7,fill:'rgba(255,252,230,0.88)',stroke:'none'}).style('filter','url(#gf-core)');
-  coreG.append('circle').attrs({r:2.5,fill:'white',opacity:1});
-  coreG.append('circle').attrs({
-    r:isCoreSelected?20:isCoreConnectSrc?18:13,
-    fill:'none',
-    stroke:isCoreConnectSrc?'#ffaa44':isCoreSelected?'rgba(220,200,255,0.55)':'rgba(200,180,255,0.2)',
-    'stroke-width':isCoreSelected||isCoreConnectSrc?1.5:0.8
-  });
-  const coreLbl=DB.core.name||'CORE';const coreLblShort=coreLbl.length>14?coreLbl.slice(0,12)+'…':coreLbl;
-  coreG.append('text').attrs({y:38,'text-anchor':'middle',fill:isCoreSelected?'rgba(220,200,255,0.7)':'rgba(200,178,255,0.4)','font-size':'8.5px','letter-spacing':'1.5px','font-weight':isCoreSelected?'500':'300'}).text(coreLblShort);
-}
-
-function _refreshCoreOverlay(){
-  _renderCoreOverlay();
 }
 
 function starPath(cx,cy,ro,ri,pts){
