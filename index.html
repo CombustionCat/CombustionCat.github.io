@@ -294,6 +294,30 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 .tinsert-btn{background:rgba(74,144,255,0.07);border:1px solid rgba(74,144,255,0.18);border-radius:4px;color:rgba(200,216,255,0.45);cursor:pointer;font-size:10px;padding:1px 8px;letter-spacing:.3px;transition:all .15s;}
 .tinsert-btn:hover{background:rgba(74,144,255,0.2);color:var(--text);}
 
+/* ── READING LIST VIEW ── */
+#reading-view{overflow-y:auto;padding:12px 12px 80px;}
+#reading-view.on{display:block;}
+.rl-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.rl-sort-btn{background:none;border:1px solid var(--border);border-radius:5px;color:var(--dim);cursor:pointer;font-size:11px;padding:3px 10px;font-family:inherit;transition:all .15s;}
+.rl-sort-btn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.rl-item{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:9px;transition:border-color .15s;}
+.rl-item:hover{border-color:rgba(80,120,255,0.32);}
+.rl-item-hd{display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;}
+.rl-title{font-size:13px;font-weight:500;flex:1;line-height:1.4;word-break:break-word;}
+.rl-badge{font-size:9px;padding:2px 6px;border-radius:3px;flex-shrink:0;letter-spacing:.3px;margin-top:1px;}
+.rl-type-paper{background:rgba(68,200,255,0.15);color:#88ddff;}
+.rl-type-textbook{background:rgba(170,100,255,0.15);color:#cc99ff;}
+.rl-type-article{background:rgba(68,255,136,0.15);color:#88ffaa;}
+.rl-type-report{background:rgba(255,200,68,0.15);color:#ffdd99;}
+.rl-type-other{background:rgba(150,150,150,0.15);color:#aaaaaa;}
+.rl-desc{font-size:12px;color:var(--dim);margin-bottom:6px;line-height:1.5;}
+.rl-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.rl-node-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;background:rgba(74,144,255,0.1);border:1px solid rgba(74,144,255,0.2);border-radius:4px;padding:1px 6px;color:var(--accent2);}
+.rl-date{font-size:10px;color:rgba(200,216,255,0.28);margin-left:auto;}
+.rl-group-hd{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);padding:0 2px 7px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:6px;}
+.rl-add{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:13px;margin-bottom:16px;}
+.rl-add-title{font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;}
+
 /* ── EMPTY STATE ── */
 .empty{text-align:center;color:var(--dim);padding:28px 16px;font-size:13px;line-height:1.7;}
 
@@ -445,6 +469,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
       <button class="vtab on" id="vtab-top" onclick="switchView('top')">☆ Constellation</button>
       <button class="vtab" id="vtab-front" onclick="switchView('front')">◈ Node View</button>
       <button class="vtab" id="vtab-tasks" onclick="switchView('tasks')">✓ Tasks</button>
+      <button class="vtab" id="vtab-reading" onclick="switchView('reading')">📖 Reading</button>
       <button class="vtab" id="vtab-thesis" onclick="switchView('thesis')">✦ Thesis</button>
     </div>
     <div class="spacer"></div>
@@ -508,6 +533,11 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
         <div id="tv-inner"></div>
       </div>
 
+      <!-- READING LIST VIEW -->
+      <div id="reading-view" class="view">
+        <div id="rl-inner" style="max-width:760px;margin:0 auto;"></div>
+      </div>
+
     </div><!-- /#main -->
 
     <!-- DETAIL PANEL -->
@@ -539,6 +569,9 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   </button>
   <button class="mob-tab" id="mtab-tasks" onclick="switchView('tasks');closeSidebar()">
     <span class="mti">✓</span><span>Tasks</span>
+  </button>
+  <button class="mob-tab" id="mtab-reading" onclick="switchView('reading');closeSidebar()">
+    <span class="mti">📖</span><span>Reading</span>
   </button>
   <button class="mob-tab" id="mtab-thesis" onclick="switchView('thesis');closeSidebar()">
     <span class="mti">✦</span><span>Thesis</span>
@@ -580,8 +613,8 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
 // ═══════════════════════════════════════════════
 
 // ── STATE ──────────────────────────────────────
-let DB = { nodes:{}, paths:{}, tasks:{} };
-let selNode = null;   // selected node id
+let DB = { nodes:{}, paths:{}, tasks:{}, core:null, corePaths:{}, reading:{} };
+let selNode = null;   // selected node id  ('__core__' when core is selected)
 let frontNode = null; // node id shown in front view
 let curView = 'top';
 let curTab = 'info';
@@ -654,6 +687,8 @@ function toggleLoginNewDevice(){
 function load(){
   try{const s=localStorage.getItem('rf_data');if(s)DB=JSON.parse(s);}catch(e){}
   DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};DB.marvinSeen=DB.marvinSeen||[];
+  DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};
+  // DB.core is initialized in initTopView() once the SVG has dimensions
 }
 let _syncDirty=false;
 function _updateSyncBtn(){
@@ -669,10 +704,14 @@ function doExport(){
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:`research-forest-${today()}.json`});
   a.click();
 }
+function _normalizeDB(){
+  DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};
+  DB.marvinSeen=DB.marvinSeen||[];DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};
+}
 function doImport(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{DB=JSON.parse(e.target.result);save();render();}catch{alert('Invalid JSON');}};
+  r.onload=e=>{try{DB=JSON.parse(e.target.result);_normalizeDB();save();render();}catch{alert('Invalid JSON');}};
   r.readAsText(f);ev.target.value='';
 }
 function today(){return new Date().toISOString().slice(0,10);}
@@ -810,7 +849,7 @@ async function gistPull(){
     }
     if(!content) throw new Error('Gist file is empty.');
     DB = JSON.parse(content);
-    save(); render();
+    _normalizeDB(); save(); render();
     _syncDirty=false;_updateSyncBtn();
     localStorage.setItem('rf_gist_last', new Date().toISOString());
     showModal(`<h3>☁ Pulled!</h3>
@@ -859,13 +898,14 @@ function render(){
   if(curView==='front') renderFrontView();
   if(curView==='thesis') renderThesisView();
   if(curView==='tasks') renderTasksView();
+  if(curView==='reading') renderReadingView();
   if(selNode) renderPanel();
 }
 
 // ── VIEWS ──────────────────────────────────────
 function switchView(v){
   curView=v;
-  ['top','front','thesis','tasks'].forEach(x=>{
+  ['top','front','thesis','tasks','reading'].forEach(x=>{
     document.getElementById(x+'-view').classList.toggle('on',x===v);
     const vt=document.getElementById('vtab-'+x);
     if(vt)vt.classList.toggle('on',x===v);
@@ -878,6 +918,7 @@ function switchView(v){
   if(v==='front'){cancelAnimationFrame(tCanvasFrame);renderFrontView();}
   if(v==='thesis'){cancelAnimationFrame(tCanvasFrame);renderThesisView();}
   if(v==='tasks'){cancelAnimationFrame(tCanvasFrame);renderTasksView();}
+  if(v==='reading'){cancelAnimationFrame(tCanvasFrame);renderReadingView();}
 }
 
 // ── UTILS ──────────────────────────────────────
@@ -999,18 +1040,19 @@ function _saveTaskName(id){
 }
 
 // ── PARAGRAPHS ─────────────────────────────────
+function _nodeOrCore(nodeId){ return nodeId==='__core__'?DB.core:DB.nodes[nodeId]; }
 function addPara(nodeId,content,refKeys,format,customRefs){
-  const n=DB.nodes[nodeId];if(!n)return;
+  const n=_nodeOrCore(nodeId);if(!n)return;
   n.paragraphs=n.paragraphs||[];
   n.paragraphs.push({id:uid(),content,refKeys:refKeys||[],customRefs:customRefs||[],format:format||'text',at:new Date().toISOString()});
   save();renderPanel();
 }
 function deletePara(nodeId,paraId){
-  const n=DB.nodes[nodeId];if(!n)return;
+  const n=_nodeOrCore(nodeId);if(!n)return;
   n.paragraphs=(n.paragraphs||[]).filter(p=>p.id!==paraId);save();renderPanel();
 }
 function updatePara(nodeId,paraId,content,refKeys,format,customRefs){
-  const n=DB.nodes[nodeId];if(!n)return;
+  const n=_nodeOrCore(nodeId);if(!n)return;
   const p=n.paragraphs?.find(p=>p.id===paraId);
   if(p){p.content=content;p.refKeys=refKeys||[];p.customRefs=customRefs||[];if(format)p.format=format;}
   save();renderPanel();
@@ -1035,7 +1077,12 @@ function _toggleSbCat(key){
 function renderSidebar(){
   const list=document.getElementById('node-list');
   const nodes=Object.values(DB.nodes);
-  if(!nodes.length){list.innerHTML='<div class="empty">No nodes yet.<br>Add your first research direction.</div>';return;}
+  // Core entry always shown at top
+  let coreHtml=`<div class="n-item${selNode==='__core__'?' sel':''}" onclick="selectCore()" style="border-bottom:1px solid var(--border);margin-bottom:4px;">
+    <div class="ndot" style="background:radial-gradient(circle,#fff 20%,#bb99ff 80%);box-shadow:0 0 6px rgba(170,140,255,0.8);flex-shrink:0;"></div>
+    <span class="nname" style="color:var(--accent2);font-weight:600;">✦ Research Core</span>
+  </div>`;
+  if(!nodes.length){list.innerHTML=coreHtml+'<div class="empty" style="margin-top:8px;">No nodes yet.<br>Add your first research direction.</div>';return;}
 
   // Group by category
   const cats={};
@@ -1046,7 +1093,7 @@ function renderSidebar(){
   const allOpen=_sbOpen['__all__']??false;
   const sortedAll=[...nodes].sort((a,b)=>a.name.localeCompare(b.name));
 
-  let html=`<div class="sb-cat">
+  let html=coreHtml+`<div class="sb-cat">
     <div class="sb-cat-hd" onclick="_toggleSbCat('__all__')">
       <span class="sb-cat-arrow">${allOpen?'▾':'▸'}</span>
       <span class="sb-cat-label">All Nodes</span>
@@ -1082,7 +1129,21 @@ function selectNode(id){
   closeSidebar();
 }
 
+function selectCore(){
+  selNode='__core__';
+  if(curTab==='tasks'||curTab==='paths')curTab='info';
+  renderSidebar();openPanel();renderPanel();
+  if(curView==='top')renderTopView();
+  closeSidebar();
+}
+
 // ── PANEL ──────────────────────────────────────
+function _setPanelTabsForCore(isCore){
+  ['pt-tasks','pt-paths'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=isCore?'none':'';
+  });
+}
 function openPanel(){
   const p=document.getElementById('panel');
   p.style.display='';
@@ -1092,6 +1153,7 @@ function closePanel(){
   const p=document.getElementById('panel');
   p.style.display='';
   p.classList.remove('on');
+  _setPanelTabsForCore(false);
   selNode=null;renderSidebar();
   if(curView==='top')renderTopView();
 }
@@ -1099,11 +1161,16 @@ function closePanel(){
 function switchTab(t){
   curTab=t;
   if(t==='notes'){_pendingRefKeys=[];_pendingCustomRefs=[];}
+  if(selNode==='__core__'){
+    ['info','notes'].forEach(x=>document.getElementById('pt-'+x).classList.toggle('on',x===t));
+    renderPanel();return;
+  }
   ['info','tasks','notes','paths'].forEach(x=>document.getElementById('pt-'+x).classList.toggle('on',x===t));
   renderPanel();
 }
 
 function renderPanel(){
+  if(selNode==='__core__'){renderCorePanel();return;}
   const n=DB.nodes[selNode];if(!n)return;
   document.getElementById('p-dot').className=`ndot dot-${n.status}`;
   document.getElementById('p-title').textContent=n.name;
@@ -1245,6 +1312,78 @@ function renderPanel(){
   }
 }
 
+function renderCorePanel(){
+  const c=DB.core;if(!c)return;
+  _setPanelTabsForCore(true);
+  const dot=document.getElementById('p-dot');
+  dot.className='ndot';
+  dot.style.cssText='background:radial-gradient(circle,#fff 20%,#bb99ff 80%);box-shadow:0 0 7px rgba(170,140,255,0.9);flex-shrink:0;';
+  document.getElementById('p-title').textContent=c.name||'Research Core';
+  if(curTab!=='info'&&curTab!=='notes')curTab='info';
+  ['info','notes'].forEach(x=>document.getElementById('pt-'+x).classList.toggle('on',x===curTab));
+  const ct=document.getElementById('pcontent');
+
+  if(curTab==='info'){
+    const cps=Object.values(DB.corePaths);
+    const cpHtml=cps.length?cps.map(cp=>{
+      const tgt=DB.nodes[cp.target];
+      return`<div style="display:flex;align-items:center;gap:7px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;margin-bottom:5px;">
+        <div class="ndot" style="background:rgba(180,150,255,0.6);box-shadow:0 0 4px rgba(170,140,255,0.5);flex-shrink:0;"></div>
+        <span style="font-size:12px;flex:1;">${esc(tgt?.name||'Unknown')}</span>
+        ${cp.name?`<span style="font-size:10px;color:var(--dim);">${esc(cp.name)}</span>`:''}
+        <button class="icon-btn" onclick="deleteCorePath('${cp.id}');renderPanel()">✕</button>
+      </div>`;
+    }).join(''):`<div style="font-size:12px;color:var(--dim);padding:6px 0;">No connections yet.<br>Use "Connect Nodes" and click the Core, then a node.</div>`;
+    ct.innerHTML=`
+      <div class="fg"><label>Name</label>
+        <input value="${esc(c.name||'')}" oninput="DB.core.name=this.value;save();renderSidebar();document.getElementById('p-title').textContent=this.value||'Research Core'"></div>
+      <div class="fg"><label>Problem Statement / Motivation</label>
+        <textarea rows="7" style="min-height:110px;" oninput="DB.core.description=this.value;save();">${esc(c.description||'')}</textarea></div>
+      <div style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:8px;margin-top:4px;">Core Connections</div>
+      ${cpHtml}`;
+  } else if(curTab==='notes'){
+    const paras=c.paragraphs||[];
+    const gRefMap=_buildGlobalRefMap();
+    ct.innerHTML=`
+      ${paras.length?paras.map((p,i)=>`
+        <div class="para" data-paraid="${p.id}" data-nodeid="__core__">
+          <div class="para-meta">
+            <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
+            <div style="display:flex;gap:3px;">
+              <button class="icon-btn" title="Edit paragraph (popup)" onclick="_editPara('__core__','${p.id}')">✎</button>
+              <button class="icon-btn" title="Edit inline" onclick="_inlineEdit('__core__','${p.id}')" style="font-size:10px;">✏</button>
+              <button class="icon-btn" title="Delete paragraph" onclick="deletePara('__core__','${p.id}')">✕</button>
+            </div>
+          </div>
+          <div class="para-text" id="pt-${p.id}">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>
+          ${(()=>{const zk=p.refKeys||[];const cr=p.customRefs||[];if(!zk.length&&!cr.length)return'';
+            return`<div class="para-refs">${zk.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm"><span class="zot-badge" style="margin-right:2px;font-size:8px;">Z</span>${esc(m?m.citation:k)}</span>`;}).join('')}${cr.map(r=>r.type==='link'?`<a class="ref-chip-sm ref-link" href="${esc(r.url||'')}" target="_blank" rel="noopener">🔗 ${esc(r.label||r.url)}</a>`:`<span class="ref-chip-sm ref-file">📎 ${esc(r.label)}</span>`).join('')}</div>`;
+          })()}
+        </div>`).join(''):'<div class="empty">No notes yet.</div>'}
+      <div class="tadd" style="margin-top:10px;">
+        <div class="tadd-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Add Note</span>
+          <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
+        </div>
+        <div class="rte-wrap">
+          ${_rteToolbarHtml('ptext')}
+          <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write notes… type $$x^2 then Enter for math" onkeydown="_rteEqOnEnter(this,event)"></div>
+        </div>
+        <button class="btn btn-sm" style="width:100%;justify-content:center;margin-top:6px;" onclick="_submitPara()">Add Note</button>
+      </div>`;
+  }
+}
+
+// ── CORE PATHS ─────────────────────────────────
+function addCorePath(tgtId,name){
+  const dup=Object.values(DB.corePaths).some(p=>p.target===tgtId);
+  if(dup){alert('A core connection to this node already exists.');return null;}
+  const id=uid();
+  DB.corePaths[id]={id,target:tgtId,name:name||''};
+  save();render();return id;
+}
+function deleteCorePath(id){delete DB.corePaths[id];save();render();}
+
 function _submitTask(){
   const name=document.getElementById('tn')?.value.trim();
   if(!name)return;
@@ -1264,10 +1403,10 @@ function _submitPara(){
   _pendingRefKeys=[];_pendingCustomRefs=[];
 }
 function _editPara(nodeId,paraId){
-  const n=DB.nodes[nodeId];const p=n?.paragraphs?.find(x=>x.id===paraId);if(!p)return;
+  const n=_nodeOrCore(nodeId);const p=n?.paragraphs?.find(x=>x.id===paraId);if(!p)return;
   _pendingRefKeys=[...(p.refKeys||[])];
   _pendingCustomRefs=[...(p.customRefs||[])];
-  // Collect unique Zotero references from all tasks on this node
+  // Collect unique Zotero references from all tasks on this node (core has no tasks)
   const seen=new Set();_editRefTasks=[];
   (n?.taskIds||[]).forEach(tid=>{
     const t=DB.tasks[tid];
@@ -1576,7 +1715,7 @@ function _saveInlineEdit(nodeId,paraId){
   const textDiv=document.getElementById('pt-'+paraId);
   if(!textDiv)return;
   const html=textDiv.innerHTML;
-  const n=DB.nodes[nodeId];const p=n?.paragraphs?.find(x=>x.id===paraId);
+  const n=_nodeOrCore(nodeId);const p=n?.paragraphs?.find(x=>x.id===paraId);
   if(p){p.content=html;p.format='html';p.at=new Date().toISOString();save();}
   _inlineEditId=null;
   renderPanel();
@@ -1701,14 +1840,37 @@ document.addEventListener('dblclick',e=>{
 });
 
 function handleConnectClick(id){
+  const getName=x=>x==='__core__'?(DB.core?.name||'Core'):DB.nodes[x]?.name;
   if(!connectSrc){
     connectSrc=id;
-    document.getElementById('connect-banner').textContent=`Source: ${DB.nodes[id]?.name} — now click TARGET node`;
+    document.getElementById('connect-banner').textContent=`Source: ${getName(id)} — now click TARGET node`;
     renderTopView();
   } else if(connectSrc!==id){
-    showPathModal(connectSrc,id);
+    if(connectSrc==='__core__'||id==='__core__'){
+      const othId=connectSrc==='__core__'?id:connectSrc;
+      showCorePathModal(othId);
+    } else {
+      showPathModal(connectSrc,id);
+    }
     cancelConnect();
   }
+}
+
+function showCorePathModal(nodeId){
+  const n=DB.nodes[nodeId];
+  showModal(`<h3>Connect to Core</h3>
+    <p style="color:var(--dim);margin-bottom:16px;font-size:13px;">
+      <strong>✦ ${esc(DB.core?.name||'Core')}</strong> ⟷ <strong>${esc(n?.name)}</strong>
+    </p>
+    <div class="fg"><label>Label (optional)</label><input id="cpn" placeholder="e.g. Motivating question…"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_submitCorePath('${nodeId}')">Connect to Core</button>
+    </div>`);
+}
+function _submitCorePath(nodeId){
+  const name=document.getElementById('cpn')?.value.trim();
+  addCorePath(nodeId,name);closeModal();
 }
 
 function showPathModal(src,tgt){
@@ -1756,29 +1918,29 @@ function initStarfield(){
   const buildStars=()=>{
     const W=cv.width,H=cv.height;
     stars=[];
-    for(let i=0;i<480;i++){
+    for(let i=0;i<700;i++){
       const t=Math.random();
       let x,y,r,a,rgb;
-      if(t<0.12){
-        // Core cluster — dense near center
+      if(t<0.08){
+        // Core cluster — near center
         const ang=Math.random()*Math.PI*2;
-        const d=Math.pow(Math.random(),2.2)*Math.min(W,H)*0.1;
-        x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*0.75;
-        r=Math.random()*1.4+0.5; a=Math.random()*0.5+0.35;
-      } else if(t<0.46){
+        const d=Math.pow(Math.random(),2.2)*Math.min(W,H)*0.09;
+        x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*0.78;
+        r=Math.random()*1.1+0.38; a=Math.random()*0.42+0.25;
+      } else if(t<0.36){
         // Galactic disk — elliptical band
         const ang=Math.random()*Math.PI*2;
-        const d=Math.pow(Math.random(),0.6)*Math.min(W,H)*0.46;
-        x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*(0.32+Math.random()*0.42);
-        r=Math.random()*0.9+0.2; a=Math.random()*0.28+0.08;
+        const d=Math.pow(Math.random(),0.62)*Math.min(W,H)*0.46;
+        x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*(0.3+Math.random()*0.38);
+        r=Math.random()*0.8+0.18; a=Math.random()*0.24+0.06;
       } else {
-        // Background scatter
+        // Background scatter — wide and evenly spread
         x=Math.random()*W; y=Math.random()*H;
-        r=Math.random()*0.6+0.1; a=Math.random()*0.2+0.04;
+        r=Math.random()*0.55+0.1; a=Math.random()*0.18+0.04;
       }
       const cr=Math.random();
-      rgb=cr<0.62?'190,212,255':cr<0.8?'230,236,255':cr<0.91?'255,225,175':'255,175,135';
-      stars.push({x,y,r,a,rgb,da:(Math.random()*.007+.002)*(Math.random()>.5?1:-1)});
+      rgb=cr<0.62?'190,212,255':cr<0.8?'230,236,255':cr<0.91?'255,225,175':'255,185,150';
+      stars.push({x,y,r,a,rgb,da:(Math.random()*.006+.0015)*(Math.random()>.5?1:-1)});
     }
   };
 
@@ -1856,28 +2018,32 @@ function initConstellationCanvas(){
   const resize=()=>{cv.width=wrap.clientWidth||window.innerWidth;cv.height=wrap.clientHeight||window.innerHeight;};
   resize();
 
-  // Galaxy-distributed stars — denser near center
+  // Galaxy-distributed stars — disk + dense background scatter
   const stars=[];
-  for(let i=0;i<520;i++){
+  for(let i=0;i<860;i++){
     const t=Math.random();
     const W=cv.width,H=cv.height;
     let x,y,r,a,rgb;
-    if(t<0.14){
+    if(t<0.09){
+      // Core cluster — small, slightly brighter
       const ang=Math.random()*Math.PI*2;
-      const d=Math.pow(Math.random(),2)*Math.min(W,H)*0.09;
-      x=W/2+Math.cos(ang)*d;y=H/2+Math.sin(ang)*d;
-      r=Math.random()*1.1+0.45;a=Math.random()*0.55+0.3;rgb='225,232,255';
-    } else if(t<0.52){
+      const d=Math.pow(Math.random(),2.2)*Math.min(W,H)*0.08;
+      x=W/2+Math.cos(ang)*d;y=H/2+Math.sin(ang)*d*0.88;
+      r=Math.random()*0.95+0.35;a=Math.random()*0.42+0.22;rgb='225,232,255';
+    } else if(t<0.36){
+      // Galactic disk — elliptical band, tilted slightly
       const ang=Math.random()*Math.PI*2;
-      const d=Math.pow(Math.random(),0.55)*Math.min(W,H)*0.44;
-      x=W/2+Math.cos(ang)*d;y=H/2+Math.sin(ang)*d*0.65;
-      r=Math.random()*0.9+0.2;a=Math.random()*0.42+0.1;
-      const cr=Math.random();rgb=cr<0.6?'190,212,255':cr<0.8?'230,236,255':'255,225,175';
+      const d=Math.pow(Math.random(),0.58)*Math.min(W,H)*0.44;
+      x=W/2+Math.cos(ang)*d;y=H/2+Math.sin(ang)*d*(0.28+Math.random()*0.38);
+      r=Math.random()*0.8+0.15;a=Math.random()*0.30+0.06;
+      const cr=Math.random();rgb=cr<0.58?'190,212,255':cr<0.78?'230,236,255':cr<0.91?'255,225,175':'255,200,170';
     } else {
+      // Background — widely and evenly spread across the full canvas
       x=Math.random()*cv.width;y=Math.random()*cv.height;
-      r=Math.random()*0.55+0.1;a=Math.random()*0.22+0.06;rgb='190,212,255';
+      r=Math.random()*0.5+0.1;a=Math.random()*0.17+0.04;
+      const cr=Math.random();rgb=cr<0.65?'190,212,255':cr<0.82?'230,236,255':cr<0.92?'255,225,175':'255,195,175';
     }
-    stars.push({x,y,r,a,rgb,da:(Math.random()*.008+.002)*(Math.random()>.5?1:-1)});
+    stars.push({x,y,r,a,rgb,da:(Math.random()*.007+.0015)*(Math.random()>.5?1:-1)});
   }
 
   let frame=0;
@@ -1893,35 +2059,26 @@ function initConstellationCanvas(){
     halo.addColorStop(0.75,'rgba(60,80,200,0.03)');
     halo.addColorStop(1,'rgba(0,0,0,0)');
     cx.fillStyle=halo;cx.fillRect(0,0,W,H);
-    // Inner corona
-    const corona=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.13);
-    corona.addColorStop(0,'rgba(255,252,220,0.52)');
-    corona.addColorStop(0.3,'rgba(220,200,255,0.32)');
-    corona.addColorStop(0.7,'rgba(150,170,255,0.1)');
+    // Inner corona — soft and diffuse, no hard center
+    const corona=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.min(W,H)*0.22);
+    corona.addColorStop(0,'rgba(255,252,230,0.22)');
+    corona.addColorStop(0.25,'rgba(220,205,255,0.12)');
+    corona.addColorStop(0.6,'rgba(150,160,255,0.04)');
     corona.addColorStop(1,'rgba(0,0,0,0)');
     cx.fillStyle=corona;cx.fillRect(0,0,W,H);
-    // Pulsing bright nucleus
-    const pulse=Math.sin(frame*0.025)*0.12+0.82;
-    const nucleus=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,18);
-    nucleus.addColorStop(0,`rgba(255,255,255,${pulse})`);
-    nucleus.addColorStop(0.4,'rgba(255,248,220,0.65)');
+    // Gentle pulsing nebular glow — no bright point, just a diffuse cloud
+    const pulse=Math.sin(frame*0.02)*0.05+0.28;
+    const nucleus=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,42);
+    nucleus.addColorStop(0,`rgba(255,250,235,${pulse})`);
+    nucleus.addColorStop(0.45,`rgba(220,210,255,${pulse*0.5})`);
     nucleus.addColorStop(1,'rgba(0,0,0,0)');
     cx.fillStyle=nucleus;cx.fillRect(0,0,W,H);
-    // Radiating spikes (4 light rays from core)
-    cx.save();
-    cx.translate(W/2,H/2);
-    const spikeA=pulse*0.18;
-    [0,90,45,135].forEach(deg=>{
-      const rad=deg*Math.PI/180;
-      const len=Math.min(W,H)*0.28;
-      const gr=cx.createLinearGradient(0,0,Math.cos(rad)*len,Math.sin(rad)*len);
-      gr.addColorStop(0,`rgba(255,250,220,${spikeA})`);
-      gr.addColorStop(1,'rgba(0,0,0,0)');
-      cx.strokeStyle=gr;cx.lineWidth=1.2;
-      cx.beginPath();cx.moveTo(0,0);cx.lineTo(Math.cos(rad)*len,Math.sin(rad)*len);cx.stroke();
-      cx.beginPath();cx.moveTo(0,0);cx.lineTo(-Math.cos(rad)*len,-Math.sin(rad)*len);cx.stroke();
-    });
-    cx.restore();
+    // Tilted galactic band — faint dust lane across the field
+    cx.save();cx.translate(W/2,H/2);cx.rotate(0.42);
+    const band=cx.createRadialGradient(0,0,0,0,0,Math.min(W,H)*0.52);
+    band.addColorStop(0,'rgba(155,140,255,0.05)');band.addColorStop(0.5,'rgba(120,110,220,0.025)');band.addColorStop(1,'rgba(0,0,0,0)');
+    cx.beginPath();cx.ellipse(0,0,Math.min(W,H)*0.52,Math.min(W,H)*0.09,0,0,Math.PI*2);
+    cx.fillStyle=band;cx.fill();cx.restore();
 
     // === STARS ===
     stars.forEach(s=>{
@@ -1946,21 +2103,58 @@ function renderTopView(){
   const nodes=Object.values(DB.nodes);
   const paths=Object.values(DB.paths);
 
-  // ── GALAXY CORE (rendered first, behind links and nodes)
-  const svgEl=document.getElementById('tsvg');
-  const cX=(svgEl.clientWidth||800)/2, cY=(svgEl.clientHeight||600)/2;
-  const coreG=tG.append('g').attr('transform',`translate(${cX},${cY})`).attr('pointer-events','none');
+  // Ensure DB.core is initialized (needs SVG dimensions)
+  if(!DB.core){
+    const svgEl=document.getElementById('tsvg');
+    const W=svgEl.clientWidth||800, H=svgEl.clientHeight||600;
+    DB.core={name:'Research Core',description:'',paragraphs:[],x:W/2,y:H/2};
+    save();
+  }
+  const coreX=DB.core.x, coreY=DB.core.y;
+  const isCoreSelected=selNode==='__core__';
+  const isCoreConnectSrc=connectSrc==='__core__';
+
+  // ── CORE PATHS layer (behind everything)
+  const cpLayer=tG.append('g');
+  Object.values(DB.corePaths).forEach(cp=>{
+    const tgtNode=DB.nodes[cp.target];if(!tgtNode)return;
+    const col='rgba(180,150,255,0.45)';
+    cpLayer.append('line')
+      .attrs({x1:coreX,y1:coreY,x2:tgtNode.x,y2:tgtNode.y,stroke:'rgba(180,150,255,0.12)','stroke-width':8,opacity:1});
+    cpLayer.append('line')
+      .attrs({x1:coreX,y1:coreY,x2:tgtNode.x,y2:tgtNode.y,stroke:col,'stroke-width':1.2,opacity:.6})
+      .style('stroke-dasharray','5,6');
+    if(cp.name){
+      cpLayer.append('text')
+        .attrs({x:(coreX+tgtNode.x)/2,y:(coreY+tgtNode.y)/2-7,'text-anchor':'middle',fill:'rgba(180,150,255,0.4)','font-size':'9px'})
+        .text(cp.name.length>18?cp.name.slice(0,16)+'…':cp.name);
+    }
+  });
+
+  // ── GALAXY CORE interactive node (rendered before links so links draw over the halo)
+  const coreG=tG.append('g')
+    .attr('transform',`translate(${coreX},${coreY})`)
+    .attr('cursor','pointer')
+    .on('click',function(e){e.stopPropagation();connectMode?handleConnectClick('__core__'):selectCore();})
+    .on('mouseenter',e=>showTip(e,(DB.core.name||'Research Core')+'\nProblem statements & motivations'))
+    .on('mouseleave',()=>hideTip());
   // Layered glow rings
-  coreG.append('circle').attrs({r:110,fill:'rgba(170,150,255,0.07)',stroke:'none'}).style('filter','url(#gf-core)');
-  coreG.append('circle').attrs({r:60,fill:'rgba(210,190,255,0.13)',stroke:'none'}).style('filter','url(#gf-core)');
-  coreG.append('circle').attrs({r:28,fill:'rgba(255,248,215,0.32)',stroke:'none'}).style('filter','url(#gf-core)');
-  coreG.append('circle').attrs({r:8,fill:'rgba(255,252,230,0.92)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:100,fill:'rgba(170,150,255,0.07)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:55,fill:'rgba(210,190,255,0.11)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:isCoreSelected?32:25,fill:'rgba(255,248,215,0.28)',stroke:'none'}).style('filter','url(#gf-core)');
+  coreG.append('circle').attrs({r:isCoreSelected?10:7,fill:'rgba(255,252,230,0.88)',stroke:'none'}).style('filter','url(#gf-core)');
   // Hard bright center
-  coreG.append('circle').attrs({r:3,fill:'white',opacity:1});
-  // Subtle ring
-  coreG.append('circle').attrs({r:14,fill:'none',stroke:'rgba(200,180,255,0.18)','stroke-width':0.8});
+  coreG.append('circle').attrs({r:2.5,fill:'white',opacity:1});
+  // Selection / connect-source ring
+  coreG.append('circle').attrs({
+    r:isCoreSelected?20:isCoreConnectSrc?18:13,
+    fill:'none',
+    stroke:isCoreConnectSrc?'#ffaa44':isCoreSelected?'rgba(220,200,255,0.55)':'rgba(200,180,255,0.2)',
+    'stroke-width':isCoreSelected||isCoreConnectSrc?1.5:0.8
+  });
   // Label
-  coreG.append('text').attrs({y:38,'text-anchor':'middle',fill:'rgba(200,178,255,0.38)','font-size':'8.5px','letter-spacing':'3px','font-weight':'300'}).text('CORE');
+  const coreLbl=(DB.core.name||'CORE');const coreLblShort=coreLbl.length>14?coreLbl.slice(0,12)+'…':coreLbl;
+  coreG.append('text').attrs({y:38,'text-anchor':'middle',fill:isCoreSelected?'rgba(220,200,255,0.7)':'rgba(200,178,255,0.4)','font-size':'8.5px','letter-spacing':'1.5px','font-weight':isCoreSelected?'500':'300'}).text(coreLblShort);
 
   // ── LINKS layer
   const lLayer=tG.append('g');
@@ -2316,6 +2510,171 @@ function _rfRemoveLabel(taskId,label){
   const t=DB.tasks[taskId];if(!t)return;
   t.labels=(t.labels||[]).filter(l=>l!==label);
   save();render();
+}
+
+// ── READING LIST ───────────────────────────────
+let _rlSort='date'; // 'date' | 'node' | 'alpha'
+const _rlTypes=['paper','textbook','article','report','other'];
+function _rlTypeName(t){return t==='paper'?'Paper':t==='textbook'?'Textbook':t==='article'?'Article':t==='report'?'Report':'Other';}
+
+function addReadingItem(title,type,desc,url,nodeIds){
+  const id=uid();
+  DB.reading[id]={id,title:title||'',type:type||'other',description:desc||'',url:url||'',nodeIds:nodeIds||[],addedAt:new Date().toISOString()};
+  save();renderReadingView();return id;
+}
+function deleteReadingItem(id){delete DB.reading[id];save();renderReadingView();}
+function updateReadingItem(id,patch){if(DB.reading[id])Object.assign(DB.reading[id],patch);save();renderReadingView();}
+
+function _rlSetSort(s){_rlSort=s;renderReadingView();}
+
+function _rlNodePicker(itemId,currentIds){
+  const nodes=Object.values(DB.nodes);
+  if(!nodes.length){alert('No nodes yet.');return;}
+  const checked=new Set(currentIds);
+  showModal(`<h3>Tag Nodes</h3>
+    <p style="color:var(--dim);font-size:12px;margin-bottom:12px;">Select nodes this item is relevant to:</p>
+    <div style="display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;margin-bottom:14px;">
+      ${nodes.map(n=>`<label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:5px 7px;border-radius:5px;transition:background .12s;" onmouseover="this.style.background='rgba(74,144,255,0.08)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${n.id}" ${checked.has(n.id)?'checked':''} accent-color="var(--accent)" style="accent-color:var(--accent);">
+        <div class="ndot dot-${n.status}" style="flex-shrink:0;"></div>
+        <span style="font-size:13px;">${esc(n.name)}</span>
+      </label>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_rlSaveNodes('${itemId}')">Save</button>
+    </div>`);
+}
+function _rlSaveNodes(itemId){
+  const checks=[...document.querySelectorAll('#modal-body input[type=checkbox]')];
+  const nodeIds=checks.filter(c=>c.checked).map(c=>c.value);
+  updateReadingItem(itemId,{nodeIds});closeModal();
+}
+
+function _rlEditModal(id){
+  const item=DB.reading[id];if(!item)return;
+  showModal(`<h3>Edit Reading Item</h3>
+    <div class="fg"><label>Title</label><input id="rle-title" value="${esc(item.title)}"></div>
+    <div class="fg"><label>Type</label>
+      <select id="rle-type">
+        ${_rlTypes.map(t=>`<option value="${t}"${item.type===t?' selected':''}>${_rlTypeName(t)}</option>`).join('')}
+      </select></div>
+    <div class="fg"><label>URL / DOI (optional)</label><input id="rle-url" value="${esc(item.url||'')}" placeholder="https://…"></div>
+    <div class="fg"><label>Description / Notes</label><textarea id="rle-desc" rows="3">${esc(item.description||'')}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_rlSaveEdit('${id}')">Save</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('rle-title')?.focus(),50);
+}
+function _rlSaveEdit(id){
+  const title=document.getElementById('rle-title')?.value.trim();
+  if(!title)return;
+  const type=document.getElementById('rle-type')?.value||'other';
+  const url=document.getElementById('rle-url')?.value.trim()||'';
+  const desc=document.getElementById('rle-desc')?.value.trim()||'';
+  updateReadingItem(id,{title,type,url,description:desc});closeModal();
+}
+
+function renderReadingView(){
+  const inner=document.getElementById('rl-inner');
+  if(!inner)return;
+  const items=Object.values(DB.reading);
+
+  const addForm=`<div class="rl-add">
+    <div class="rl-add-title">Add to Reading List</div>
+    <div class="fg" style="margin-bottom:7px;">
+      <input id="rl-title" placeholder="Title…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+    </div>
+    <div style="display:flex;gap:7px;margin-bottom:7px;flex-wrap:wrap;">
+      <select id="rl-type" style="flex:1;min-width:120px;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+        ${_rlTypes.map(t=>`<option value="${t}">${_rlTypeName(t)}</option>`).join('')}
+      </select>
+      <input id="rl-url" placeholder="URL / DOI (optional)" style="flex:2;min-width:160px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+    </div>
+    <div class="fg" style="margin-bottom:8px;">
+      <textarea id="rl-desc" rows="2" placeholder="Notes / why you want to read this…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+    </div>
+    <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_rlSubmit()">Add Item</button>
+  </div>`;
+
+  const total=items.length;
+  const toolbar=total>0?`<div class="rl-toolbar">
+    <span style="font-size:12px;color:var(--dim);margin-right:4px;">${total} item${total!==1?'s':''} · Sort:</span>
+    <button class="rl-sort-btn${_rlSort==='date'?' on':''}" onclick="_rlSetSort('date')">Date added</button>
+    <button class="rl-sort-btn${_rlSort==='node'?' on':''}" onclick="_rlSetSort('node')">By node</button>
+    <button class="rl-sort-btn${_rlSort==='alpha'?' on':''}" onclick="_rlSetSort('alpha')">A–Z</button>
+  </div>`:'';
+
+  function itemHtml(item){
+    const nodeChips=(item.nodeIds||[]).map(nid=>{
+      const n=DB.nodes[nid];if(!n)return'';
+      return`<span class="rl-node-chip"><span class="ndot dot-${n.status}" style="width:5px;height:5px;"></span>${esc(n.name)}</span>`;
+    }).filter(Boolean).join('');
+    const linkHtml=item.url?`<a href="${esc(item.url)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent2);text-decoration:none;margin-right:auto;" title="${esc(item.url)}">🔗 Open</a>`:'<span style="margin-right:auto;"></span>';
+    return`<div class="rl-item">
+      <div class="rl-item-hd">
+        <span class="rl-badge rl-type-${item.type}">${_rlTypeName(item.type)}</span>
+        <span class="rl-title">${esc(item.title)}</span>
+        <button class="icon-btn" title="Edit" onclick="_rlEditModal('${item.id}')" style="flex-shrink:0;">✎</button>
+        <button class="icon-btn" title="Delete" onclick="deleteReadingItem('${item.id}')" style="flex-shrink:0;">✕</button>
+      </div>
+      ${item.description?`<div class="rl-desc">${esc(item.description)}</div>`:''}
+      <div class="rl-footer">
+        ${linkHtml}
+        ${nodeChips}
+        <button class="icon-btn" title="Tag nodes" onclick="_rlNodePicker('${item.id}',[${(item.nodeIds||[]).map(x=>`'${x}'`).join(',')}])" style="font-size:10px;color:var(--dim);">⊕ nodes</button>
+        <span class="rl-date">${new Date(item.addedAt).toLocaleDateString()}</span>
+      </div>
+    </div>`;
+  }
+
+  let listHtml='';
+  if(!items.length){
+    listHtml=`<div class="empty">No reading items yet.<br>Add papers, textbooks, or articles you want to read.</div>`;
+  } else if(_rlSort==='date'){
+    const sorted=[...items].sort((a,b)=>new Date(b.addedAt)-new Date(a.addedAt));
+    listHtml=sorted.map(itemHtml).join('');
+  } else if(_rlSort==='alpha'){
+    const sorted=[...items].sort((a,b)=>a.title.localeCompare(b.title));
+    listHtml=sorted.map(itemHtml).join('');
+  } else { // 'node'
+    // Group: items with nodes (grouped per node), then untagged
+    const nodeGroups={};
+    const untagged=[];
+    items.forEach(item=>{
+      if(!(item.nodeIds&&item.nodeIds.length)){untagged.push(item);return;}
+      item.nodeIds.forEach(nid=>{
+        (nodeGroups[nid]=nodeGroups[nid]||[]).push(item);
+      });
+    });
+    const nodeIds=Object.keys(nodeGroups).sort((a,b)=>{
+      const na=DB.nodes[a]?.name||'';const nb=DB.nodes[b]?.name||'';return na.localeCompare(nb);
+    });
+    nodeIds.forEach(nid=>{
+      const n=DB.nodes[nid];if(!n)return;
+      const grpItems=[...new Set(nodeGroups[nid])].sort((a,b)=>a.title.localeCompare(b.title));
+      listHtml+=`<div class="rl-group-hd"><span class="ndot dot-${n.status}" style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>${esc(n.name)}</div>`;
+      listHtml+=grpItems.map(itemHtml).join('');
+    });
+    if(untagged.length){
+      if(nodeIds.length)listHtml+=`<div class="rl-group-hd" style="margin-top:12px;">Untagged</div>`;
+      listHtml+=untagged.sort((a,b)=>a.title.localeCompare(b.title)).map(itemHtml).join('');
+    }
+  }
+
+  inner.innerHTML=addForm+toolbar+listHtml;
+}
+
+function _rlSubmit(){
+  const title=document.getElementById('rl-title')?.value.trim();if(!title)return;
+  const type=document.getElementById('rl-type')?.value||'other';
+  const url=document.getElementById('rl-url')?.value.trim()||'';
+  const desc=document.getElementById('rl-desc')?.value.trim()||'';
+  addReadingItem(title,type,desc,url,[]);
+  document.getElementById('rl-title').value='';
+  document.getElementById('rl-url').value='';
+  document.getElementById('rl-desc').value='';
 }
 
 // ── TASK VIEW ──────────────────────────────────
