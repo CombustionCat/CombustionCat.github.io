@@ -297,6 +297,15 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 /* ── READING LIST VIEW ── */
 #reading-view{overflow-y:auto;padding:12px 12px 80px;}
 #reading-view.on{display:block;}
+/* ── THOUGHTS VIEW ── */
+#thoughts-view{overflow-y:auto;padding:12px 12px 80px;}
+#thoughts-view.on{display:block;}
+.thought-card{transition:box-shadow .15s;}
+.thought-card:hover{box-shadow:0 2px 14px rgba(100,120,255,0.09);}
+.thought-body:focus{outline:1px solid rgba(80,120,255,0.25);border-radius:4px;padding:2px;}
+/* ── THESIS CORE BLOCK ── */
+.tblock-core{border-left:2px solid rgba(180,150,255,0.45);background:rgba(170,150,255,0.04);}
+.tvdoc-core-section{border-left:3px solid rgba(180,150,255,0.35);padding-left:16px;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid rgba(200,200,255,0.08);}
 .rl-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
 .rl-sort-btn{background:none;border:1px solid var(--border);border-radius:5px;color:var(--dim);cursor:pointer;font-size:11px;padding:3px 10px;font-family:inherit;transition:all .15s;}
 .rl-sort-btn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -470,6 +479,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
       <button class="vtab" id="vtab-front" onclick="switchView('front')">◈ Node View</button>
       <button class="vtab" id="vtab-tasks" onclick="switchView('tasks')">✓ Tasks</button>
       <button class="vtab" id="vtab-reading" onclick="switchView('reading')">📖 Reading</button>
+      <button class="vtab" id="vtab-thoughts" onclick="switchView('thoughts')">💭 Thoughts</button>
       <button class="vtab" id="vtab-thesis" onclick="switchView('thesis')">✦ Thesis</button>
     </div>
     <div class="spacer"></div>
@@ -538,6 +548,11 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
         <div id="rl-inner" style="max-width:760px;margin:0 auto;"></div>
       </div>
 
+      <!-- THOUGHTS VIEW -->
+      <div id="thoughts-view" class="view">
+        <div id="thoughts-inner" style="max-width:760px;margin:0 auto;padding:20px 16px 80px;"></div>
+      </div>
+
     </div><!-- /#main -->
 
     <!-- DETAIL PANEL -->
@@ -572,6 +587,9 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   </button>
   <button class="mob-tab" id="mtab-reading" onclick="switchView('reading');closeSidebar()">
     <span class="mti">📖</span><span>Reading</span>
+  </button>
+  <button class="mob-tab" id="mtab-thoughts" onclick="switchView('thoughts');closeSidebar()">
+    <span class="mti">💭</span><span>Thoughts</span>
   </button>
   <button class="mob-tab" id="mtab-thesis" onclick="switchView('thesis');closeSidebar()">
     <span class="mti">✦</span><span>Thesis</span>
@@ -687,7 +705,7 @@ function toggleLoginNewDevice(){
 function load(){
   try{const s=localStorage.getItem('rf_data');if(s)DB=JSON.parse(s);}catch(e){}
   DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};DB.marvinSeen=DB.marvinSeen||[];
-  DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};
+  DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};DB.thoughts=DB.thoughts||[];
   // DB.core is initialized in initTopView() once the SVG has dimensions
 }
 let _syncDirty=false;
@@ -706,7 +724,7 @@ function doExport(){
 }
 function _normalizeDB(){
   DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};
-  DB.marvinSeen=DB.marvinSeen||[];DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};
+  DB.marvinSeen=DB.marvinSeen||[];DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};DB.thoughts=DB.thoughts||[];
 }
 function doImport(ev){
   const f=ev.target.files[0];if(!f)return;
@@ -905,7 +923,7 @@ function render(){
 // ── VIEWS ──────────────────────────────────────
 function switchView(v){
   curView=v;
-  ['top','front','thesis','tasks','reading'].forEach(x=>{
+  ['top','front','thesis','tasks','reading','thoughts'].forEach(x=>{
     document.getElementById(x+'-view').classList.toggle('on',x===v);
     const vt=document.getElementById('vtab-'+x);
     if(vt)vt.classList.toggle('on',x===v);
@@ -919,6 +937,7 @@ function switchView(v){
   if(v==='thesis'){cancelAnimationFrame(tCanvasFrame);renderThesisView();}
   if(v==='tasks'){cancelAnimationFrame(tCanvasFrame);renderTasksView();}
   if(v==='reading'){cancelAnimationFrame(tCanvasFrame);renderReadingView();}
+  if(v==='thoughts'){cancelAnimationFrame(tCanvasFrame);renderThoughtsView();}
 }
 
 // ── UTILS ──────────────────────────────────────
@@ -3392,12 +3411,98 @@ function _mvSaveNode(taskId){
   save();closeModal();renderTasksView();
 }
 
+// ── THOUGHTS VIEW ──────────────────────────────
+function renderThoughtsView(){
+  const el=document.getElementById('thoughts-inner');
+  if(!el)return;
+  DB.thoughts=DB.thoughts||[];
+  const list=[...DB.thoughts].sort((a,b)=>b.at-a.at);
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--text);">Unorganised Thoughts</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px;">Ideas that don't belong to a node yet</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addThought()">+ New thought</button>
+    </div>
+    ${list.length?list.map(t=>`
+      <div class="thought-card" id="tc-${t.id}" style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:14px 14px 10px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:10px;color:var(--dim);">${new Date(t.at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>
+          <button class="btn btn-ghost btn-sm" onclick="deleteThought('${t.id}')" style="padding:2px 8px;font-size:10px;color:var(--dim);">✕</button>
+        </div>
+        <div class="thought-body" contenteditable="true" data-tid="${t.id}" onblur="saveThought(this)"
+          style="min-height:44px;font-size:13px;line-height:1.6;color:var(--text);outline:none;white-space:pre-wrap;">${esc(t.content||'')}</div>
+      </div>`).join('')
+    :'<div class="empty" style="padding:60px 20px;text-align:center;color:var(--dim);">No thoughts yet.<br><span style="font-size:12px;opacity:.7;">Hit "+ New thought" to start capturing ideas.</span></div>'}
+  `;
+}
+
+function addThought(){
+  DB.thoughts=DB.thoughts||[];
+  const id=uid();
+  DB.thoughts.push({id,content:'',at:Date.now()});
+  save();renderThoughtsView();
+  setTimeout(()=>{const el=document.querySelector(`#tc-${id} .thought-body`);if(el)el.focus();},50);
+}
+
+function deleteThought(id){
+  if(!DB.thoughts)return;
+  if(!confirm('Delete this thought?'))return;
+  DB.thoughts=DB.thoughts.filter(t=>t.id!==id);
+  save();renderThoughtsView();
+}
+
+function saveThought(el){
+  const tid=el.dataset.tid;
+  if(!DB.thoughts||!tid)return;
+  const t=DB.thoughts.find(x=>x.id===tid);
+  if(t)t.content=el.innerText;
+  save();
+}
+
 // ── THESIS VIEW ────────────────────────────────
 function _initThesisDoc(){
   if(!DB.thesis_doc)DB.thesis_doc=[];
   const existIds=new Set(DB.thesis_doc.filter(b=>b.type==='node').map(b=>b.nodeId));
   Object.keys(DB.nodes).forEach(id=>{if(!existIds.has(id))DB.thesis_doc.push({type:'node',nodeId:id});});
   DB.thesis_doc=DB.thesis_doc.filter(b=>b.type!=='node'||DB.nodes[b.nodeId]);
+}
+
+function _tCoreBlock(){
+  if(!DB.core)return'';
+  const paras=DB.core.paragraphs||[];
+  return`<div class="tblock tblock-core" id="thesis-core-block">
+    <div class="tblock-inner">
+      <div class="tnode-hd">
+        <h2><span style="color:rgba(180,150,255,0.8);font-size:9px;margin-right:3px;">⦿</span>Research Problem &amp; Motivation</h2>
+        <span class="tnode-badge tbadge" style="background:rgba(170,150,255,0.18);color:rgba(180,150,255,0.9);border:1px solid rgba(170,150,255,0.3);">Core</span>
+      </div>
+      ${DB.core.description?`<div style="font-size:12px;color:var(--dim);font-style:italic;margin-bottom:8px;">${esc(DB.core.description)}</div>`:''}
+      ${paras.map((p,pi)=>`
+        <div class="tpara-item" data-nodeid="__core__" data-pi="${pi}">
+          <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
+          <div class="tpara-body" contenteditable="true" data-nodeid="__core__" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
+          <button class="tpara-del" onclick="tDelCorePara(${pi})" title="Delete">✕</button>
+        </div>`).join('')}
+      <button class="tpara-add" onclick="tAddCorePara()">+ Add paragraph</button>
+    </div>
+  </div>`;
+}
+
+function tAddCorePara(){
+  if(!DB.core)return;
+  if(!DB.core.paragraphs)DB.core.paragraphs=[];
+  DB.core.paragraphs.push({id:uid(),content:'',at:Date.now(),refKeys:[]});
+  save();renderThesisView();
+  setTimeout(()=>{const items=document.querySelectorAll('[data-nodeid="__core__"] .tpara-body');if(items.length)items[items.length-1].focus();},50);
+}
+
+function tDelCorePara(pi){
+  if(!DB.core||!DB.core.paragraphs)return;
+  if(!confirm('Delete this paragraph?'))return;
+  DB.core.paragraphs.splice(pi,1);
+  save();renderThesisView();
 }
 
 function _tInsert(pos){
@@ -3474,6 +3579,10 @@ function _ieeeRefTxt(k,num,gRefMap){
 function _thesisCitations(){
   const gRefMap=_buildGlobalRefMap();
   const orderedKeys=[];
+  // Core paragraphs first (they appear before doc blocks in view)
+  (DB.core?.paragraphs||[]).forEach(p=>(p.refKeys||[]).forEach(k=>{
+    if(gRefMap[k]&&!orderedKeys.includes(k))orderedKeys.push(k);
+  }));
   (DB.thesis_doc||[]).forEach(b=>{
     if(b.type==='node'){
       const n=DB.nodes[b.nodeId];
@@ -3535,7 +3644,7 @@ function renderThesisView(){
 
   // ── EDIT MODE ──────────────────────────────────
   const {gRefMap,orderedKeys}=_thesisCitations();
-  let html='';
+  let html=_tCoreBlock();
   html+=_tInsert(0);
   DB.thesis_doc.forEach((b,i)=>{
     if(b.type==='node')html+=_tNodeBlock(b,i);
@@ -3563,8 +3672,12 @@ function _renderThesisDocView(doc){
     return nums.length?`<sup style="font-size:8pt;color:#1a55cc;">${nums.join('')}</sup>`:'';
   };
 
-  // Word count across paragraphs + freetext blocks
+  // Word count across core + paragraphs + freetext blocks
   let words=0;
+  (DB.core?.paragraphs||[]).forEach(p=>{
+    const txt=(p.content||'').replace(/<[^>]*>/g,'');
+    words+=txt.trim().split(/\s+/).filter(Boolean).length;
+  });
   (DB.thesis_doc||[]).forEach(b=>{
     if(b.type==='node')(DB.nodes[b.nodeId]?.paragraphs||[]).forEach(p=>{
       const txt=(p.content||'').replace(/<[^>]*>/g,'');
@@ -3573,7 +3686,22 @@ function _renderThesisDocView(doc){
     else if(b.type==='freetext')words+=(b.content||'').trim().split(/\s+/).filter(Boolean).length;
   });
 
+  // Core section always at top
   let body='';
+  if(DB.core){
+    const coreParas=(DB.core.paragraphs||[]).filter(p=>{
+      const txt=p.format==='html'?p.content.replace(/<[^>]*>/g,'').trim():(p.content||'').trim();
+      return txt.length>0;
+    });
+    if(coreParas.length||DB.core.description){
+      body+=`<div class="tvdoc-section tvdoc-core-section">
+        <h2 class="tvdoc-node-hd"><span style="color:rgba(180,150,255,0.8);font-size:0.7em;margin-right:5px;">⦿</span>Research Problem &amp; Motivation</h2>
+        ${DB.core.description?`<div class="tvdoc-desc">${esc(DB.core.description)}</div>`:''}
+        ${coreParas.map(p=>`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}</p>`).join('')}
+      </div>`;
+    }
+  }
+
   (DB.thesis_doc||[]).forEach(b=>{
     if(b.type==='node'){
       const n=DB.nodes[b.nodeId];if(!n)return;
@@ -3651,6 +3779,12 @@ function tSaveFt(el){
 function tSavePara(el){
   const nodeId=el.dataset.nodeid;
   const pi=parseInt(el.dataset.pi);
+  if(nodeId==='__core__'){
+    if(!DB.core||!DB.core.paragraphs||!DB.core.paragraphs[pi])return;
+    DB.core.paragraphs[pi].content=el.innerHTML;
+    DB.core.paragraphs[pi].format='html';
+    save();return;
+  }
   const n=DB.nodes[nodeId];
   if(!n||!n.paragraphs||!n.paragraphs[pi])return;
   n.paragraphs[pi].content=el.innerHTML;
