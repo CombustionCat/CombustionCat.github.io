@@ -2049,30 +2049,38 @@ function initStarfield(){
 
   const buildStars=()=>{
     const W=cv.width,H=cv.height;
+    const cx2=W/2,cy2=H/2;
+    const maxD=Math.sqrt(cx2*cx2+cy2*cy2);
     stars=[];
-    for(let i=0;i<700;i++){
+    for(let i=0;i<1400;i++){
       const t=Math.random();
-      let x,y,r,a,rgb;
-      if(t<0.08){
+      let x,y,r,a,rgb,fade=1;
+      if(t<0.06){
         // Core cluster — near center
         const ang=Math.random()*Math.PI*2;
         const d=Math.pow(Math.random(),2.2)*Math.min(W,H)*0.09;
         x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*0.78;
         r=Math.random()*1.1+0.38; a=Math.random()*0.42+0.25;
-      } else if(t<0.36){
+      } else if(t<0.22){
         // Galactic disk — elliptical band
         const ang=Math.random()*Math.PI*2;
         const d=Math.pow(Math.random(),0.62)*Math.min(W,H)*0.46;
         x=W/2+Math.cos(ang)*d; y=H/2+Math.sin(ang)*d*(0.3+Math.random()*0.38);
         r=Math.random()*0.8+0.18; a=Math.random()*0.24+0.06;
+        // mild edge fade for disk stars
+        const dist=Math.sqrt((x-cx2)**2+(y-cy2)**2);
+        fade=Math.max(0.4,1-0.5*(dist/maxD));
       } else {
-        // Background scatter — wide and evenly spread
+        // Full-canvas scatter — stars everywhere, dimmer at edges
         x=Math.random()*W; y=Math.random()*H;
-        r=Math.random()*0.55+0.1; a=Math.random()*0.18+0.04;
+        r=Math.random()*0.65+0.12;
+        const dist=Math.sqrt((x-cx2)**2+(y-cy2)**2);
+        fade=Math.max(0.18,1-0.72*(dist/maxD));
+        a=Math.random()*0.42+0.1;
       }
       const cr=Math.random();
       rgb=cr<0.62?'190,212,255':cr<0.8?'230,236,255':cr<0.91?'255,225,175':'255,185,150';
-      stars.push({x,y,r,a,rgb,da:(Math.random()*.006+.0015)*(Math.random()>.5?1:-1)});
+      stars.push({x,y,r,a,rgb,fade,da:(Math.random()*.006+.0015)*(Math.random()>.5?1:-1)});
     }
   };
 
@@ -2095,11 +2103,12 @@ function initStarfield(){
     // Stars
     stars.forEach(s=>{
       s.a+=s.da;if(s.a>0.88||s.a<0.04)s.da*=-1;
+      const eff=s.a*(s.fade??1);
       cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
-      if(s.r>0.75&&s.a>0.28){
-        cx.shadowBlur=s.r*9;cx.shadowColor=`rgba(${s.rgb},${(s.a*0.55).toFixed(2)})`;
+      if(s.r>0.75&&eff>0.22){
+        cx.shadowBlur=s.r*9;cx.shadowColor=`rgba(${s.rgb},${(eff*0.55).toFixed(2)})`;
       }
-      cx.fillStyle=`rgba(${s.rgb},${s.a})`;cx.fill();
+      cx.fillStyle=`rgba(${s.rgb},${eff.toFixed(3)})`;cx.fill();
       cx.shadowBlur=0;
     });
     requestAnimationFrame(draw);
