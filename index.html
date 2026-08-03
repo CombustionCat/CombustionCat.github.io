@@ -66,7 +66,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* ── SIDEBAR ── */
 #sidebar{width:210px;background:var(--panel2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;backdrop-filter:blur(16px);}
 .sb-head{padding:11px 12px 9px;font-size:10px;letter-spacing:1.2px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-#node-list{flex:1;overflow-y:auto;padding:6px 0;}
+#node-list{flex:1;overflow-y:auto;padding:6px 0;-webkit-overflow-scrolling:touch;}
 .n-item{display:flex;align-items:center;gap:7px;padding:7px 11px;cursor:pointer;transition:background .13s;font-size:13px;}
 .n-item:hover,.n-item.sel{background:rgba(74,144,255,0.1);}
 .ndot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
@@ -281,7 +281,7 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 .tpara-add{background:none;border:1px dashed rgba(74,144,255,0.18);border-radius:5px;color:rgba(200,216,255,0.3);cursor:pointer;font-size:11px;padding:4px 10px;width:100%;text-align:left;margin-top:5px;transition:all .15s;}
 .tpara-add:hover{border-color:var(--accent);color:var(--dim);}
 /* Image notes */
-.node-imgs-section{margin-top:16px;border-top:1px solid var(--border);padding-top:12px;}
+.node-imgs-section{margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;}
 .node-imgs-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .node-imgs-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
 .node-img-item{position:relative;flex:0 0 auto;width:90px;}
@@ -422,7 +422,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   #pull-btn{display:inline-flex;}
 
   /* Sidebar becomes a drawer overlay */
-  #sidebar{position:absolute;top:0;bottom:0;left:0;z-index:20;transform:translateX(-210px);transition:transform .25s cubic-bezier(.4,0,.2,1);}
+  #sidebar{position:absolute;top:0;bottom:56px;left:0;z-index:20;transform:translateX(-210px);transition:transform .25s cubic-bezier(.4,0,.2,1);}
   #sidebar.mob-open{transform:translateX(0);}
   #sidebar-bd.mob-open{display:block;}
 
@@ -1348,6 +1348,7 @@ function renderPanel(){
     const paras=n.paragraphs||[];
     const gRefMap=_buildGlobalRefMap();
     c.innerHTML=`
+      ${_renderNodeImagesPanel(n)}
       ${paras.length?paras.map((p,i)=>`
         <div class="para" data-paraid="${p.id}" data-nodeid="${n.id}">
           <div class="para-meta">
@@ -1384,8 +1385,7 @@ function renderPanel(){
           <div id="selected-refs" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
         </div>
         <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_submitPara()">Add Paragraph</button>
-      </div>
-      ${_renderNodeImagesPanel(n)}`;
+      </div>`;
   }
 
   else if(curTab==='paths'){
