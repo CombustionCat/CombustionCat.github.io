@@ -2419,198 +2419,246 @@ function renderFrontView(){
   }
 
   const node=DB.nodes[nid];
-  // Only forward (outgoing) paths
-  const connPaths=Object.values(DB.paths).filter(p=>p.source===nid);
-
   document.getElementById('fnode-name').textContent=node.name;
   document.getElementById('fnode-status').textContent=node.status.toUpperCase();
 
-  const hY=Math.round(H*0.38); // horizon line Y
-  const vpX=W/2;               // vanishing point X
+  const hY=Math.round(H*0.30); // horizon sits higher to give more ground room
+  const vpX=W/2;
 
-  // Sky stars (above horizon only)
-  const bgStars=Array.from({length:260},()=>({
+  // ── BUILD DOWNSTREAM TREE (BFS, max depth 6, no cycles) ─
+  const tN={}; // id -> {node, depth, parentId, path, children[], windPhase, x, y}
+  const tE={}; // edgeKey -> {from, to, path, cpx, cpy}  (computed after layout)
+  {
+    const visited=new Set([nid]);
+    const queue=[{id:nid, depth:0, parentId:null, path:null}];
+    tN[nid]={node, depth:0, parentId:null, path:null, children:[], windPhase:0};
+    while(queue.length){
+      const {id, depth}=queue.shift();
+      if(depth>=6) continue;
+      Object.values(DB.paths)
+        .filter(p=>p.source===id && !visited.has(p.target) && DB.nodes[p.target])
+        .forEach((p,ci)=>{
+          visited.add(p.target);
+          // Winding phase alternates by depth+child-index to create S-curves along chains
+          const windPhase=((depth+1+ci)%2===0)?1:-1;
+          tN[p.target]={node:DB.nodes[p.target],depth:depth+1,parentId:id,path:p,children:[],windPhase};
+          tN[id].children.push(p.target);
+          queue.push({id:p.target,depth:depth+1,parentId:id,path:p});
+        });
+    }
+  }
+  const allEdgeIds=Object.values(tN).filter(d=>d.parentId).map(d=>d.parentId+'→'+d.node.id);
+
+  // ── ASSIGN SCREEN POSITIONS (layout) ─────────────
+  // depth → Y: perspective foreshortening, deeper = higher (closer to horizon)
+  function depthToY(d){
+    if(d===0) return H+80; // current node: below visible screen ("at viewer's feet")
+    const t=1-1/(1+d*0.46);
+    return H-t*(H-hY);
+  }
+  // Recursive horizontal layout — divide the x-slice evenly among siblings
+  function assignLayout(id, xL, xR, depth){
+    const d=tN[id];
+    d.x=(xL+xR)/2; d.y=depthToY(depth);
+    const ch=d.children;
+    if(!ch.length) return;
+    const slice=(xR-xL)/ch.length;
+    ch.forEach((cid,i)=>assignLayout(cid,xL+i*slice,xL+(i+1)*slice,depth+1));
+  }
+  const rootCh=tN[nid].children;
+  const initSpread=Math.min(W*0.88,Math.max(rootCh.length*240,280));
+  assignLayout(nid,vpX-initSpread/2,vpX+initSpread/2,0);
+
+  // Pre-compute bezier control point for each edge (winding road shape)
+  const edgeList=[]; // [{from, to, path, cpx, cpy, rgb, aban}]
+  Object.values(tN).forEach(d=>{
+    if(!d.parentId) return;
+    const fd=tN[d.parentId];
+    const x0=fd.x,y0=Math.min(fd.y,H+80),x1=d.x,y1=d.y;
+    const chordLen=Math.hypot(x1-x0,y1-y0);
+    const windAmt=Math.min(chordLen*0.38,W*0.12)*d.windPhase;
+    const cpx=(x0+x1)/2+windAmt, cpy=(y0+y1)/2;
+    const aban=d.path.status==='abandoned';
+    edgeList.push({from:d.parentId,to:d.node.id,path:d.path,cpx,cpy,
+      x0,y0,x1,y1,aban,rgb:aban?'255,90,90':'200,220,255'});
+  });
+  // Sort edges: draw deepest first (painter's algo — far before near)
+  edgeList.sort((a,b)=>tN[b.to].depth-tN[a.to].depth);
+
+  // ── SPARKLES per edge ─────────────────────────────
+  const edgeSparkles=edgeList.map(()=>
+    Array.from({length:22},()=>({
+      t:Math.random(), dt:0.0025+Math.random()*0.004,
+      off:(Math.random()-.5)*14,
+      size:0.5+Math.random()*1.6,
+      a:Math.random(), da:(0.018+Math.random()*0.035)*(Math.random()>.5?1:-1)
+    }))
+  );
+
+  // Background stars (sky only)
+  const bgStars=Array.from({length:240},()=>({
     x:Math.random()*W, y:Math.random()*hY,
     r:Math.random()*1.2+.2, a:Math.random()*.7+.2,
     da:(Math.random()*.012+.004)*(Math.random()>.5?1:-1)
   }));
 
-  // Path layout: fan out at the bottom, converge near horizon
-  const N=connPaths.length;
-  // Each node needs ~130px at the horizon so name labels don't overlap
-  const horizSpread=N<=1?0:Math.min(W*0.86,(N-1)*130);
-  // Bottom spread fans wider than horizon; each path needs room for hwB on each side
-  const botSpread=N<=1?0:Math.min(W*0.90,Math.max(horizSpread*1.5,N*150));
-  // Path half-widths shrink when many paths share the screen
-  const hwB=Math.min(58,N<=1?58:botSpread/(N*2.6));
-  const hwT=Math.min(4.5,N<=1?4.5:Math.max(1.5,horizSpread/(N*12)));
-  const destPositions=connPaths.map((p,i)=>{
-    const frac=N<=1?0.5:i/(N-1);
-    const bx=W/2+(frac-0.5)*botSpread;
-    const vx=vpX+(frac-0.5)*horizSpread;
-    return{p, othId:p.target, bx, vx};
-  });
+  // ── HELPERS ───────────────────────────────────────
+  function bezPt(t,x0,y0,cx,cy,x1,y1){
+    const mt=1-t;
+    return{x:mt*mt*x0+2*mt*t*cx+t*t*x1, y:mt*mt*y0+2*mt*t*cy+t*t*y1};
+  }
+  function sampleBez(x0,y0,cx,cy,x1,y1,N=28){
+    return Array.from({length:N+1},(_,i)=>{
+      const t=i/N, p=bezPt(t,x0,y0,cx,cy,x1,y1);
+      const t2=Math.min(t+0.01,1), p2=bezPt(t2,x0,y0,cx,cy,x1,y1);
+      const tl=Math.hypot(p2.x-p.x,p2.y-p.y)||1;
+      return{...p, t, nx:-(p2.y-p.y)/tl, ny:(p2.x-p.x)/tl};
+    });
+  }
+  // Width of road at a given y: wide near bottom, zero at horizon
+  function yToW(y){return Math.max(2,64*Math.max(0,(Math.min(y,H)-hY)/(H-hY)));}
 
-  // Sparkles per path — travel from viewer toward horizon
-  const pathSparkles=destPositions.map(()=>
-    Array.from({length:38},()=>({
-      t:Math.random(), dt:0.003+Math.random()*0.005,
-      off:(Math.random()-.5)*20,
-      size:0.5+Math.random()*1.8,
-      a:Math.random(), da:(0.02+Math.random()*0.04)*(Math.random()>.5?1:-1)
-    }))
-  );
+  function drawRoad(x0,y0,cx,cy,x1,y1,rgb,aban){
+    const pts=sampleBez(x0,y0,cx,cy,x1,y1);
+    const left=[],right=[];
+    pts.forEach(p=>{const w=yToW(p.y);left.push({x:p.x+p.nx*w,y:p.y+p.ny*w});right.push({x:p.x-p.nx*w,y:p.y-p.ny*w});});
+    // Fill surface
+    fCtx.beginPath();
+    left.forEach((p,i)=>i?fCtx.lineTo(p.x,p.y):fCtx.moveTo(p.x,p.y));
+    [...right].reverse().forEach(p=>fCtx.lineTo(p.x,p.y));
+    fCtx.closePath();
+    const fg=fCtx.createLinearGradient(0,y0,0,y1);
+    fg.addColorStop(0,`rgba(${rgb},0.17)`);fg.addColorStop(1,`rgba(${rgb},0.04)`);
+    fCtx.fillStyle=fg;fCtx.fill();
+    // Edges + centre line
+    [[left,'edge1'],[right,'edge2'],[pts,'centre']].forEach(([arr,role])=>{
+      fCtx.beginPath();
+      arr.forEach((p,i)=>i?fCtx.lineTo(p.x,p.y):fCtx.moveTo(p.x,p.y));
+      const lg=fCtx.createLinearGradient(0,y0,0,y1);
+      lg.addColorStop(0,`rgba(${rgb},${role==='centre'?0.2:0.16})`);
+      lg.addColorStop(1,`rgba(${rgb},0.02)`);
+      if(aban&&role!=='centre')fCtx.setLineDash([10,9]);
+      fCtx.strokeStyle=lg;fCtx.lineWidth=role==='centre'?1:1.4;fCtx.stroke();
+      fCtx.setLineDash([]);
+    });
+  }
 
   fHitAreas=[];
 
   function frame(){
     fCtx.clearRect(0,0,W,H);
 
-    // ── SKY ──────────────────────────────────────────────
+    // Sky
     const skyG=fCtx.createLinearGradient(0,0,0,hY);
     skyG.addColorStop(0,'#010110');skyG.addColorStop(1,'#0c082a');
     fCtx.fillStyle=skyG;fCtx.fillRect(0,0,W,hY);
-
     bgStars.forEach(s=>{
       s.a+=s.da;if(s.a>.9||s.a<.1)s.da*=-1;
       fCtx.beginPath();fCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
       fCtx.fillStyle=`rgba(200,218,255,${s.a})`;fCtx.fill();
     });
+    // Horizon glow
+    const horizG=fCtx.createLinearGradient(0,hY-40,0,hY+25);
+    horizG.addColorStop(0,'rgba(40,60,180,0)');horizG.addColorStop(0.5,'rgba(40,60,180,0.09)');horizG.addColorStop(1,'rgba(0,0,0,0)');
+    fCtx.fillStyle=horizG;fCtx.fillRect(0,hY-40,W,65);
 
-    // Atmospheric horizon glow
-    const horizG=fCtx.createLinearGradient(0,hY-50,0,hY+30);
-    horizG.addColorStop(0,'rgba(40,60,180,0)');
-    horizG.addColorStop(0.5,'rgba(40,60,180,0.1)');
-    horizG.addColorStop(1,'rgba(0,0,0,0)');
-    fCtx.fillStyle=horizG;fCtx.fillRect(0,hY-50,W,80);
-
-    // ── GROUND ───────────────────────────────────────────
+    // Ground
     const groundG=fCtx.createLinearGradient(0,hY,0,H);
     groundG.addColorStop(0,'#08051a');groundG.addColorStop(1,'#030210');
     fCtx.fillStyle=groundG;fCtx.fillRect(0,hY,W,H-hY);
-
-    // Perspective horizontal grid lines (depth markers)
-    for(let i=1;i<=8;i++){
-      const t=Math.pow(i/8,1.7);
-      const y=hY+(H-hY)*t;
+    // Perspective grid
+    for(let i=1;i<=9;i++){
+      const t=Math.pow(i/9,1.7),y=hY+(H-hY)*t;
       fCtx.beginPath();fCtx.moveTo(0,y);fCtx.lineTo(W,y);
-      fCtx.strokeStyle=`rgba(50,70,150,${0.05+t*0.05})`;fCtx.lineWidth=1;fCtx.stroke();
-    }
-    // Radial grid lines converging to VP
-    for(let i=-8;i<=8;i++){
-      fCtx.beginPath();fCtx.moveTo(vpX,hY);fCtx.lineTo(vpX+i*W*0.14,H);
-      fCtx.strokeStyle='rgba(35,55,120,0.04)';fCtx.lineWidth=1;fCtx.stroke();
+      fCtx.strokeStyle=`rgba(50,70,150,${0.04+t*0.04})`;fCtx.lineWidth=1;fCtx.stroke();
     }
 
     fHitAreas=[];
 
-    // ── PATHS ─────────────────────────────────────────────
-    destPositions.forEach(({p,othId,bx,vx},pi)=>{
-      const other=DB.nodes[othId];if(!other)return;
-      const aban=p.status==='abandoned';
-      const pR=aban?255:255, pG=aban?70:255, pB=aban?70:255;
+    // ── ROADS (deepest first) ──────────────────────────
+    edgeList.forEach(({x0,y0,x1,y1,cpx,cpy,rgb,aban,path},ei)=>{
+      drawRoad(x0,y0,cpx,cpy,x1,y1,rgb,aban);
 
-      // Path surface fill
-      const pathG=fCtx.createLinearGradient(0,H,0,hY);
-      pathG.addColorStop(0,`rgba(${pR},${pG},${pB},0.16)`);
-      pathG.addColorStop(0.65,`rgba(${pR},${pG},${pB},0.06)`);
-      pathG.addColorStop(1,`rgba(${pR},${pG},${pB},0)`);
-      fCtx.beginPath();
-      fCtx.moveTo(bx-hwB,H);fCtx.lineTo(bx+hwB,H);
-      fCtx.lineTo(vx+hwT,hY);fCtx.lineTo(vx-hwT,hY);
-      fCtx.closePath();fCtx.fillStyle=pathG;fCtx.fill();
-
-      // Edge + centre lane lines (perspective-converging)
-      [[-1,0.12],[0,0.22],[1,0.12]].forEach(([side,alpha])=>{
-        const bxE=bx+side*hwB, vxE=vx+side*hwT*0.9;
-        const lg=fCtx.createLinearGradient(0,H,0,hY);
-        lg.addColorStop(0,`rgba(${pR},${pG},${pB},${alpha})`);
-        lg.addColorStop(0.8,`rgba(${pR},${pG},${pB},${alpha*0.3})`);
-        lg.addColorStop(1,`rgba(${pR},${pG},${pB},0)`);
-        fCtx.beginPath();fCtx.moveTo(bxE,H);fCtx.lineTo(vxE,hY);
-        if(aban&&side!==0)fCtx.setLineDash([14,12]);
-        fCtx.strokeStyle=lg;fCtx.lineWidth=side===0?1.8:1;
-        fCtx.stroke();fCtx.setLineDash([]);
-      });
-
-      // Glitter particles traveling away from viewer toward horizon
-      pathSparkles[pi].forEach(sp=>{
-        sp.t=(sp.t+sp.dt)%1;
-        sp.a+=sp.da;if(sp.a>.9||sp.a<.07)sp.da*=-1;
-        const ox=sp.off*(1-sp.t*0.9);
-        const px=bx+(vx-bx)*sp.t+ox;
-        const py=H+(hY-H)*sp.t;
-        const sz=sp.size*(1-sp.t*0.88);
-        if(sz<0.08)return;
-        // glow
-        const sg=fCtx.createRadialGradient(px,py,0,px,py,sz*4);
-        sg.addColorStop(0,`rgba(${pR},${pG},${pB},${sp.a*0.5})`);
-        sg.addColorStop(1,`rgba(${pR},${pG},${pB},0)`);
-        fCtx.beginPath();fCtx.arc(px,py,sz*4,0,Math.PI*2);fCtx.fillStyle=sg;fCtx.fill();
-        fCtx.beginPath();fCtx.arc(px,py,sz,0,Math.PI*2);
-        fCtx.fillStyle=`rgba(${pR},${pG},${pB},${sp.a})`;fCtx.fill();
-      });
-
-      // Destination node sits just above horizon at end of its path
-      const dnX=vx, dnY=hY-14;
-      const col=statusColor(other.status);
-
-      // Node glow
-      const ng=fCtx.createRadialGradient(dnX,dnY,0,dnX,dnY,50);
-      ng.addColorStop(0,`rgba(${pR},${pG},${pB},0.22)`);
-      ng.addColorStop(0.4,hexAlpha(col,0.12));
-      ng.addColorStop(1,'rgba(0,0,0,0)');
-      fCtx.beginPath();fCtx.arc(dnX,dnY,50,0,Math.PI*2);fCtx.fillStyle=ng;fCtx.fill();
-
-      // Rings
-      fCtx.beginPath();fCtx.arc(dnX,dnY,20,0,Math.PI*2);
-      fCtx.strokeStyle=`rgba(${pR},${pG},${pB},0.22)`;fCtx.lineWidth=1.5;fCtx.stroke();
-      fCtx.beginPath();fCtx.arc(dnX,dnY,11,0,Math.PI*2);
-      fCtx.fillStyle=hexAlpha(col,0.65);fCtx.fill();
-      fCtx.beginPath();fCtx.arc(dnX,dnY,5,0,Math.PI*2);
-      fCtx.fillStyle='#fff';fCtx.fill();
-
-      // Node name pill
-      fCtx.font='bold 13px Segoe UI, sans-serif';
-      fCtx.textAlign='center';
-      const nm=other.name;
-      const tw=fCtx.measureText(nm).width;
-      fCtx.fillStyle='rgba(4,6,22,0.8)';
-      if(fCtx.roundRect){fCtx.beginPath();fCtx.roundRect(dnX-tw/2-9,dnY-50,tw+18,22,5);fCtx.fill();}
-      fCtx.fillStyle='rgba(230,240,255,0.96)';
-      fCtx.fillText(nm,dnX,dnY-34);
-
-      // Status label
-      fCtx.font='10px Segoe UI, sans-serif';
-      fCtx.fillStyle=col;
-      fCtx.fillText(other.status,dnX,dnY+32);
-
-      // Path name (midway along road)
-      if(p.name){
-        const mx2=bx+(vx-bx)*0.42, my2=H+(hY-H)*0.42;
-        fCtx.font='10px Segoe UI, sans-serif';
-        fCtx.fillStyle='rgba(200,220,255,0.22)';
-        fCtx.fillText(p.name,mx2,my2-14);
+      // Path name label (midpoint along road)
+      if(path.name){
+        const mp=bezPt(0.5,x0,y0,cpx,cpy,x1,y1);
+        fCtx.font='10px Segoe UI, sans-serif';fCtx.textAlign='center';
+        fCtx.fillStyle=`rgba(${rgb},0.28)`;
+        fCtx.fillText(path.name,mp.x,mp.y-10);
       }
 
-      fHitAreas.push({x:dnX,y:dnY,r:26,nodeId:othId});
+      // Sparkles traveling along road
+      edgeSparkles[ei].forEach(sp=>{
+        sp.t=(sp.t+sp.dt)%1;
+        sp.a+=sp.da;if(sp.a>.9||sp.a<.07)sp.da*=-1;
+        const bp=bezPt(sp.t,x0,y0,cpx,cpy,x1,y1);
+        const sz=sp.size*(0.35+0.65*(1-sp.t));
+        const sg=fCtx.createRadialGradient(bp.x,bp.y,0,bp.x,bp.y,sz*5);
+        sg.addColorStop(0,`rgba(${rgb},${sp.a*0.5})`);
+        sg.addColorStop(1,`rgba(${rgb},0)`);
+        fCtx.beginPath();fCtx.arc(bp.x,bp.y,sz*5,0,Math.PI*2);fCtx.fillStyle=sg;fCtx.fill();
+        fCtx.beginPath();fCtx.arc(bp.x,bp.y,sz,0,Math.PI*2);
+        fCtx.fillStyle=`rgba(${rgb},${sp.a})`;fCtx.fill();
+      });
     });
 
-    // No outgoing paths message
-    if(N===0){
+    // ── NODES (deepest first, so near nodes render on top) ──
+    Object.values(tN)
+      .filter(d=>d.depth>0)
+      .sort((a,b)=>b.depth-a.depth)
+      .forEach(d=>{
+        const {node:n,x,y,depth}=d;
+        const col=statusColor(n.status);
+        // Scale down with depth for perspective
+        const sc=Math.max(0.32,1-depth*0.11);
+        const R=Math.round(20*sc), r=Math.round(11*sc), rDot=Math.round(5*sc);
+
+        // Glow halo
+        const ng=fCtx.createRadialGradient(x,y,0,x,y,R*2.8);
+        ng.addColorStop(0,hexAlpha(col,0.28*sc));
+        ng.addColorStop(0.45,hexAlpha(col,0.08*sc));
+        ng.addColorStop(1,'rgba(0,0,0,0)');
+        fCtx.beginPath();fCtx.arc(x,y,R*2.8,0,Math.PI*2);fCtx.fillStyle=ng;fCtx.fill();
+
+        // Rings
+        fCtx.beginPath();fCtx.arc(x,y,R,0,Math.PI*2);
+        fCtx.strokeStyle=`rgba(200,220,255,${0.2*sc})`;fCtx.lineWidth=Math.max(1,1.5*sc);fCtx.stroke();
+        fCtx.beginPath();fCtx.arc(x,y,r,0,Math.PI*2);
+        fCtx.fillStyle=hexAlpha(col,0.65);fCtx.fill();
+        fCtx.beginPath();fCtx.arc(x,y,rDot,0,Math.PI*2);
+        fCtx.fillStyle='#fff';fCtx.fill();
+
+        // Label — only when large enough to read
+        if(sc>0.42){
+          const fs=Math.max(9,Math.round(13*sc));
+          fCtx.font=`bold ${fs}px Segoe UI, sans-serif`;fCtx.textAlign='center';
+          const tw=fCtx.measureText(n.name).width;
+          const lY=y-R-10;
+          fCtx.fillStyle='rgba(3,5,20,0.82)';
+          if(fCtx.roundRect){fCtx.beginPath();fCtx.roundRect(x-tw/2-7,lY-fs,tw+14,fs+8,4);fCtx.fill();}
+          fCtx.fillStyle='rgba(230,240,255,0.96)';fCtx.fillText(n.name,x,lY);
+          // Status / depth hint below node
+          fCtx.font=`${Math.max(8,Math.round(10*sc))}px Segoe UI, sans-serif`;
+          fCtx.fillStyle=col;
+          fCtx.fillText(depth===1?n.status:`↓${depth} · ${n.status}`,x,y+R+16);
+        }
+
+        fHitAreas.push({x,y,r:R+6,nodeId:n.id});
+      });
+
+    // No paths message
+    if(rootCh.length===0){
       fCtx.font='13px Segoe UI, sans-serif';fCtx.textAlign='center';
-      fCtx.fillStyle='rgba(150,170,220,0.45)';
-      fCtx.fillText('No outgoing paths from this node',W/2,hY+70);
+      fCtx.fillStyle='rgba(150,170,220,0.45)';fCtx.fillText('No outgoing paths from this node',W/2,hY+80);
       fCtx.font='11px Segoe UI, sans-serif';
-      fCtx.fillStyle='rgba(100,120,180,0.35)';
-      fCtx.fillText('Use the Paths tab to connect this node to another',W/2,hY+92);
+      fCtx.fillStyle='rgba(100,120,180,0.35)';fCtx.fillText('Use the Paths tab to connect this node to another',W/2,hY+102);
     }
 
-    // ── FLOOR GLOW (standing position) ───────────────────
+    // Floor glow at current node position
     const nCol=statusColor(node.status);
     const floorG=fCtx.createRadialGradient(W/2,H,0,W/2,H,W*0.55);
     floorG.addColorStop(0,hexAlpha(nCol,0.18));floorG.addColorStop(1,'rgba(0,0,0,0)');
-    fCtx.fillStyle=floorG;fCtx.fillRect(0,H-180,W,200);
+    fCtx.fillStyle=floorG;fCtx.fillRect(0,H-200,W,220);
 
     fFrame=requestAnimationFrame(frame);
   }
