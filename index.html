@@ -2020,16 +2020,37 @@ function initTopView(){
   cf.append('feGaussianBlur').attr('stdDeviation','10').attr('result','blur');
   const cm=cf.append('feMerge');cm.append('feMergeNode').attr('in','blur');cm.append('feMergeNode').attr('in','SourceGraphic');
 
-  // Zoom
-  const zoom=d3.zoom().scaleExtent([0.1,8]).on('zoom',e=>{
-    tG?.attr('transform',e.transform);
-    _coreZoomTransform=e.transform;
-    _refreshCoreOverlay();
-  });
+  // Zoom — scroll-wheel only; pan is handled separately with inverted direction
+  const zoom=d3.zoom().scaleExtent([0.1,8])
+    .filter(e=>e.type==='wheel')
+    .on('zoom',e=>{
+      tG?.attr('transform',e.transform);
+      _coreZoomTransform=e.transform;
+      _refreshCoreOverlay();
+    });
   tSvg.call(zoom);
 
-  // Dismiss click
-  tSvg.on('click',()=>{if(!connectMode){selPath=null;closePanel();}});
+  // Camera-style pan: drag direction = viewport movement direction
+  // (drag right → view moves right → constellation scrolls left, opposite of pull-canvas)
+  let _pan=null,_panMoved=false;
+  tSvg
+    .on('mousedown.pan',function(e){
+      if(e.button!==0||connectMode)return;
+      _pan={sx:e.clientX,sy:e.clientY,tx:_coreZoomTransform.x,ty:_coreZoomTransform.y};
+      _panMoved=false;
+    })
+    .on('mousemove.pan',function(e){
+      if(!_pan)return;
+      const dx=e.clientX-_pan.sx, dy=e.clientY-_pan.sy;
+      if(Math.abs(dx)>2||Math.abs(dy)>2)_panMoved=true;
+      const nt=d3.zoomIdentity.translate(_pan.tx-dx,_pan.ty-dy).scale(_coreZoomTransform.k);
+      tSvg.call(zoom.transform,nt);
+    })
+    .on('mouseup.pan',()=>_pan=null)
+    .on('mouseleave.pan',()=>_pan=null);
+
+  // Dismiss click — suppressed if a pan drag occurred
+  tSvg.on('click',()=>{if(!connectMode&&!_panMoved){selPath=null;closePanel();}});
 
   tG=tSvg.append('g');
   tCoreOverlay=tSvg.append('g').attr('class','core-overlay');
@@ -2107,22 +2128,14 @@ function initConstellationCanvas(){
     cx.beginPath();cx.ellipse(0,0,Math.min(W,H)*0.52,Math.min(W,H)*0.09,0,0,Math.PI*2);
     cx.fillStyle=band;cx.fill();cx.restore();
 
-    // === STARS (update animation, then draw tiled with pan offset) ===
-    stars.forEach(s=>{s.a+=s.da;if(s.a>0.92||s.a<0.05)s.da*=-1;});
-    // Tile stars so they scroll with pan instead of sitting on a fixed backdrop
-    const {x:ptx,y:pty}=_coreZoomTransform;
-    const ox=((ptx%W)+W)%W, oy=((pty%H)+H)%H;
-    const dxs=ox>0?[-1,0]:[0], dys=oy>0?[-1,0]:[0];
-    for(const dx of dxs){for(const dy of dys){
-      cx.save();cx.translate(ox+dx*W,oy+dy*H);
-      stars.forEach(s=>{
-        cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
-        if(s.r>0.65&&s.a>0.22){cx.shadowBlur=s.r*8;cx.shadowColor=`rgba(${s.rgb},${(s.a*0.5).toFixed(2)})`;}
-        cx.fillStyle=`rgba(${s.rgb},${s.a})`;cx.fill();
-        cx.shadowBlur=0;
-      });
-      cx.restore();
-    }}
+    // === STARS ===
+    stars.forEach(s=>{
+      s.a+=s.da;if(s.a>0.92||s.a<0.05)s.da*=-1;
+      cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      if(s.r>0.65&&s.a>0.22){cx.shadowBlur=s.r*8;cx.shadowColor=`rgba(${s.rgb},${(s.a*0.5).toFixed(2)})`;}
+      cx.fillStyle=`rgba(${s.rgb},${s.a})`;cx.fill();
+      cx.shadowBlur=0;
+    });
 
     frame++;
     tCanvasFrame=requestAnimationFrame(draw);
