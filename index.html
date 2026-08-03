@@ -2229,12 +2229,12 @@ function renderTopView(){
   const nodes=Object.values(DB.nodes);
   const paths=Object.values(DB.paths);
 
-  // Ensure DB.core is initialized (including x/y which may be absent in older saved data)
+  // Always pin core to the canvas pixel centre — stars, glow, and node all share that origin
   {
-    const svgEl=document.getElementById('tsvg');
-    const vW=svgEl.clientWidth||800, vH=svgEl.clientHeight||600;
-    if(!DB.core){DB.core={name:'Research Core',description:'',paragraphs:[],x:vW/2,y:vH/2};save();}
-    else{if(DB.core.x==null){DB.core.x=vW/2;save();}if(DB.core.y==null){DB.core.y=vH/2;save();}}
+    const cv=document.getElementById('tcanvas');
+    const cW=(cv&&cv.width)||800, cH=(cv&&cv.height)||600;
+    if(!DB.core){DB.core={name:'Research Core',description:'',paragraphs:[],x:cW/2,y:cH/2};save();}
+    else{DB.core.x=cW/2;DB.core.y=cH/2;}
   }
 
   const coreX=DB.core.x, coreY=DB.core.y;
