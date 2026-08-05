@@ -3278,7 +3278,7 @@ async function _mvApi(path, method='GET', body=null){
   if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
   const res = await fetch(`https://serv.amazingmarvin.com/api${path}`, opts);
   if(!res.ok) throw new Error(`Marvin API ${res.status}`);
-  return res.json();
+  try{ return await res.json(); }catch(e){ return {}; }
 }
 
 function showMarvinModal(){
@@ -3613,6 +3613,27 @@ async function marvinSync(){
         }
       }
     });
+
+    // ── RF→AM: push any RF tasks that haven't made it to Marvin yet ─────────
+    if(rfCatId){
+      // First pass: match by title to recover IDs for tasks pushed without getting _id back
+      const amRfByTitle = {};
+      rfSubTasks.forEach(amTask=>{ amRfByTitle[amTask.title]=amTask; });
+      Object.values(DB.tasks).forEach(t=>{
+        if(t.amSource||t.marvinId) return;
+        const match=amRfByTitle[t.name];
+        if(match){ t.marvinId=match._id; updated++; }
+      });
+      // Second pass: push anything still missing from Marvin
+      const unpushed=Object.values(DB.tasks).filter(t=>!t.amSource&&!t.marvinId&&t.name);
+      for(const t of unpushed){
+        try{
+          const result=await _mvApi('/addTask','POST',{title:t.name,parentId:rfCatId,note:t.description||''});
+          if(result&&result._id){ t.marvinId=result._id; }
+          updated++;
+        }catch(e){ /* will retry on next sync */ }
+      }
+    }
 
     save(); render();
     const landedCnt = Object.values(DB.tasks).filter(t=>t.amSource&&!(t.nodeIds&&t.nodeIds.length)).length;
