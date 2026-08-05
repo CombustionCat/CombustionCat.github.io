@@ -1396,8 +1396,18 @@ function renderPanel(){
 
   else if(curTab==='paths'){
     const pths=Object.values(DB.paths).filter(p=>p.source===selNode||p.target===selNode);
+    const coreConn=Object.values(DB.corePaths).find(p=>p.target===selNode);
+    const coreRow=coreConn?`<div style="background:rgba(170,150,255,0.06);border:1px solid rgba(180,150,255,0.25);border-radius:7px;padding:10px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:7px;">
+        <div class="ndot" style="background:radial-gradient(circle,#fff 20%,#bb99ff 80%);box-shadow:0 0 6px rgba(170,140,255,0.8);flex-shrink:0;"></div>
+        <span style="font-size:13px;flex:1;color:rgba(200,178,255,0.9);">✦ ${esc(DB.core?.name||'Research Core')}</span>
+        ${coreConn.name?`<span style="font-size:10px;color:var(--dim);">${esc(coreConn.name)}</span>`:''}
+        <button class="icon-btn" title="Delete core connection" onclick="deleteCorePath('${coreConn.id}');renderPanel()">✕</button>
+      </div>
+    </div>`:'';
     c.innerHTML=`
       <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">Paths connected to this node · <span style="color:var(--accent2);">→ outgoing</span> shown in Node View</div>
+      ${coreRow}
       ${pths.length?pths.map(p=>{
         const isOut=p.source===selNode;
         const othId=isOut?p.target:p.source;
@@ -1421,7 +1431,7 @@ function renderPanel(){
             <button class="icon-btn" onclick="deletePath('${p.id}');renderPanel()">✕</button>
           </div>
         </div>`;
-      }).join(''):'<div class="empty">No paths yet.<br>Use "Connect Nodes" to link nodes.</div>'}`;
+      }).join(''):(!coreConn?'<div class="empty">No paths yet.<br>Use "Connect Nodes" to link nodes.</div>':'')}`;
   }
 }
 
