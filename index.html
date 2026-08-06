@@ -157,9 +157,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .para-text{font-size:13px;line-height:1.7;}
 .para-edit-footer{display:flex;gap:6px;justify-content:flex-end;padding-top:6px;margin-top:2px;}
 .para-refs{font-size:11px;color:var(--dim);margin-top:5px;font-style:italic;}
-.para-dnd-handle{color:transparent;cursor:grab;font-size:11px;user-select:none;letter-spacing:-2px;padding:1px 3px;border-radius:3px;transition:color .12s;flex-shrink:0;}
-.para:hover .para-dnd-handle{color:rgba(140,160,255,0.45);}
-.para-dnd-handle:hover{color:rgba(200,216,255,0.75)!important;}
+.para-dnd-handle{opacity:0.18;cursor:grab;user-select:none;flex-shrink:0;color:var(--accent2);transition:opacity .12s;}
+.para:hover .para-dnd-handle{opacity:0.55;}
+.para-dnd-handle:hover{opacity:1!important;}
 .para-dnd-handle:active{cursor:grabbing;}
 .note-drop-ring{transition:opacity .15s;}
 .ngrp.note-target .note-drop-ring{opacity:.7!important;}
@@ -1366,7 +1366,7 @@ function renderPanel(){
         <div class="para" data-paraid="${p.id}" data-nodeid="${n.id}">
           <div class="para-meta">
             <span style="display:flex;align-items:center;gap:5px;">
-              <span class="para-dnd-handle" draggable="true" ondragstart="_noteDragStart('${n.id}','${p.id}',event)" ondragend="_noteDragEnd()" title="Drag to move to another node">⠿⠿</span>
+              <svg class="para-dnd-handle" width="9" height="13" viewBox="0 0 9 13" draggable="true" ondragstart="_noteDragStart('${n.id}','${p.id}',event)" ondragend="_noteDragEnd()" title="Drag to move to another node"><circle cx="2.5" cy="2.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="2.5" r="1.3" fill="currentColor"/><circle cx="2.5" cy="6.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="6.5" r="1.3" fill="currentColor"/><circle cx="2.5" cy="10.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="10.5" r="1.3" fill="currentColor"/></svg>
               <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
             </span>
             <div style="display:flex;gap:3px;">
