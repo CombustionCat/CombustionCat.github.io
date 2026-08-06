@@ -389,6 +389,8 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 
 /* ── TOOLTIP ── */
 #tip{position:fixed;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;pointer-events:none;z-index:300;display:none;max-width:200px;}
+#rte-table-popup{position:fixed;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.65);display:none;min-width:210px;}
+#rte-table-popup.on{display:block;}
 
 /* ── FRONT VIEW ── */
 #front-view{background:#020210;}
@@ -686,6 +688,25 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
 <!-- MODAL -->
 <div id="modal-wrap" onmousedown="if(event.target===this)closeModal()">
   <div class="modal" id="modal-body"></div>
+</div>
+
+<!-- TABLE INSERT POPUP (separate from modal so it works inside the expanded editor) -->
+<div id="rte-table-popup">
+  <div style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;">Insert Table</div>
+  <div style="display:flex;gap:10px;margin-bottom:12px;">
+    <div class="fg" style="flex:1;margin:0;">
+      <label>Rows <span style="opacity:.55;font-size:9px;text-transform:none;letter-spacing:0;">(first = header)</span></label>
+      <input id="tbl-rows" type="number" min="1" max="30" value="3" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')_rteDoInsertTable();if(event.key==='Escape')_rteTablePopupClose();">
+    </div>
+    <div class="fg" style="flex:1;margin:0;">
+      <label>Columns</label>
+      <input id="tbl-cols" type="number" min="1" max="20" value="3" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')_rteDoInsertTable();if(event.key==='Escape')_rteTablePopupClose();">
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;justify-content:flex-end;">
+    <button class="btn btn-ghost btn-sm" onclick="_rteTablePopupClose()">Cancel</button>
+    <button class="btn btn-sm" onclick="_rteDoInsertTable()">Insert</button>
+  </div>
 </div>
 
 <!-- D3 -->
@@ -1628,7 +1649,7 @@ function _rteToolbarHtml(id){
     <button class="rte-btn" onclick="_toggleHighlightMenu('${id}',this)" title="Highlight selected text"><span style="display:inline-block;width:9px;height:9px;background:#ffd700;border-radius:2px;vertical-align:middle;margin-right:2px;"></span>Mark</button>
     <div class="rte-sep"></div>
     <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert equation (or type $$x^2 then Enter)">∑ Eq</button>
-    <button class="rte-btn" onclick="_rteInsertTable('${id}')" title="Insert table">⊞ Table</button>
+    <button class="rte-btn" onclick="_rteInsertTable('${id}',this)" title="Insert table">⊞ Table</button>
   </div>`;
 }
 
@@ -1804,36 +1825,33 @@ function _rteInsertEq(editorId){
 // ── TABLE INSERT ───────────────────────────────
 let _rteTableEditorId=null, _rteTableRange=null;
 
-function _rteInsertTable(editorId){
+function _rteInsertTable(editorId,btn){
   _rteTableEditorId=editorId;
   const sel=window.getSelection();
   _rteTableRange=(sel&&sel.rangeCount)?sel.getRangeAt(0).cloneRange():null;
-  showModal(`<h3>Insert Table</h3>
-    <div style="display:flex;gap:12px;margin-bottom:18px;">
-      <div class="fg" style="flex:1;margin:0;">
-        <label>Rows <span style="opacity:.55;font-size:9px;text-transform:none;letter-spacing:0;">(first row is header)</span></label>
-        <input id="tbl-rows" type="number" min="1" max="30" value="3"
-          style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;"
-          onkeydown="if(event.key==='Enter')_rteDoInsertTable()">
-      </div>
-      <div class="fg" style="flex:1;margin:0;">
-        <label>Columns</label>
-        <input id="tbl-cols" type="number" min="1" max="20" value="3"
-          style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;"
-          onkeydown="if(event.key==='Enter')_rteDoInsertTable()">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-sm" onclick="_rteDoInsertTable()">Insert</button>
-    </div>`);
+  const popup=document.getElementById('rte-table-popup');
+  // Position below the toolbar button, clamp so it stays on screen
+  const rect=btn?btn.getBoundingClientRect():{bottom:200,left:200};
+  popup.style.top=(rect.bottom+6)+'px';
+  popup.style.left=Math.min(rect.left,window.innerWidth-230)+'px';
+  popup.classList.add('on');
   setTimeout(()=>{const el=document.getElementById('tbl-rows');if(el){el.focus();el.select();}},60);
+  // Close when clicking outside
+  setTimeout(()=>{
+    function _closeOnOutside(e){
+      if(!popup.contains(e.target)){_rteTablePopupClose();document.removeEventListener('mousedown',_closeOnOutside);}
+    }
+    document.addEventListener('mousedown',_closeOnOutside);
+  },100);
+}
+function _rteTablePopupClose(){
+  document.getElementById('rte-table-popup').classList.remove('on');
 }
 
 function _rteDoInsertTable(){
   const rows=Math.max(1,Math.min(30,parseInt(document.getElementById('tbl-rows')?.value)||3));
   const cols=Math.max(1,Math.min(20,parseInt(document.getElementById('tbl-cols')?.value)||3));
-  closeModal();
+  _rteTablePopupClose();
   const editorId=_rteTableEditorId;
   _rteTableEditorId=null;
   const editor=document.getElementById(editorId);
