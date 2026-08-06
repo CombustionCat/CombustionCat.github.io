@@ -157,6 +157,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .para-text{font-size:13px;line-height:1.7;}
 .para-edit-footer{display:flex;gap:6px;justify-content:flex-end;padding-top:6px;margin-top:2px;}
 .para-refs{font-size:11px;color:var(--dim);margin-top:5px;font-style:italic;}
+.para-dnd-handle{color:rgba(80,120,255,0.15);cursor:grab;font-size:11px;user-select:none;letter-spacing:-2px;padding:1px 3px;border-radius:3px;transition:color .12s;flex-shrink:0;}
+.para-dnd-handle:hover{color:rgba(140,160,255,0.55);}
+.para-dnd-handle:active{cursor:grabbing;}
+.note-drop-ring{transition:opacity .15s;}
+.ngrp.note-target .note-drop-ring{opacity:.7!important;}
+.ngrp.note-hover .note-drop-ring{opacity:1!important;}
 
 /* ── RICH TEXT EDITOR ── */
 .rte-wrap{border:1px solid var(--border);border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.04);margin-bottom:7px;}
@@ -1358,7 +1364,10 @@ function renderPanel(){
       ${paras.length?paras.map((p,i)=>`
         <div class="para" data-paraid="${p.id}" data-nodeid="${n.id}">
           <div class="para-meta">
-            <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
+            <span style="display:flex;align-items:center;gap:5px;">
+              <span class="para-dnd-handle" draggable="true" ondragstart="_noteDragStart('${n.id}','${p.id}',event)" ondragend="_noteDragEnd()" title="Drag to move to another node">⠿⠿</span>
+              <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
+            </span>
             <div style="display:flex;gap:3px;">
               <button class="icon-btn" title="Edit paragraph (popup)" onclick="_editPara('${n.id}','${p.id}')">✎</button>
               <button class="icon-btn" title="Edit inline" onclick="_inlineEdit('${n.id}','${p.id}')" style="font-size:10px;">✏</button>
@@ -2201,6 +2210,7 @@ function initStarfield(){
 // ── TOP VIEW (D3 Constellation) ─────────────────
 let tSvg, tG, linkRefs={}, corePathRefs={}, tCanvasFrame=null;
 let selPath=null;
+let _noteDragData=null;
 
 function initTopView(){
   initConstellationCanvas();
@@ -2325,6 +2335,19 @@ function _pathBezierD(sx,sy,tx,ty,cp){
 function _pathMidpoint(sx,sy,tx,ty,cp){
   if(!cp)return{x:(sx+tx)/2,y:(sy+ty)/2};
   return{x:(sx+2*cp.x+tx)/4,y:(sy+2*cp.y+ty)/4};
+}
+
+function _noteDragStart(fromNodeId,paraId,e){
+  _noteDragData={paraId,fromNodeId};
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',paraId);
+  document.querySelectorAll('.ngrp').forEach(g=>{
+    if(g.dataset.nodeid!==fromNodeId) g.classList.add('note-target');
+  });
+}
+function _noteDragEnd(){
+  _noteDragData=null;
+  document.querySelectorAll('.ngrp').forEach(g=>g.classList.remove('note-target','note-hover'));
 }
 
 function renderTopView(){
@@ -2500,8 +2523,14 @@ function renderTopView(){
       .attr('transform',`translate(${n.x},${n.y})`)
       .attr('cursor','pointer')
       .attr('class','ngrp')
+      .attr('data-nodeid',n.id)
       .on('mouseenter',function(e){showTip(e,n.name+(tasks.length?`\n${done}/${tasks.length} tasks`:''));})
       .on('mouseleave',()=>hideTip());
+
+    // Drop ring — hidden by default, revealed during note-drag via CSS classes
+    g.append('circle').attr('class','note-drop-ring')
+      .attrs({r:42,fill:'rgba(74,144,255,0.07)',stroke:'rgba(74,144,255,0.45)','stroke-width':1.5,'stroke-dasharray':'5,3.5','pointer-events':'none'})
+      .style('opacity','0');
 
     g.append('circle')
       .attrs({r:isSel?26:isSrc?24:18,fill:'none',stroke:isSrc?'#ffaa44':col,'stroke-width':isSel||isSrc?2:1,opacity:.3})
@@ -2517,6 +2546,30 @@ function renderTopView(){
     const short=n.name.length>18?n.name.slice(0,16)+'…':n.name;
     g.append('text').attrs({y:tasks.length?33:22,'text-anchor':'middle',fill:isSel?'#fff':'rgba(200,218,255,0.88)','font-size':isSel?'11.5px':'10.5px','font-weight':isSel?'600':'normal'})
       .text(short);
+
+    const gEl=g.node();
+    gEl.addEventListener('dragover',e=>{
+      if(!_noteDragData||_noteDragData.fromNodeId===n.id)return;
+      e.preventDefault();e.dataTransfer.dropEffect='move';
+      document.querySelectorAll('.ngrp.note-hover').forEach(el=>el.classList.remove('note-hover'));
+      gEl.classList.add('note-hover');
+    });
+    gEl.addEventListener('dragleave',e=>{
+      if(!e.relatedTarget||!gEl.contains(e.relatedTarget))gEl.classList.remove('note-hover');
+    });
+    gEl.addEventListener('drop',e=>{
+      e.preventDefault();
+      if(!_noteDragData||_noteDragData.fromNodeId===n.id)return;
+      const fromNode=_noteDragData.fromNodeId==='__core__'?DB.core:DB.nodes[_noteDragData.fromNodeId];
+      if(!fromNode)return;
+      const idx=(fromNode.paragraphs||[]).findIndex(p=>p.id===_noteDragData.paraId);
+      if(idx===-1)return;
+      const[para]=fromNode.paragraphs.splice(idx,1);
+      (n.paragraphs=n.paragraphs||[]).push(para);
+      _noteDragData=null;
+      document.querySelectorAll('.ngrp').forEach(g=>g.classList.remove('note-target','note-hover'));
+      save();selectNode(n.id);
+    });
 
     let _nodeMoved=false;
     g.call(d3.drag()
