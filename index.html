@@ -389,7 +389,9 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 
 /* ── TOOLTIP ── */
 #tip{position:fixed;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;pointer-events:none;z-index:300;display:none;max-width:200px;}
-#rte-table-popup{position:fixed;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.65);display:none;min-width:210px;}
+#rte-table-backdrop{position:fixed;inset:0;z-index:1999;display:none;}
+#rte-table-backdrop.on{display:block;}
+#rte-table-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;z-index:2000;box-shadow:0 8px 40px rgba(0,0,0,.75);display:none;min-width:240px;}
 #rte-table-popup.on{display:block;}
 
 /* ── FRONT VIEW ── */
@@ -691,6 +693,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
 </div>
 
 <!-- TABLE INSERT POPUP (separate from modal so it works inside the expanded editor) -->
+<div id="rte-table-backdrop" onclick="_rteTablePopupClose()"></div>
 <div id="rte-table-popup">
   <div style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;">Insert Table</div>
   <div style="display:flex;gap:10px;margin-bottom:12px;">
@@ -1649,7 +1652,7 @@ function _rteToolbarHtml(id){
     <button class="rte-btn" onclick="_toggleHighlightMenu('${id}',this)" title="Highlight selected text"><span style="display:inline-block;width:9px;height:9px;background:#ffd700;border-radius:2px;vertical-align:middle;margin-right:2px;"></span>Mark</button>
     <div class="rte-sep"></div>
     <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert equation (or type $$x^2 then Enter)">∑ Eq</button>
-    <button class="rte-btn" onclick="_rteInsertTable('${id}',this)" title="Insert table">⊞ Table</button>
+    <button class="rte-btn" onclick="_rteInsertTable('${id}')" title="Insert table">⊞ Table</button>
   </div>`;
 }
 
@@ -1825,27 +1828,17 @@ function _rteInsertEq(editorId){
 // ── TABLE INSERT ───────────────────────────────
 let _rteTableEditorId=null, _rteTableRange=null;
 
-function _rteInsertTable(editorId,btn){
+function _rteInsertTable(editorId){
   _rteTableEditorId=editorId;
   const sel=window.getSelection();
   _rteTableRange=(sel&&sel.rangeCount)?sel.getRangeAt(0).cloneRange():null;
-  const popup=document.getElementById('rte-table-popup');
-  // Position below the toolbar button, clamp so it stays on screen
-  const rect=btn?btn.getBoundingClientRect():{bottom:200,left:200};
-  popup.style.top=(rect.bottom+6)+'px';
-  popup.style.left=Math.min(rect.left,window.innerWidth-230)+'px';
-  popup.classList.add('on');
+  document.getElementById('rte-table-backdrop').classList.add('on');
+  document.getElementById('rte-table-popup').classList.add('on');
   setTimeout(()=>{const el=document.getElementById('tbl-rows');if(el){el.focus();el.select();}},60);
-  // Close when clicking outside
-  setTimeout(()=>{
-    function _closeOnOutside(e){
-      if(!popup.contains(e.target)){_rteTablePopupClose();document.removeEventListener('mousedown',_closeOnOutside);}
-    }
-    document.addEventListener('mousedown',_closeOnOutside);
-  },100);
 }
 function _rteTablePopupClose(){
   document.getElementById('rte-table-popup').classList.remove('on');
+  document.getElementById('rte-table-backdrop').classList.remove('on');
 }
 
 function _rteDoInsertTable(){
