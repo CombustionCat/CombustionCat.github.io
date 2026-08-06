@@ -721,6 +721,11 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   <div class="rte-sep"></div>
   <button class="rte-btn" onclick="_rteTableOp('addCol')" title="Add column right">+ Col</button>
   <button class="rte-btn" onclick="_rteTableOp('delCol')" title="Remove last column">− Col</button>
+  <div class="rte-sep"></div>
+  <span style="font-size:10px;color:var(--dim);">Col W</span>
+  <input id="rte-col-w" type="number" min="20" max="800" step="10" placeholder="px" title="Column width (px)" oninput="_rteSetColWidth(this.value)" style="width:52px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;">
+  <span style="font-size:10px;color:var(--dim);">Row H</span>
+  <input id="rte-row-h" type="number" min="20" max="600" step="5" placeholder="px" title="Row height (px)" oninput="_rteSetRowHeight(this.value)" style="width:52px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;">
 </div>
 
 <!-- D3 -->
@@ -1853,19 +1858,22 @@ function _rteTablePopupClose(){
 }
 
 // ── TABLE EDIT BAR ─────────────────────────────
-let _rteActiveTable=null;
+let _rteActiveTable=null, _rteActiveCell=null;
 
 document.addEventListener('mousedown',e=>{
   const bar=document.getElementById('rte-table-bar');
   if(!bar)return;
   const table=e.target.closest('table.rte-table');
+  const cell=e.target.closest('th,td');
   const inEditor=!!e.target.closest('.rte-editor');
   if(table&&inEditor){
     _rteActiveTable=table;
+    _rteActiveCell=cell||null;
+    _rteUpdateTableBarInputs();
     bar.classList.add('on');
     requestAnimationFrame(()=>_rtePositionTableBar());
   } else if(!bar.contains(e.target)){
-    _rteActiveTable=null;
+    _rteActiveTable=null;_rteActiveCell=null;
     bar.classList.remove('on');
   }
 });
@@ -1877,6 +1885,37 @@ function _rtePositionTableBar(){
   const top=r.top>44 ? r.top-40 : r.bottom+4;
   bar.style.top=Math.max(4,top)+'px';
   bar.style.left=Math.max(4,Math.min(r.left,window.innerWidth-220))+'px';
+}
+
+function _rteUpdateTableBarInputs(){
+  const wEl=document.getElementById('rte-col-w');
+  const hEl=document.getElementById('rte-row-h');
+  if(!wEl||!hEl)return;
+  if(_rteActiveCell){
+    wEl.value=parseInt(_rteActiveCell.style.width)||'';
+    hEl.value=parseInt(_rteActiveCell.closest('tr')?.style.height)||'';
+  } else {
+    wEl.value='';hEl.value='';
+  }
+}
+
+function _rteSetColWidth(val){
+  if(!_rteActiveCell||!_rteActiveTable)return;
+  const px=Math.max(20,parseInt(val)||20)+'px';
+  const row=_rteActiveCell.closest('tr');
+  const cells=Array.from(row.querySelectorAll('th,td'));
+  const idx=cells.indexOf(_rteActiveCell);
+  _rteActiveTable.querySelectorAll('tr').forEach(tr=>{
+    const c=tr.querySelectorAll('th,td')[idx];
+    if(c)c.style.width=px;
+  });
+}
+
+function _rteSetRowHeight(val){
+  if(!_rteActiveCell)return;
+  const px=Math.max(20,parseInt(val)||20)+'px';
+  const row=_rteActiveCell.closest('tr');
+  if(row)row.style.height=px;
 }
 
 function _rteTableOp(op){
