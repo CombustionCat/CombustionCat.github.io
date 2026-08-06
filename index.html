@@ -393,6 +393,8 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 #rte-table-backdrop.on{display:block;}
 #rte-table-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;z-index:2000;box-shadow:0 8px 40px rgba(0,0,0,.75);display:none;min-width:240px;}
 #rte-table-popup.on{display:block;}
+#rte-table-bar{position:fixed;display:none;align-items:center;gap:2px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:3px 5px;z-index:1500;box-shadow:0 4px 16px rgba(0,0,0,.5);}
+#rte-table-bar.on{display:flex;}
 
 /* ── FRONT VIEW ── */
 #front-view{background:#020210;}
@@ -710,6 +712,15 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
     <button class="btn btn-ghost btn-sm" onclick="_rteTablePopupClose()">Cancel</button>
     <button class="btn btn-sm" onclick="_rteDoInsertTable()">Insert</button>
   </div>
+</div>
+
+<!-- TABLE EDIT BAR (appears when cursor is inside an existing rte-table) -->
+<div id="rte-table-bar">
+  <button class="rte-btn" onclick="_rteTableOp('addRow')" title="Add row below">+ Row</button>
+  <button class="rte-btn" onclick="_rteTableOp('delRow')" title="Remove last row">− Row</button>
+  <div class="rte-sep"></div>
+  <button class="rte-btn" onclick="_rteTableOp('addCol')" title="Add column right">+ Col</button>
+  <button class="rte-btn" onclick="_rteTableOp('delCol')" title="Remove last column">− Col</button>
 </div>
 
 <!-- D3 -->
@@ -1839,6 +1850,62 @@ function _rteInsertTable(editorId){
 function _rteTablePopupClose(){
   document.getElementById('rte-table-popup').classList.remove('on');
   document.getElementById('rte-table-backdrop').classList.remove('on');
+}
+
+// ── TABLE EDIT BAR ─────────────────────────────
+let _rteActiveTable=null;
+
+document.addEventListener('mousedown',e=>{
+  const bar=document.getElementById('rte-table-bar');
+  if(!bar)return;
+  const table=e.target.closest('table.rte-table');
+  const inEditor=!!e.target.closest('.rte-editor');
+  if(table&&inEditor){
+    _rteActiveTable=table;
+    bar.classList.add('on');
+    requestAnimationFrame(()=>_rtePositionTableBar());
+  } else if(!bar.contains(e.target)){
+    _rteActiveTable=null;
+    bar.classList.remove('on');
+  }
+});
+
+function _rtePositionTableBar(){
+  const bar=document.getElementById('rte-table-bar');
+  if(!_rteActiveTable||!bar)return;
+  const r=_rteActiveTable.getBoundingClientRect();
+  const top=r.top>44 ? r.top-40 : r.bottom+4;
+  bar.style.top=Math.max(4,top)+'px';
+  bar.style.left=Math.max(4,Math.min(r.left,window.innerWidth-220))+'px';
+}
+
+function _rteTableOp(op){
+  if(!_rteActiveTable)return;
+  if(op==='addRow'){
+    const tbody=_rteActiveTable.querySelector('tbody')||_rteActiveTable;
+    const firstRow=_rteActiveTable.querySelector('tr');
+    const cols=firstRow?firstRow.querySelectorAll('th,td').length:1;
+    const tr=document.createElement('tr');
+    for(let i=0;i<cols;i++){const td=document.createElement('td');td.innerHTML='<br>';tr.appendChild(td);}
+    tbody.appendChild(tr);
+  } else if(op==='delRow'){
+    const tbody=_rteActiveTable.querySelector('tbody');
+    if(!tbody)return;
+    const rows=tbody.querySelectorAll('tr');
+    if(rows.length)rows[rows.length-1].remove();
+  } else if(op==='addCol'){
+    _rteActiveTable.querySelectorAll('tr').forEach(tr=>{
+      const inHead=!!tr.closest('thead');
+      const cell=document.createElement(inHead?'th':'td');
+      cell.innerHTML='<br>';tr.appendChild(cell);
+    });
+  } else if(op==='delCol'){
+    _rteActiveTable.querySelectorAll('tr').forEach(tr=>{
+      const cells=tr.querySelectorAll('th,td');
+      if(cells.length>1)cells[cells.length-1].remove();
+    });
+  }
+  requestAnimationFrame(()=>_rtePositionTableBar());
 }
 
 function _rteDoInsertTable(){
