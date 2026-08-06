@@ -2340,7 +2340,17 @@ function renderTopView(){
     const cv=document.getElementById('tcanvas');
     const cW=(cv&&cv.width)||800, cH=(cv&&cv.height)||600;
     if(!DB.core){DB.core={name:'Research Core',description:'',paragraphs:[],x:cW/2,y:cH/2};save();}
-    else{DB.core.x=cW/2;DB.core.y=cH/2;}
+    else{
+      const dx=cW/2-DB.core.x, dy=cH/2-DB.core.y;
+      if(Math.abs(dx)>0.5||Math.abs(dy)>0.5){
+        // Viewport center has shifted (different device/screen size) — translate all nodes
+        // and path control points by the same delta so relative layout is preserved.
+        Object.values(DB.nodes).forEach(n=>{n.x+=dx;n.y+=dy;});
+        Object.values(DB.paths).forEach(p=>{if(p.cp){p.cp.x+=dx;p.cp.y+=dy;}});
+        DB.core.x=cW/2;DB.core.y=cH/2;
+        save();
+      }
+    }
   }
 
   const coreX=DB.core.x, coreY=DB.core.y;
