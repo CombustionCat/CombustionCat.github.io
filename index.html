@@ -157,8 +157,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .para-text{font-size:13px;line-height:1.7;}
 .para-edit-footer{display:flex;gap:6px;justify-content:flex-end;padding-top:6px;margin-top:2px;}
 .para-refs{font-size:11px;color:var(--dim);margin-top:5px;font-style:italic;}
-.para-dnd-handle{color:rgba(80,120,255,0.15);cursor:grab;font-size:11px;user-select:none;letter-spacing:-2px;padding:1px 3px;border-radius:3px;transition:color .12s;flex-shrink:0;}
-.para-dnd-handle:hover{color:rgba(140,160,255,0.55);}
+.para-dnd-handle{color:transparent;cursor:grab;font-size:11px;user-select:none;letter-spacing:-2px;padding:1px 3px;border-radius:3px;transition:color .12s;flex-shrink:0;}
+.para:hover .para-dnd-handle{color:rgba(140,160,255,0.45);}
+.para-dnd-handle:hover{color:rgba(200,216,255,0.75)!important;}
 .para-dnd-handle:active{cursor:grabbing;}
 .note-drop-ring{transition:opacity .15s;}
 .ngrp.note-target .note-drop-ring{opacity:.7!important;}
