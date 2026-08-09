@@ -293,24 +293,46 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 .tpara-item:hover .tpara-del{opacity:.55;}
 .tpara-add{background:none;border:1px dashed rgba(74,144,255,0.18);border-radius:5px;color:rgba(200,216,255,0.3);cursor:pointer;font-size:11px;padding:4px 10px;width:100%;text-align:left;margin-top:5px;transition:all .15s;}
 .tpara-add:hover{border-color:var(--accent);color:var(--dim);}
-/* Image notes */
+/* Image cards */
 .node-imgs-section{margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;}
 .node-imgs-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.node-imgs-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
-.node-img-item{position:relative;flex:0 0 auto;width:90px;}
-.node-img-item img{width:90px;height:68px;object-fit:cover;border-radius:5px;border:1px solid var(--border);display:block;cursor:pointer;}
-.node-img-item:hover .node-img-del{opacity:1;}
-.node-img-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.75);border:none;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;opacity:0;transition:opacity .15s;line-height:16px;text-align:center;padding:0;}
-.node-img-caption{font-size:10px;width:90px;background:transparent;border:none;border-bottom:1px solid var(--border);padding:2px 0;outline:none;color:var(--dim);margin-top:3px;box-sizing:border-box;}
-.node-img-caption:focus{border-color:var(--accent);color:var(--text);}
-.timg-grid{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 6px;}
+.img-card{background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;}
+.img-card-header{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+.img-card-title-input{flex:1;background:transparent;border:none;border-bottom:1px solid transparent;color:var(--text);font-size:12px;font-weight:500;font-family:inherit;outline:none;padding:2px 0;min-width:0;}
+.img-card-title-input:focus{border-bottom-color:var(--accent);}
+.img-card-title-input::placeholder{color:var(--dim);}
+.img-card-del-btn{background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:4px;opacity:0;transition:opacity .15s;}
+.img-card:hover .img-card-del-btn{opacity:.55;}
+.img-card-del-btn:hover{opacity:1!important;color:#ff6677;}
+.img-card-notes-input{width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:5px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;resize:vertical;min-height:36px;box-sizing:border-box;margin-bottom:8px;}
+.img-card-notes-input:focus{border-color:rgba(74,144,255,0.4);}
+.img-card-notes-input::placeholder{color:var(--dim);}
+.img-card-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.img-card-img-wrap{position:relative;flex:0 0 auto;}
+.img-card-img-wrap img{width:82px;height:62px;object-fit:cover;border-radius:4px;border:1px solid var(--border);display:block;cursor:pointer;}
+.img-card-img-wrap:hover .img-card-img-del{opacity:1;}
+.img-card-img-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.75);border:none;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;opacity:0;transition:opacity .15s;line-height:16px;text-align:center;padding:0;}
+.img-card-add-btn{background:rgba(74,144,255,0.06);border:1px dashed rgba(74,144,255,0.2);border-radius:4px;color:var(--dim);cursor:pointer;font-size:11px;padding:3px 10px;transition:all .15s;}
+.img-card-add-btn:hover{background:rgba(74,144,255,0.15);border-color:var(--accent);color:var(--text);}
+.timg-grid{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 4px;}
 .timg-item{text-align:center;}
 .timg-item img{max-width:180px;max-height:160px;object-fit:contain;border-radius:4px;border:1px solid rgba(255,255,255,0.1);}
-.timg-caption{font-size:10px;color:var(--dim);margin-top:3px;font-style:italic;}
-.tvdoc-img-grid{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 16px;}
+.tvdoc-img-grid{display:flex;flex-wrap:wrap;gap:14px;margin:8px 0 14px;}
 .tvdoc-img-item{text-align:center;}
 .tvdoc-img-item img{max-width:260px;max-height:200px;object-fit:contain;border:1px solid #e0e0e0;border-radius:4px;}
-.tvdoc-img-caption{font-size:10px;color:#777;margin-top:4px;font-style:italic;}
+/* Handwriting overlay */
+.hw-overlay{position:fixed;inset:0;z-index:3000;background:#0f1020;display:flex;flex-direction:column;}
+.hw-toolbar{display:flex;align-items:center;gap:7px;padding:9px 14px;background:rgba(0,0,0,0.65);border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;flex-wrap:wrap;}
+.hw-canvas-wrap{flex:1;overflow:hidden;position:relative;touch-action:none;}
+#hw-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair;}
+.hw-btn{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:6px;color:#ccc;cursor:pointer;font-size:12px;padding:5px 11px;font-family:inherit;transition:all .15s;}
+.hw-btn:hover{background:rgba(255,255,255,0.14);}
+.hw-btn.hw-active{background:rgba(74,144,255,0.3);border-color:var(--accent);color:#fff;}
+.hw-btn-save{background:rgba(74,144,255,0.4);border-color:var(--accent);color:#fff;}
+.hw-btn-save:hover{background:var(--accent);}
+.hw-sep{width:1px;height:20px;background:rgba(255,255,255,0.14);margin:0 3px;flex-shrink:0;}
+/* Handwritten para display */
+.para-hw-img{max-width:100%;border-radius:5px;border:1px solid var(--border);display:block;cursor:pointer;}
 /* Heading block */
 .tblock-hd .tblock-inner{padding-top:10px;padding-bottom:6px;}
 .tblock-h1 [contenteditable]{font-size:20px;font-weight:700;color:var(--accent2);}
@@ -1413,15 +1435,17 @@ function renderPanel(){
           <div class="para-meta">
             <span style="display:flex;align-items:center;gap:5px;">
               <svg class="para-dnd-handle" width="9" height="13" viewBox="0 0 9 13" draggable="true" ondragstart="_noteDragStart('${n.id}','${p.id}',event)" ondragend="_noteDragEnd()" title="Drag to move to another node"><circle cx="2.5" cy="2.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="2.5" r="1.3" fill="currentColor"/><circle cx="2.5" cy="6.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="6.5" r="1.3" fill="currentColor"/><circle cx="2.5" cy="10.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="10.5" r="1.3" fill="currentColor"/></svg>
-              <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
+              <span>${p.format==='handwriting'?'✍ Handwritten':'Para'} ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
             </span>
             <div style="display:flex;gap:3px;">
-              <button class="icon-btn" title="Edit paragraph (popup)" onclick="_editPara('${n.id}','${p.id}')">✎</button>
-              <button class="icon-btn" title="Edit inline" onclick="_inlineEdit('${n.id}','${p.id}')" style="font-size:10px;">✏</button>
-              <button class="icon-btn" title="Delete paragraph" onclick="deletePara('${n.id}','${p.id}')">✕</button>
+              ${p.format!=='handwriting'?`<button class="icon-btn" title="Edit paragraph (popup)" onclick="_editPara('${n.id}','${p.id}')">✎</button>
+              <button class="icon-btn" title="Edit inline" onclick="_inlineEdit('${n.id}','${p.id}')" style="font-size:10px;">✏</button>`:''}
+              <button class="icon-btn" title="Delete" onclick="deletePara('${n.id}','${p.id}')">✕</button>
             </div>
           </div>
-          <div class="para-text" id="pt-${p.id}">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>
+          ${p.format==='handwriting'
+            ?`<img class="para-hw-img" src="${p.content}" onclick="_viewHwNote('${n.id}','${p.id}')" title="Click to enlarge">`
+            :`<div class="para-text" id="pt-${p.id}">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>`}
           ${(()=>{const zk=p.refKeys||[];const cr=p.customRefs||[];if(!zk.length&&!cr.length)return'';
             return`<div class="para-refs">${zk.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm"><span class="zot-badge" style="margin-right:2px;font-size:8px;">Z</span>${esc(m?m.citation:k)}</span>`;}).join('')}${cr.map(r=>r.type==='link'?`<a class="ref-chip-sm ref-link" href="${esc(r.url||'')}" target="_blank" rel="noopener">🔗 ${esc(r.label||r.url)}</a>`:`<span class="ref-chip-sm ref-file">📎 ${esc(r.label)}</span>`).join('')}</div>`;
           })()}
@@ -1429,7 +1453,10 @@ function renderPanel(){
       <div class="tadd" style="margin-top:10px;">
         <div class="tadd-title" style="display:flex;align-items:center;justify-content:space-between;">
           <span>Add Note / Paragraph</span>
-          <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
+          <div style="display:flex;gap:4px;">
+            <button class="rte-btn" title="Handwrite (canvas)" onclick="_openHandwritingPad('${n.id}')" style="font-size:11px;padding:2px 8px;">✍ Handwrite</button>
+            <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
+          </div>
         </div>
         <div class="rte-wrap">
           ${_rteToolbarHtml('ptext')}
@@ -1527,14 +1554,16 @@ function renderCorePanel(){
       ${paras.length?paras.map((p,i)=>`
         <div class="para" data-paraid="${p.id}" data-nodeid="__core__">
           <div class="para-meta">
-            <span>Para ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
+            <span>${p.format==='handwriting'?'✍ Handwritten':'Para'} ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
             <div style="display:flex;gap:3px;">
-              <button class="icon-btn" title="Edit paragraph (popup)" onclick="_editPara('__core__','${p.id}')">✎</button>
-              <button class="icon-btn" title="Edit inline" onclick="_inlineEdit('__core__','${p.id}')" style="font-size:10px;">✏</button>
-              <button class="icon-btn" title="Delete paragraph" onclick="deletePara('__core__','${p.id}')">✕</button>
+              ${p.format!=='handwriting'?`<button class="icon-btn" title="Edit paragraph (popup)" onclick="_editPara('__core__','${p.id}')">✎</button>
+              <button class="icon-btn" title="Edit inline" onclick="_inlineEdit('__core__','${p.id}')" style="font-size:10px;">✏</button>`:''}
+              <button class="icon-btn" title="Delete" onclick="deletePara('__core__','${p.id}')">✕</button>
             </div>
           </div>
-          <div class="para-text" id="pt-${p.id}">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>
+          ${p.format==='handwriting'
+            ?`<img class="para-hw-img" src="${p.content}" onclick="_viewHwNote('__core__','${p.id}')" title="Click to enlarge">`
+            :`<div class="para-text" id="pt-${p.id}">${p.format==='html'?p.content:esc(p.content).replace(/\n/g,'<br>')}</div>`}
           ${(()=>{const zk=p.refKeys||[];const cr=p.customRefs||[];if(!zk.length&&!cr.length)return'';
             return`<div class="para-refs">${zk.map(k=>{const m=gRefMap[k];return`<span class="ref-chip-sm"><span class="zot-badge" style="margin-right:2px;font-size:8px;">Z</span>${esc(m?m.citation:k)}</span>`;}).join('')}${cr.map(r=>r.type==='link'?`<a class="ref-chip-sm ref-link" href="${esc(r.url||'')}" target="_blank" rel="noopener">🔗 ${esc(r.label||r.url)}</a>`:`<span class="ref-chip-sm ref-file">📎 ${esc(r.label)}</span>`).join('')}</div>`;
           })()}
@@ -1542,7 +1571,10 @@ function renderCorePanel(){
       <div class="tadd" style="margin-top:10px;">
         <div class="tadd-title" style="display:flex;align-items:center;justify-content:space-between;">
           <span>Add Note</span>
-          <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
+          <div style="display:flex;gap:4px;">
+            <button class="rte-btn" title="Handwrite (canvas)" onclick="_openHandwritingPad('__core__')" style="font-size:11px;padding:2px 8px;">✍ Handwrite</button>
+            <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
+          </div>
         </div>
         <div class="rte-wrap">
           ${_rteToolbarHtml('ptext')}
@@ -4031,7 +4063,7 @@ function deleteThought(id){
   save();renderThoughtsView();
 }
 
-// ── NODE IMAGES ───────────────────────────────────
+// ── IMAGE CARDS ────────────────────────────────────
 async function _compressImage(file){
   return new Promise(resolve=>{
     const reader=new FileReader();
@@ -4052,72 +4084,280 @@ async function _compressImage(file){
   });
 }
 
+function _migrateNodeImages(n){
+  if(n.images&&!n.imageCards){
+    n.imageCards=[{id:uid(),title:'Photos',notes:'',images:n.images.map(i=>({id:i.id,data:i.data,at:i.at||Date.now()})),at:Date.now()}];
+    delete n.images;
+    save();
+  }
+  if(!n.imageCards)n.imageCards=[];
+}
+
 function addNodeImage(useCamera){
   if(!selNode||selNode==='__core__')return;
+  const n=DB.nodes[selNode];if(!n)return;
+  _migrateNodeImages(n);
   const inp=document.createElement('input');
   inp.type='file';inp.accept='image/*';
   if(useCamera)inp.capture='environment';
   inp.onchange=async e=>{
     const file=e.target.files[0];if(!file)return;
     const data=await _compressImage(file);
-    const n=DB.nodes[selNode];if(!n)return;
-    if(!n.images)n.images=[];
-    n.images.push({id:uid(),data,caption:'',at:Date.now()});
-    save();renderPanel();
+    if(n.imageCards.length===0){
+      n.imageCards.push({id:uid(),title:'',notes:'',images:[{id:uid(),data,at:Date.now()}],at:Date.now()});
+      save();renderPanel();
+    }else{
+      _pickCardForImage(n,data);
+    }
   };
   inp.click();
 }
 
-function deleteNodeImage(nodeId,imgId){
-  const n=DB.nodes[nodeId];if(!n||!n.images)return;
-  n.images=n.images.filter(i=>i.id!==imgId);
+function _pickCardForImage(n,imgData){
+  window.__pendingImgData=imgData;
+  const nodeId=esc(n.id);
+  showModal(`<h3 style="margin:0 0 14px;">Add image to…</h3>
+    ${n.imageCards.map(c=>`<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;margin-bottom:7px;font-size:13px;text-align:left;" onclick="_addImgToCard('${nodeId}','${esc(c.id)}',window.__pendingImgData);closeModal()">
+      📂 ${esc(c.title||'Untitled card')} <span style="opacity:.45;font-size:10px;margin-left:6px;">${c.images.length} image${c.images.length!==1?'s':''}</span>
+    </button>`).join('')}
+    <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+    <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_addImgToNewCard('${nodeId}',window.__pendingImgData);closeModal()">+ New Card</button>`);
+}
+
+function _addImgToCard(nodeId,cardId,imgData){
+  const n=DB.nodes[nodeId];if(!n)return;
+  _migrateNodeImages(n);
+  const card=n.imageCards.find(c=>c.id===cardId);
+  if(card){card.images.push({id:uid(),data:imgData,at:Date.now()});save();renderPanel();}
+}
+
+function _addImgToNewCard(nodeId,imgData){
+  const n=DB.nodes[nodeId];if(!n)return;
+  _migrateNodeImages(n);
+  n.imageCards.push({id:uid(),title:'',notes:'',images:[{id:uid(),data:imgData,at:Date.now()}],at:Date.now()});
   save();renderPanel();
 }
 
-function saveNodeImageCaption(nodeId,imgId,val){
-  const n=DB.nodes[nodeId];if(!n||!n.images)return;
-  const img=n.images.find(i=>i.id===imgId);
-  if(img){img.caption=val;save();}
+function _addMoreToCard(nodeId,cardId){
+  const n=DB.nodes[nodeId];if(!n)return;
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    const data=await _compressImage(file);
+    _addImgToCard(nodeId,cardId,data);
+  };
+  inp.click();
 }
 
-function _viewNodeImage(nodeId,imgId){
+function deleteNodeImage(nodeId,cardId,imgId){
   const n=DB.nodes[nodeId];if(!n)return;
-  const img=n.images?.find(i=>i.id===imgId);if(!img)return;
-  showModal(`<div style="text-align:center;padding:10px;"><img src="${img.data}" style="max-width:90vw;max-height:78vh;object-fit:contain;border-radius:6px;">${img.caption?`<div style="margin-top:8px;font-size:12px;color:#aaa;font-style:italic;">${esc(img.caption)}</div>`:''}</div>`);
+  _migrateNodeImages(n);
+  const card=n.imageCards.find(c=>c.id===cardId);
+  if(card){card.images=card.images.filter(i=>i.id!==imgId);save();renderPanel();}
+}
+
+function deleteImageCard(nodeId,cardId){
+  const n=DB.nodes[nodeId];if(!n)return;
+  if(!confirm('Delete this image card and all its photos?'))return;
+  n.imageCards=(n.imageCards||[]).filter(c=>c.id!==cardId);
+  save();renderPanel();
+}
+
+function saveImageCardTitle(nodeId,cardId,val){
+  const n=DB.nodes[nodeId];if(!n)return;
+  const card=(n.imageCards||[]).find(c=>c.id===cardId);
+  if(card){card.title=val;save();}
+}
+
+function saveImageCardNotes(nodeId,cardId,val){
+  const n=DB.nodes[nodeId];if(!n)return;
+  const card=(n.imageCards||[]).find(c=>c.id===cardId);
+  if(card){card.notes=val;save();}
+}
+
+function _viewCardImage(nodeId,cardId,imgId){
+  const n=DB.nodes[nodeId];if(!n)return;
+  const card=(n.imageCards||[]).find(c=>c.id===cardId);if(!card)return;
+  const img=card.images.find(i=>i.id===imgId);if(!img)return;
+  showModal(`<div style="text-align:center;padding:10px;"><img src="${img.data}" style="max-width:90vw;max-height:78vh;object-fit:contain;border-radius:6px;"></div>`);
 }
 
 function _renderNodeImagesPanel(n){
-  const imgs=n.images||[];
+  _migrateNodeImages(n);
+  const cards=n.imageCards||[];
   return`<div class="node-imgs-section">
     <div class="node-imgs-header">
-      <span style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;">Photos &amp; Images</span>
-      <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="addNodeImage(true)">📷 Camera</button>
-      <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="addNodeImage(false)">🖼 Gallery</button>
+      <span style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;">Image Cards</span>
+      <div style="display:flex;gap:5px;">
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="addNodeImage(true)">📷 Camera</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="addNodeImage(false)">🖼 Gallery</button>
+      </div>
     </div>
-    ${imgs.length?`<div class="node-imgs-grid">
-      ${imgs.map(img=>`<div class="node-img-item">
-        <img src="${img.data}" onclick="_viewNodeImage('${esc(n.id)}','${esc(img.id)}')" title="Click to enlarge">
-        <button class="node-img-del" onclick="deleteNodeImage('${esc(n.id)}','${esc(img.id)}')" title="Delete">✕</button>
-        <input class="node-img-caption" type="text" value="${esc(img.caption||'')}" placeholder="caption…" onchange="saveNodeImageCaption('${esc(n.id)}','${esc(img.id)}',this.value)">
-      </div>`).join('')}
-    </div>`:`<div style="font-size:11px;color:var(--dim);padding:4px 0;">No images yet. Add photos of handwritten notes.</div>`}
+    ${cards.length?cards.map(card=>`<div class="img-card">
+      <div class="img-card-header">
+        <input class="img-card-title-input" type="text" value="${esc(card.title||'')}" placeholder="Card title…" onchange="saveImageCardTitle('${esc(n.id)}','${esc(card.id)}',this.value)">
+        <button class="img-card-del-btn" onclick="deleteImageCard('${esc(n.id)}','${esc(card.id)}')" title="Delete card">✕</button>
+      </div>
+      <textarea class="img-card-notes-input" placeholder="Notes for this card…" onchange="saveImageCardNotes('${esc(n.id)}','${esc(card.id)}',this.value)">${esc(card.notes||'')}</textarea>
+      <div class="img-card-imgs">
+        ${card.images.map(img=>`<div class="img-card-img-wrap">
+          <img src="${img.data}" onclick="_viewCardImage('${esc(n.id)}','${esc(card.id)}','${esc(img.id)}')" title="Click to enlarge">
+          <button class="img-card-img-del" onclick="deleteNodeImage('${esc(n.id)}','${esc(card.id)}','${esc(img.id)}')" title="Remove">✕</button>
+        </div>`).join('')}
+      </div>
+      <button class="img-card-add-btn" onclick="_addMoreToCard('${esc(n.id)}','${esc(card.id)}')">+ Add image to this card</button>
+    </div>`).join(''):`<div style="font-size:11px;color:var(--dim);padding:4px 0;">No image cards yet. Use Camera or Gallery to start.</div>`}
   </div>`;
 }
 
 function _tImgsBlock(n){
-  const imgs=n.images;if(!imgs||!imgs.length)return'';
-  return`<div class="timg-grid">${imgs.map(img=>`<div class="timg-item">
-    <img src="${img.data}" title="${esc(img.caption||'')}">
-    ${img.caption?`<div class="timg-caption">${esc(img.caption)}</div>`:''}
-  </div>`).join('')}</div>`;
+  _migrateNodeImages(n);
+  const cards=n.imageCards;if(!cards||!cards.length)return'';
+  return cards.map(card=>`
+    ${card.title?`<div style="font-size:11px;font-weight:500;color:var(--dim);margin:6px 0 3px;">${esc(card.title)}</div>`:''}
+    ${card.notes?`<div style="font-size:11px;color:var(--dim);font-style:italic;margin-bottom:5px;">${esc(card.notes)}</div>`:''}
+    <div class="timg-grid">${card.images.map(img=>`<div class="timg-item"><img src="${img.data}"></div>`).join('')}</div>
+  `).join('');
 }
 
 function _tvImgsBlock(n){
-  const imgs=n.images;if(!imgs||!imgs.length)return'';
-  return`<div class="tvdoc-img-grid">${imgs.map(img=>`<div class="tvdoc-img-item">
-    <img src="${img.data}" alt="${esc(img.caption||'')}">
-    ${img.caption?`<div class="tvdoc-img-caption">${esc(img.caption)}</div>`:''}
-  </div>`).join('')}</div>`;
+  _migrateNodeImages(n);
+  const cards=n.imageCards;if(!cards||!cards.length)return'';
+  return cards.map(card=>`
+    ${card.title?`<h4 style="font-size:12px;font-weight:600;color:#555;margin:12px 0 4px;">${esc(card.title)}</h4>`:''}
+    ${card.notes?`<p style="font-size:12px;color:#777;font-style:italic;margin:0 0 8px;">${esc(card.notes)}</p>`:''}
+    <div class="tvdoc-img-grid">${card.images.map(img=>`<div class="tvdoc-img-item"><img src="${img.data}"></div>`).join('')}</div>
+  `).join('');
+}
+
+// ── HANDWRITING PAD ────────────────────────────────
+let _hwNodeId=null,_hwDrawing=false,_hwLastX=0,_hwLastY=0,_hwPenSize=3,_hwErasing=false,_hwStrokes=[],_hwCurrentStroke=[];
+
+function _openHandwritingPad(nodeId){
+  _hwNodeId=nodeId;_hwStrokes=[];_hwCurrentStroke=[];_hwDrawing=false;
+  const overlay=document.createElement('div');
+  overlay.className='hw-overlay';overlay.id='hw-overlay';
+  overlay.innerHTML=`
+    <div class="hw-toolbar">
+      <span style="font-size:10px;letter-spacing:.8px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-right:2px;">Handwrite</span>
+      <div class="hw-sep"></div>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#999;">
+        Size <input type="range" min="1" max="18" value="3" style="width:64px;accent-color:#4a90ff;" oninput="_hwPenSize=+this.value">
+      </label>
+      <div class="hw-sep"></div>
+      <button class="hw-btn hw-active" id="hw-pen-btn" onclick="_hwSetPen()">✏ Pen</button>
+      <button class="hw-btn" id="hw-era-btn" onclick="_hwSetEraser()">⬜ Eraser</button>
+      <div class="hw-sep"></div>
+      <button class="hw-btn" onclick="_hwUndo()">↩ Undo</button>
+      <button class="hw-btn" onclick="_hwClear()">✕ Clear</button>
+      <div style="flex:1"></div>
+      <button class="hw-btn" onclick="_hwClose()">Cancel</button>
+      <button class="hw-btn hw-btn-save" onclick="_hwSave()">Save Note</button>
+    </div>
+    <div class="hw-canvas-wrap" id="hw-canvas-wrap"><canvas id="hw-canvas"></canvas></div>`;
+  document.body.appendChild(overlay);
+  const canvas=document.getElementById('hw-canvas');
+  const wrap=document.getElementById('hw-canvas-wrap');
+  canvas.width=wrap.clientWidth||window.innerWidth;
+  canvas.height=wrap.clientHeight||(window.innerHeight-60);
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#12131f';ctx.fillRect(0,0,canvas.width,canvas.height);
+  _hwErasing=false;
+  canvas.addEventListener('pointerdown',_hwPointerDown);
+  canvas.addEventListener('pointermove',_hwPointerMove);
+  canvas.addEventListener('pointerup',_hwPointerUp);
+  canvas.addEventListener('pointercancel',_hwPointerUp);
+}
+
+function _hwSetPen(){
+  _hwErasing=false;
+  document.getElementById('hw-pen-btn')?.classList.add('hw-active');
+  document.getElementById('hw-era-btn')?.classList.remove('hw-active');
+}
+function _hwSetEraser(){
+  _hwErasing=true;
+  document.getElementById('hw-era-btn')?.classList.add('hw-active');
+  document.getElementById('hw-pen-btn')?.classList.remove('hw-active');
+}
+function _hwGetXY(e){
+  const canvas=document.getElementById('hw-canvas');
+  const rect=canvas.getBoundingClientRect();
+  const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
+  return{x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy};
+}
+function _hwPointerDown(e){
+  e.preventDefault();
+  _hwDrawing=true;
+  const {x,y}=_hwGetXY(e);
+  _hwLastX=x;_hwLastY=y;
+  _hwCurrentStroke=[{x,y}];
+  const canvas=document.getElementById('hw-canvas');
+  const ctx=canvas.getContext('2d');
+  ctx.beginPath();
+  ctx.arc(x,y,(_hwErasing?_hwPenSize*3:_hwPenSize)*0.5,0,Math.PI*2);
+  ctx.fillStyle=_hwErasing?'#12131f':'rgba(220,228,255,0.92)';
+  ctx.fill();
+}
+function _hwPointerMove(e){
+  if(!_hwDrawing)return;
+  e.preventDefault();
+  const canvas=document.getElementById('hw-canvas');
+  const ctx=canvas.getContext('2d');
+  const {x,y}=_hwGetXY(e);
+  _hwCurrentStroke.push({x,y});
+  ctx.beginPath();ctx.moveTo(_hwLastX,_hwLastY);ctx.lineTo(x,y);
+  ctx.strokeStyle=_hwErasing?'#12131f':'rgba(220,228,255,0.92)';
+  ctx.lineWidth=_hwErasing?_hwPenSize*5:_hwPenSize;
+  ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+  _hwLastX=x;_hwLastY=y;
+}
+function _hwPointerUp(e){
+  if(!_hwDrawing)return;
+  _hwDrawing=false;
+  if(_hwCurrentStroke.length)_hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing});
+  _hwCurrentStroke=[];
+}
+function _hwRedraw(){
+  const canvas=document.getElementById('hw-canvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#12131f';ctx.fillRect(0,0,canvas.width,canvas.height);
+  _hwStrokes.forEach(s=>{
+    if(!s.pts.length)return;
+    ctx.strokeStyle=s.erase?'#12131f':'rgba(220,228,255,0.92)';
+    ctx.lineWidth=s.erase?s.size*5:s.size;
+    ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.moveTo(s.pts[0].x,s.pts[0].y);
+    s.pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
+  });
+}
+function _hwUndo(){if(!_hwStrokes.length)return;_hwStrokes.pop();_hwRedraw();}
+function _hwClear(){_hwStrokes=[];_hwRedraw();}
+function _hwSave(){
+  const canvas=document.getElementById('hw-canvas');if(!canvas)return;
+  if(!_hwStrokes.length){_hwClose();return;}
+  const data=canvas.toDataURL('image/png');
+  addPara(_hwNodeId,data,[],'handwriting',[]);
+  _hwClose();
+}
+function _hwClose(){
+  const overlay=document.getElementById('hw-overlay');
+  if(overlay){
+    const canvas=document.getElementById('hw-canvas');
+    if(canvas){
+      canvas.removeEventListener('pointerdown',_hwPointerDown);
+      canvas.removeEventListener('pointermove',_hwPointerMove);
+      canvas.removeEventListener('pointerup',_hwPointerUp);
+      canvas.removeEventListener('pointercancel',_hwPointerUp);
+    }
+    overlay.remove();
+  }
+  _hwNodeId=null;_hwDrawing=false;_hwStrokes=[];_hwCurrentStroke=[];
+}
+function _viewHwNote(nodeId,paraId){
+  const n=_nodeOrCore(nodeId);
+  const p=n?.paragraphs?.find(x=>x.id===paraId);if(!p||p.format!=='handwriting')return;
+  showModal(`<div style="text-align:center;padding:10px;"><img src="${p.content}" style="max-width:90vw;max-height:78vh;object-fit:contain;border-radius:6px;"></div>`);
 }
 
 function saveThought(el){
@@ -4146,8 +4386,13 @@ function _tCoreBlock(){
         <span class="tnode-badge tbadge" style="background:rgba(170,150,255,0.18);color:rgba(180,150,255,0.9);border:1px solid rgba(170,150,255,0.3);">Core</span>
       </div>
       ${DB.core.description?`<div style="font-size:12px;color:var(--dim);font-style:italic;margin-bottom:8px;">${esc(DB.core.description)}</div>`:''}
-      ${paras.map((p,pi)=>`
-        <div class="tpara-item" data-nodeid="__core__" data-pi="${pi}">
+      ${paras.map((p,pi)=>p.format==='handwriting'
+        ?`<div class="tpara-item" data-nodeid="__core__" data-pi="${pi}">
+          <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
+          <img src="${p.content}" style="max-width:100%;border-radius:4px;opacity:.85;">
+          <button class="tpara-del" onclick="tDelCorePara(${pi})" title="Delete">✕</button>
+        </div>`
+        :`<div class="tpara-item" data-nodeid="__core__" data-pi="${pi}">
           <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
           <div class="tpara-body" contenteditable="true" data-nodeid="__core__" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
           <button class="tpara-del" onclick="tDelCorePara(${pi})" title="Delete">✕</button>
@@ -4196,8 +4441,13 @@ function _tNodeBlock(b,i){
         <span style="font-size:10px;color:var(--dim);">${ndone}/${tasks.length} tasks</span>
       </div>
       ${n.description?`<div style="font-size:12px;color:var(--dim);font-style:italic;margin-bottom:8px;">${esc(n.description)}</div>`:''}
-      ${paras.map((p,pi)=>`
-        <div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
+      ${paras.map((p,pi)=>p.format==='handwriting'
+        ?`<div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
+          <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
+          <img src="${p.content}" style="max-width:100%;border-radius:4px;opacity:.85;">
+          <button class="tpara-del" onclick="tDelPara('${esc(n.id)}',${pi})" title="Delete">✕</button>
+        </div>`
+        :`<div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
           <span class="tpara-drag" draggable="true" title="Drag to reorder">⠿⠿</span>
           <div class="tpara-body" contenteditable="true" data-nodeid="${esc(n.id)}" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
           <button class="tpara-del" onclick="tDelPara('${esc(n.id)}',${pi})" title="Delete">✕</button>
@@ -4340,14 +4590,16 @@ function _renderThesisDocView(doc){
     return nums.length?`<sup style="font-size:8pt;color:#1a55cc;">${nums.join('')}</sup>`:'';
   };
 
-  // Word count across core + paragraphs + freetext blocks
+  // Word count across core + paragraphs + freetext blocks (skip handwriting)
   let words=0;
   (DB.core?.paragraphs||[]).forEach(p=>{
+    if(p.format==='handwriting')return;
     const txt=(p.content||'').replace(/<[^>]*>/g,'');
     words+=txt.trim().split(/\s+/).filter(Boolean).length;
   });
   (DB.thesis_doc||[]).forEach(b=>{
     if(b.type==='node')(DB.nodes[b.nodeId]?.paragraphs||[]).forEach(p=>{
+      if(p.format==='handwriting')return;
       const txt=(p.content||'').replace(/<[^>]*>/g,'');
       words+=txt.trim().split(/\s+/).filter(Boolean).length;
     });
@@ -4358,6 +4610,7 @@ function _renderThesisDocView(doc){
   let body='';
   if(DB.core){
     const coreParas=(DB.core.paragraphs||[]).filter(p=>{
+      if(p.format==='handwriting')return true;
       const txt=p.format==='html'?p.content.replace(/<[^>]*>/g,'').trim():(p.content||'').trim();
       return txt.length>0;
     });
@@ -4365,7 +4618,9 @@ function _renderThesisDocView(doc){
       body+=`<div class="tvdoc-section tvdoc-core-section">
         <h2 class="tvdoc-node-hd"><span style="color:rgba(180,150,255,0.8);font-size:0.7em;margin-right:5px;">⦿</span>Research Problem &amp; Motivation</h2>
         ${DB.core.description?`<div class="tvdoc-desc">${esc(DB.core.description)}</div>`:''}
-        ${coreParas.map(p=>`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}</p>`).join('')}
+        ${coreParas.map(p=>p.format==='handwriting'
+          ?`<img src="${p.content}" style="max-width:100%;border-radius:4px;margin:6px 0;display:block;">`
+          :`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}</p>`).join('')}
       </div>`;
     }
   }
@@ -4374,17 +4629,21 @@ function _renderThesisDocView(doc){
     if(b.type==='node'){
       const n=DB.nodes[b.nodeId];if(!n)return;
       const paras=(n.paragraphs||[]).filter(p=>{
+        if(p.format==='handwriting')return true;
         if(!p.content)return false;
         const txt=p.format==='html'?p.content.replace(/<[^>]*>/g,'').trim():p.content.trim();
         return txt.length>0;
       });
-      const hasImgs=n.images&&n.images.length>0;
+      _migrateNodeImages(n);
+      const hasImgs=n.imageCards&&n.imageCards.length>0;
       if(!paras.length&&!hasImgs)return; // skip empty nodes in view mode
       const col=statusColor(n.status);
       body+=`<div class="tvdoc-section">
         <h2 class="tvdoc-node-hd"><span style="color:${col};font-size:0.7em;margin-right:5px;">●</span>${esc(n.name)}</h2>
         ${n.description?`<div class="tvdoc-desc">${esc(n.description)}</div>`:''}
-        ${paras.map(p=>`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}${renderCites(p)}</p>`).join('')}
+        ${paras.map(p=>p.format==='handwriting'
+          ?`<img src="${p.content}" style="max-width:100%;border-radius:4px;margin:6px 0;display:block;">`
+          :`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}${renderCites(p)}</p>`).join('')}
         ${_tvImgsBlock(n)}
       </div>`;
     } else if(b.type==='heading'){
@@ -5087,7 +5346,7 @@ function runSearch(raw){
   Object.values(DB.nodes).forEach(n=>{
     const nameHit=(n.name||'').toLowerCase().includes(ql);
     const descHit=(n.description||'').toLowerCase().includes(ql);
-    const paraHits=(n.paragraphs||[]).filter(p=>(p.content||'').replace(/<[^>]*>/g,'').toLowerCase().includes(ql));
+    const paraHits=(n.paragraphs||[]).filter(p=>p.format!=='handwriting'&&(p.content||'').replace(/<[^>]*>/g,'').toLowerCase().includes(ql));
     if(nameHit||descHit){
       noteHits.push({kind:'node-meta',nodeId:n.id,nodeName:n.name,snippet:_srSnippet(n.description||n.name,q)});
     }
@@ -5096,7 +5355,7 @@ function runSearch(raw){
     });
   });
   if(DB.core){
-    (DB.core.paragraphs||[]).filter(p=>(p.content||'').replace(/<[^>]*>/g,'').toLowerCase().includes(ql)).forEach(p=>{
+    (DB.core.paragraphs||[]).filter(p=>p.format!=='handwriting'&&(p.content||'').replace(/<[^>]*>/g,'').toLowerCase().includes(ql)).forEach(p=>{
       noteHits.push({kind:'core',snippet:_srSnippet(p.content,q)});
     });
   }
