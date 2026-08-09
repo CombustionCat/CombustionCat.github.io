@@ -331,6 +331,9 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 .hw-btn-save{background:rgba(74,144,255,0.4);border-color:var(--accent);color:#fff;}
 .hw-btn-save:hover{background:var(--accent);}
 .hw-sep{width:1px;height:20px;background:rgba(255,255,255,0.14);margin:0 3px;flex-shrink:0;}
+.hw-swatch{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;flex-shrink:0;transition:transform .1s,border-color .1s;}
+.hw-swatch:hover{transform:scale(1.2);}
+.hw-swatch.hw-active{border-color:#fff;transform:scale(1.15);}
 /* Handwritten para display */
 .para-hw-img{max-width:100%;border-radius:5px;border:1px solid var(--border);display:block;cursor:pointer;}
 /* Heading block */
@@ -4232,22 +4235,24 @@ function _tvImgsBlock(n){
 }
 
 // ── HANDWRITING PAD ────────────────────────────────
-let _hwNodeId=null,_hwDrawing=false,_hwLastX=0,_hwLastY=0,_hwPenSize=3,_hwErasing=false,_hwStrokes=[],_hwCurrentStroke=[];
+let _hwNodeId=null,_hwDrawing=false,_hwLastX=0,_hwLastY=0,_hwPenSize=3,_hwErasing=false,_hwColor='rgba(220,228,255,0.92)',_hwStrokes=[],_hwCurrentStroke=[];
+const _hwColors=['rgba(220,228,255,0.92)','#ffdd55','#ff9944','#ff6688','#cc77ff','#55ddff','#66ff99','#ff4444'];
 
 function _openHandwritingPad(nodeId){
-  _hwNodeId=nodeId;_hwStrokes=[];_hwCurrentStroke=[];_hwDrawing=false;
+  _hwNodeId=nodeId;_hwStrokes=[];_hwCurrentStroke=[];_hwDrawing=false;_hwColor=_hwColors[0];_hwErasing=false;
   const overlay=document.createElement('div');
   overlay.className='hw-overlay';overlay.id='hw-overlay';
   overlay.innerHTML=`
     <div class="hw-toolbar">
-      <span style="font-size:10px;letter-spacing:.8px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-right:2px;">Handwrite</span>
-      <div class="hw-sep"></div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#999;">
-        Size <input type="range" min="1" max="18" value="3" style="width:64px;accent-color:#4a90ff;" oninput="_hwPenSize=+this.value">
-      </label>
-      <div class="hw-sep"></div>
       <button class="hw-btn hw-active" id="hw-pen-btn" onclick="_hwSetPen()">✏ Pen</button>
       <button class="hw-btn" id="hw-era-btn" onclick="_hwSetEraser()">⬜ Eraser</button>
+      <div class="hw-sep"></div>
+      ${_hwColors.map((c,i)=>`<div class="hw-swatch${i===0?' hw-active':''}" id="hw-sw-${i}" style="background:${c};" onclick="_hwSetColor('${c}',${i})" title="${c}"></div>`).join('')}
+      <div class="hw-sep"></div>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#999;">
+        Size <input id="hw-size-slider" type="range" min="1" max="30" value="3" style="width:72px;accent-color:#4a90ff;" oninput="_hwPenSize=+this.value;document.getElementById('hw-size-label').textContent=this.value">
+        <span id="hw-size-label" style="font-size:11px;color:#777;min-width:16px;">3</span>
+      </label>
       <div class="hw-sep"></div>
       <button class="hw-btn" onclick="_hwUndo()">↩ Undo</button>
       <button class="hw-btn" onclick="_hwClear()">✕ Clear</button>
@@ -4280,6 +4285,13 @@ function _hwSetEraser(){
   document.getElementById('hw-era-btn')?.classList.add('hw-active');
   document.getElementById('hw-pen-btn')?.classList.remove('hw-active');
 }
+function _hwSetColor(color,idx){
+  _hwColor=color;
+  _hwErasing=false;
+  document.getElementById('hw-pen-btn')?.classList.add('hw-active');
+  document.getElementById('hw-era-btn')?.classList.remove('hw-active');
+  _hwColors.forEach((_,i)=>document.getElementById(`hw-sw-${i}`)?.classList.toggle('hw-active',i===idx));
+}
 function _hwGetXY(e){
   const canvas=document.getElementById('hw-canvas');
   const rect=canvas.getBoundingClientRect();
@@ -4296,7 +4308,7 @@ function _hwPointerDown(e){
   const ctx=canvas.getContext('2d');
   ctx.beginPath();
   ctx.arc(x,y,(_hwErasing?_hwPenSize*3:_hwPenSize)*0.5,0,Math.PI*2);
-  ctx.fillStyle=_hwErasing?'#12131f':'rgba(220,228,255,0.92)';
+  ctx.fillStyle=_hwErasing?'#12131f':_hwColor;
   ctx.fill();
 }
 function _hwPointerMove(e){
@@ -4307,7 +4319,7 @@ function _hwPointerMove(e){
   const {x,y}=_hwGetXY(e);
   _hwCurrentStroke.push({x,y});
   ctx.beginPath();ctx.moveTo(_hwLastX,_hwLastY);ctx.lineTo(x,y);
-  ctx.strokeStyle=_hwErasing?'#12131f':'rgba(220,228,255,0.92)';
+  ctx.strokeStyle=_hwErasing?'#12131f':_hwColor;
   ctx.lineWidth=_hwErasing?_hwPenSize*5:_hwPenSize;
   ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
   _hwLastX=x;_hwLastY=y;
@@ -4315,7 +4327,7 @@ function _hwPointerMove(e){
 function _hwPointerUp(e){
   if(!_hwDrawing)return;
   _hwDrawing=false;
-  if(_hwCurrentStroke.length)_hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing});
+  if(_hwCurrentStroke.length)_hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing,color:_hwColor});
   _hwCurrentStroke=[];
 }
 function _hwRedraw(){
@@ -4324,7 +4336,7 @@ function _hwRedraw(){
   ctx.fillStyle='#12131f';ctx.fillRect(0,0,canvas.width,canvas.height);
   _hwStrokes.forEach(s=>{
     if(!s.pts.length)return;
-    ctx.strokeStyle=s.erase?'#12131f':'rgba(220,228,255,0.92)';
+    ctx.strokeStyle=s.erase?'#12131f':(s.color||'rgba(220,228,255,0.92)');
     ctx.lineWidth=s.erase?s.size*5:s.size;
     ctx.lineCap='round';ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(s.pts[0].x,s.pts[0].y);
