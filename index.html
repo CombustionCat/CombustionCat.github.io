@@ -4239,14 +4239,14 @@ let _hwNodeId=null,_hwDrawing=false,_hwPenSize=3,_hwErasing=false;
 let _hwColor='rgba(220,228,255,0.92)',_hwStrokes=[],_hwCurrentStroke=[];
 let _hwDpr=1,_hwWorldWidth=800;
 let _hwVpX=0,_hwVpY=0,_hwVpScale=1;
-let _hwLastPenTime=0;
+let _hwPenActive=false; // true only while stylus is physically touching
 let _hwPointers=new Map(),_hwPinchDist=null,_hwPinchMid=null;
 const _hwColors=['rgba(220,228,255,0.92)','#ffdd55','#ff9944','#ff6688','#cc77ff','#55ddff','#66ff99','#ff4444'];
 
 function _openHandwritingPad(nodeId){
   _hwNodeId=nodeId;_hwStrokes=[];_hwCurrentStroke=[];_hwDrawing=false;
   _hwColor=_hwColors[0];_hwErasing=false;
-  _hwPointers=new Map();_hwPinchDist=null;_hwLastPenTime=0;
+  _hwPointers=new Map();_hwPinchDist=null;_hwPenActive=false;
   const overlay=document.createElement('div');
   overlay.className='hw-overlay';overlay.id='hw-overlay';
   overlay.innerHTML=`
@@ -4314,12 +4314,11 @@ function _hwSetColor(color,idx){
 
 function _hwPointerDown(e){
   e.preventDefault();
-  // Palm rejection: reject touch if Apple Pencil used recently
-  if(e.pointerType==='touch'&&Date.now()-_hwLastPenTime<800)return;
-  if(e.pointerType==='pen')_hwLastPenTime=Date.now();
+  // Palm rejection: reject touch only while stylus is actively down
+  if(e.pointerType==='touch'&&_hwPenActive)return;
+  if(e.pointerType==='pen')_hwPenActive=true;
   const {x:sx,y:sy}=_hwEvXY(e);
   _hwPointers.set(e.pointerId,{x:sx,y:sy});
-  try{document.getElementById('hw-canvas').setPointerCapture(e.pointerId);}catch(_){}
   if(_hwPointers.size>=2){
     // Enter pinch mode — save current stroke first
     if(_hwDrawing&&_hwCurrentStroke.length){
@@ -4346,8 +4345,7 @@ function _hwPointerDown(e){
 
 function _hwPointerMove(e){
   e.preventDefault();
-  if(e.pointerType==='touch'&&Date.now()-_hwLastPenTime<800)return;
-  if(e.pointerType==='pen')_hwLastPenTime=Date.now();
+  if(e.pointerType==='touch'&&_hwPenActive)return;
   if(!_hwPointers.has(e.pointerId))return;
   const {x:sx,y:sy}=_hwEvXY(e);
   _hwPointers.set(e.pointerId,{x:sx,y:sy});
@@ -4384,6 +4382,7 @@ function _hwPointerMove(e){
 }
 
 function _hwPointerUp(e){
+  if(e.pointerType==='pen')_hwPenActive=false;
   _hwPointers.delete(e.pointerId);
   if(_hwPointers.size<2){_hwPinchDist=null;_hwPinchMid=null;}
   if(!_hwDrawing)return;
@@ -4457,7 +4456,7 @@ function _hwClose(){
     }
     overlay.remove();
   }
-  _hwNodeId=null;_hwDrawing=false;_hwStrokes=[];_hwCurrentStroke=[];_hwPointers=new Map();
+  _hwNodeId=null;_hwDrawing=false;_hwStrokes=[];_hwCurrentStroke=[];_hwPointers=new Map();_hwPenActive=false;
 }
 function _viewHwNote(nodeId,paraId){
   const n=_nodeOrCore(nodeId);
