@@ -4239,14 +4239,14 @@ let _hwNodeId=null,_hwDrawing=false,_hwPenSize=3,_hwErasing=false;
 let _hwColor='rgba(220,228,255,0.92)',_hwStrokes=[],_hwCurrentStroke=[];
 let _hwDpr=1,_hwWorldWidth=800;
 let _hwVpX=0,_hwVpY=0,_hwVpScale=1;
-let _hwPenActive=false; // true only while stylus is physically touching
-let _hwPointers=new Map(),_hwPinchDist=null,_hwPinchMid=null;
+// touch-only map for pan/pinch — never mixed with pen
+let _hwTouchPtrs=new Map(),_hwPinchDist=null,_hwPinchMid=null;
 const _hwColors=['rgba(220,228,255,0.92)','#ffdd55','#ff9944','#ff6688','#cc77ff','#55ddff','#66ff99','#ff4444'];
 
 function _openHandwritingPad(nodeId){
   _hwNodeId=nodeId;_hwStrokes=[];_hwCurrentStroke=[];_hwDrawing=false;
   _hwColor=_hwColors[0];_hwErasing=false;
-  _hwPointers=new Map();_hwPinchDist=null;_hwPenActive=false;
+  _hwTouchPtrs=new Map();_hwPinchDist=null;
   const overlay=document.createElement('div');
   overlay.className='hw-overlay';overlay.id='hw-overlay';
   overlay.innerHTML=`
@@ -4314,23 +4314,22 @@ function _hwSetColor(color,idx){
 
 function _hwPointerDown(e){
   e.preventDefault();
-  // Palm rejection: reject touch only while stylus is actively down
-  if(e.pointerType==='touch'&&_hwPenActive)return;
-  if(e.pointerType==='pen')_hwPenActive=true;
   const {x:sx,y:sy}=_hwEvXY(e);
-  _hwPointers.set(e.pointerId,{x:sx,y:sy});
-  if(_hwPointers.size>=2){
-    // Enter pinch mode — save current stroke first
-    if(_hwDrawing&&_hwCurrentStroke.length){
-      _hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing,color:_hwColor});
-      _hwCurrentStroke=[];
+  if(e.pointerType==='touch'){
+    // Touch: navigation only (pan / pinch) — never draws
+    _hwTouchPtrs.set(e.pointerId,{x:sx,y:sy});
+    if(_hwTouchPtrs.size>=2){
+      if(_hwDrawing&&_hwCurrentStroke.length){
+        _hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing,color:_hwColor});
+        _hwCurrentStroke=[];_hwDrawing=false;
+      }
+      const ps=[..._hwTouchPtrs.values()];
+      _hwPinchDist=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);
+      _hwPinchMid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
     }
-    _hwDrawing=false;
-    const ps=[..._hwPointers.values()];
-    _hwPinchDist=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);
-    _hwPinchMid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
     return;
   }
+  // pen / mouse: always draws, no shared state with touch
   _hwDrawing=true;
   const wp=_hwS2W(sx,sy);
   _hwCurrentStroke=[wp];
@@ -4345,29 +4344,36 @@ function _hwPointerDown(e){
 
 function _hwPointerMove(e){
   e.preventDefault();
-  if(e.pointerType==='touch'&&_hwPenActive)return;
-  if(!_hwPointers.has(e.pointerId))return;
   const {x:sx,y:sy}=_hwEvXY(e);
-  _hwPointers.set(e.pointerId,{x:sx,y:sy});
-  if(_hwPointers.size>=2){
-    // Pinch: zoom + pan
-    const ps=[..._hwPointers.values()];
-    const newDist=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);
-    const newMid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
-    if(_hwPinchDist!==null){
-      const ds=newDist/_hwPinchDist;
-      const ns=Math.max(0.2,Math.min(12,_hwVpScale*ds));
-      _hwVpX=newMid.x-(newMid.x-_hwVpX)*(ns/_hwVpScale);
-      _hwVpY=newMid.y-(newMid.y-_hwVpY)*(ns/_hwVpScale);
-      _hwVpScale=ns;
-      _hwVpX+=newMid.x-_hwPinchMid.x;
-      _hwVpY+=newMid.y-_hwPinchMid.y;
-      const zl=document.getElementById('hw-zoom-label');
-      if(zl)zl.textContent=Math.round(_hwVpScale*100)+'%';
+  if(e.pointerType==='touch'){
+    if(!_hwTouchPtrs.has(e.pointerId))return;
+    _hwTouchPtrs.set(e.pointerId,{x:sx,y:sy});
+    if(_hwTouchPtrs.size>=2){
+      const ps=[..._hwTouchPtrs.values()];
+      const newDist=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);
+      const newMid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
+      if(_hwPinchDist!==null){
+        const ns=Math.max(0.2,Math.min(12,_hwVpScale*newDist/_hwPinchDist));
+        _hwVpX=newMid.x-(newMid.x-_hwVpX)*(ns/_hwVpScale);
+        _hwVpY=newMid.y-(newMid.y-_hwVpY)*(ns/_hwVpScale);
+        _hwVpScale=ns;
+        _hwVpX+=newMid.x-_hwPinchMid.x;
+        _hwVpY+=newMid.y-_hwPinchMid.y;
+        const zl=document.getElementById('hw-zoom-label');
+        if(zl)zl.textContent=Math.round(_hwVpScale*100)+'%';
+      }
+      _hwPinchDist=newDist;_hwPinchMid=newMid;
+      _hwRedraw();
+    } else if(_hwTouchPtrs.size===1&&_hwPinchDist===null){
+      // single-finger pan
+      const prev=_hwTouchPtrs.get(e.pointerId);
+      _hwVpX+=sx-prev.x;_hwVpY+=sy-prev.y;
+      _hwTouchPtrs.set(e.pointerId,{x:sx,y:sy});
+      _hwRedraw();
     }
-    _hwPinchDist=newDist;_hwPinchMid=newMid;
-    _hwRedraw();return;
+    return;
   }
+  // pen / mouse drawing
   if(!_hwDrawing||!_hwCurrentStroke.length)return;
   const wp=_hwS2W(sx,sy);
   const prev=_hwCurrentStroke[_hwCurrentStroke.length-1];
@@ -4382,9 +4388,12 @@ function _hwPointerMove(e){
 }
 
 function _hwPointerUp(e){
-  if(e.pointerType==='pen')_hwPenActive=false;
-  _hwPointers.delete(e.pointerId);
-  if(_hwPointers.size<2){_hwPinchDist=null;_hwPinchMid=null;}
+  if(e.pointerType==='touch'){
+    _hwTouchPtrs.delete(e.pointerId);
+    if(_hwTouchPtrs.size<2){_hwPinchDist=null;_hwPinchMid=null;}
+    return;
+  }
+  // pen / mouse
   if(!_hwDrawing)return;
   _hwDrawing=false;
   if(_hwCurrentStroke.length)_hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing,color:_hwColor});
@@ -4456,7 +4465,7 @@ function _hwClose(){
     }
     overlay.remove();
   }
-  _hwNodeId=null;_hwDrawing=false;_hwStrokes=[];_hwCurrentStroke=[];_hwPointers=new Map();_hwPenActive=false;
+  _hwNodeId=null;_hwDrawing=false;_hwStrokes=[];_hwCurrentStroke=[];_hwTouchPtrs=new Map();_hwPinchDist=null;_hwPinchMid=null;
 }
 function _viewHwNote(nodeId,paraId){
   const n=_nodeOrCore(nodeId);
