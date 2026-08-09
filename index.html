@@ -4235,11 +4235,18 @@ function _tvImgsBlock(n){
 }
 
 // ── HANDWRITING PAD ────────────────────────────────
-let _hwNodeId=null,_hwDrawing=false,_hwLastX=0,_hwLastY=0,_hwPenSize=3,_hwErasing=false,_hwColor='rgba(220,228,255,0.92)',_hwStrokes=[],_hwCurrentStroke=[];
+let _hwNodeId=null,_hwDrawing=false,_hwPenSize=3,_hwErasing=false;
+let _hwColor='rgba(220,228,255,0.92)',_hwStrokes=[],_hwCurrentStroke=[];
+let _hwDpr=1,_hwWorldWidth=800;
+let _hwVpX=0,_hwVpY=0,_hwVpScale=1;
+let _hwLastPenTime=0;
+let _hwPointers=new Map(),_hwPinchDist=null,_hwPinchMid=null;
 const _hwColors=['rgba(220,228,255,0.92)','#ffdd55','#ff9944','#ff6688','#cc77ff','#55ddff','#66ff99','#ff4444'];
 
 function _openHandwritingPad(nodeId){
-  _hwNodeId=nodeId;_hwStrokes=[];_hwCurrentStroke=[];_hwDrawing=false;_hwColor=_hwColors[0];_hwErasing=false;
+  _hwNodeId=nodeId;_hwStrokes=[];_hwCurrentStroke=[];_hwDrawing=false;
+  _hwColor=_hwColors[0];_hwErasing=false;
+  _hwPointers=new Map();_hwPinchDist=null;_hwLastPenTime=0;
   const overlay=document.createElement('div');
   overlay.className='hw-overlay';overlay.id='hw-overlay';
   overlay.innerHTML=`
@@ -4247,15 +4254,16 @@ function _openHandwritingPad(nodeId){
       <button class="hw-btn hw-active" id="hw-pen-btn" onclick="_hwSetPen()">✏ Pen</button>
       <button class="hw-btn" id="hw-era-btn" onclick="_hwSetEraser()">⬜ Eraser</button>
       <div class="hw-sep"></div>
-      ${_hwColors.map((c,i)=>`<div class="hw-swatch${i===0?' hw-active':''}" id="hw-sw-${i}" style="background:${c};" onclick="_hwSetColor('${c}',${i})" title="${c}"></div>`).join('')}
+      ${_hwColors.map((c,i)=>`<div class="hw-swatch${i===0?' hw-active':''}" id="hw-sw-${i}" style="background:${c};" onclick="_hwSetColor('${c}',${i})"></div>`).join('')}
       <div class="hw-sep"></div>
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#999;">
         Size <input id="hw-size-slider" type="range" min="1" max="30" value="3" style="width:72px;accent-color:#4a90ff;" oninput="_hwPenSize=+this.value;document.getElementById('hw-size-label').textContent=this.value">
-        <span id="hw-size-label" style="font-size:11px;color:#777;min-width:16px;">3</span>
+        <span id="hw-size-label" style="font-size:11px;color:#777;min-width:18px;">3</span>
       </label>
       <div class="hw-sep"></div>
       <button class="hw-btn" onclick="_hwUndo()">↩ Undo</button>
       <button class="hw-btn" onclick="_hwClear()">✕ Clear</button>
+      <span id="hw-zoom-label" style="font-size:10px;color:#555;margin-left:4px;">100%</span>
       <div style="flex:1"></div>
       <button class="hw-btn" onclick="_hwClose()">Cancel</button>
       <button class="hw-btn hw-btn-save" onclick="_hwSave()">Save Note</button>
@@ -4264,16 +4272,28 @@ function _openHandwritingPad(nodeId){
   document.body.appendChild(overlay);
   const canvas=document.getElementById('hw-canvas');
   const wrap=document.getElementById('hw-canvas-wrap');
-  canvas.width=wrap.clientWidth||window.innerWidth;
-  canvas.height=wrap.clientHeight||(window.innerHeight-60);
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#12131f';ctx.fillRect(0,0,canvas.width,canvas.height);
-  _hwErasing=false;
+  _hwDpr=window.devicePixelRatio||1;
+  const cssW=wrap.clientWidth||window.innerWidth;
+  const cssH=wrap.clientHeight||(window.innerHeight-56);
+  _hwWorldWidth=cssW;
+  canvas.width=Math.round(cssW*_hwDpr);
+  canvas.height=Math.round(cssH*_hwDpr);
+  canvas.style.width=cssW+'px';
+  canvas.style.height=cssH+'px';
+  _hwVpX=0;_hwVpY=0;_hwVpScale=1;
+  _hwRedraw();
   canvas.addEventListener('pointerdown',_hwPointerDown);
   canvas.addEventListener('pointermove',_hwPointerMove);
   canvas.addEventListener('pointerup',_hwPointerUp);
   canvas.addEventListener('pointercancel',_hwPointerUp);
 }
+
+// screen CSS px → world coords
+function _hwS2W(sx,sy){return{x:(sx-_hwVpX)/_hwVpScale,y:(sy-_hwVpY)/_hwVpScale};}
+// get screen CSS coords from pointer event
+function _hwEvXY(e){const r=document.getElementById('hw-canvas').getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+// apply viewport transform to ctx (DPR-aware)
+function _hwXform(ctx){ctx.setTransform(_hwDpr*_hwVpScale,0,0,_hwDpr*_hwVpScale,_hwDpr*_hwVpX,_hwDpr*_hwVpY);}
 
 function _hwSetPen(){
   _hwErasing=false;
@@ -4286,55 +4306,94 @@ function _hwSetEraser(){
   document.getElementById('hw-pen-btn')?.classList.remove('hw-active');
 }
 function _hwSetColor(color,idx){
-  _hwColor=color;
-  _hwErasing=false;
+  _hwColor=color;_hwErasing=false;
   document.getElementById('hw-pen-btn')?.classList.add('hw-active');
   document.getElementById('hw-era-btn')?.classList.remove('hw-active');
   _hwColors.forEach((_,i)=>document.getElementById(`hw-sw-${i}`)?.classList.toggle('hw-active',i===idx));
 }
-function _hwGetXY(e){
-  const canvas=document.getElementById('hw-canvas');
-  const rect=canvas.getBoundingClientRect();
-  const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
-  return{x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy};
-}
+
 function _hwPointerDown(e){
   e.preventDefault();
+  // Palm rejection: reject touch if Apple Pencil used recently
+  if(e.pointerType==='touch'&&Date.now()-_hwLastPenTime<800)return;
+  if(e.pointerType==='pen')_hwLastPenTime=Date.now();
+  const {x:sx,y:sy}=_hwEvXY(e);
+  _hwPointers.set(e.pointerId,{x:sx,y:sy});
+  try{document.getElementById('hw-canvas').setPointerCapture(e.pointerId);}catch(_){}
+  if(_hwPointers.size>=2){
+    // Enter pinch mode — save current stroke first
+    if(_hwDrawing&&_hwCurrentStroke.length){
+      _hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing,color:_hwColor});
+      _hwCurrentStroke=[];
+    }
+    _hwDrawing=false;
+    const ps=[..._hwPointers.values()];
+    _hwPinchDist=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);
+    _hwPinchMid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
+    return;
+  }
   _hwDrawing=true;
-  const {x,y}=_hwGetXY(e);
-  _hwLastX=x;_hwLastY=y;
-  _hwCurrentStroke=[{x,y}];
+  const wp=_hwS2W(sx,sy);
+  _hwCurrentStroke=[wp];
   const canvas=document.getElementById('hw-canvas');
   const ctx=canvas.getContext('2d');
+  _hwXform(ctx);
   ctx.beginPath();
-  ctx.arc(x,y,(_hwErasing?_hwPenSize*3:_hwPenSize)*0.5,0,Math.PI*2);
+  ctx.arc(wp.x,wp.y,(_hwErasing?_hwPenSize*2.5:_hwPenSize)*0.5,0,Math.PI*2);
   ctx.fillStyle=_hwErasing?'#12131f':_hwColor;
   ctx.fill();
 }
+
 function _hwPointerMove(e){
-  if(!_hwDrawing)return;
   e.preventDefault();
+  if(e.pointerType==='touch'&&Date.now()-_hwLastPenTime<800)return;
+  if(e.pointerType==='pen')_hwLastPenTime=Date.now();
+  if(!_hwPointers.has(e.pointerId))return;
+  const {x:sx,y:sy}=_hwEvXY(e);
+  _hwPointers.set(e.pointerId,{x:sx,y:sy});
+  if(_hwPointers.size>=2){
+    // Pinch: zoom + pan
+    const ps=[..._hwPointers.values()];
+    const newDist=Math.hypot(ps[1].x-ps[0].x,ps[1].y-ps[0].y);
+    const newMid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
+    if(_hwPinchDist!==null){
+      const ds=newDist/_hwPinchDist;
+      const ns=Math.max(0.2,Math.min(12,_hwVpScale*ds));
+      _hwVpX=newMid.x-(newMid.x-_hwVpX)*(ns/_hwVpScale);
+      _hwVpY=newMid.y-(newMid.y-_hwVpY)*(ns/_hwVpScale);
+      _hwVpScale=ns;
+      _hwVpX+=newMid.x-_hwPinchMid.x;
+      _hwVpY+=newMid.y-_hwPinchMid.y;
+      const zl=document.getElementById('hw-zoom-label');
+      if(zl)zl.textContent=Math.round(_hwVpScale*100)+'%';
+    }
+    _hwPinchDist=newDist;_hwPinchMid=newMid;
+    _hwRedraw();return;
+  }
+  if(!_hwDrawing||!_hwCurrentStroke.length)return;
+  const wp=_hwS2W(sx,sy);
+  const prev=_hwCurrentStroke[_hwCurrentStroke.length-1];
   const canvas=document.getElementById('hw-canvas');
   const ctx=canvas.getContext('2d');
-  const {x,y}=_hwGetXY(e);
-  _hwCurrentStroke.push({x,y});
-  ctx.beginPath();ctx.moveTo(_hwLastX,_hwLastY);ctx.lineTo(x,y);
+  _hwXform(ctx);
+  ctx.beginPath();ctx.moveTo(prev.x,prev.y);ctx.lineTo(wp.x,wp.y);
   ctx.strokeStyle=_hwErasing?'#12131f':_hwColor;
   ctx.lineWidth=_hwErasing?_hwPenSize*5:_hwPenSize;
   ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
-  _hwLastX=x;_hwLastY=y;
+  _hwCurrentStroke.push(wp);
 }
+
 function _hwPointerUp(e){
+  _hwPointers.delete(e.pointerId);
+  if(_hwPointers.size<2){_hwPinchDist=null;_hwPinchMid=null;}
   if(!_hwDrawing)return;
   _hwDrawing=false;
   if(_hwCurrentStroke.length)_hwStrokes.push({pts:[..._hwCurrentStroke],size:_hwPenSize,erase:_hwErasing,color:_hwColor});
   _hwCurrentStroke=[];
 }
-function _hwRedraw(){
-  const canvas=document.getElementById('hw-canvas');if(!canvas)return;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#12131f';ctx.fillRect(0,0,canvas.width,canvas.height);
-  _hwStrokes.forEach(s=>{
+
+function _hwDrawStrokes(ctx,strokes){
+  strokes.forEach(s=>{
     if(!s.pts.length)return;
     ctx.strokeStyle=s.erase?'#12131f':(s.color||'rgba(220,228,255,0.92)');
     ctx.lineWidth=s.erase?s.size*5:s.size;
@@ -4343,15 +4402,49 @@ function _hwRedraw(){
     s.pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
   });
 }
-function _hwUndo(){if(!_hwStrokes.length)return;_hwStrokes.pop();_hwRedraw();}
-function _hwClear(){_hwStrokes=[];_hwRedraw();}
-function _hwSave(){
+
+function _hwRedraw(){
   const canvas=document.getElementById('hw-canvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle='#12131f';ctx.fillRect(0,0,canvas.width,canvas.height);
+  _hwXform(ctx);
+  _hwDrawStrokes(ctx,_hwStrokes);
+}
+
+function _hwUndo(){
+  if(!_hwStrokes.length)return;
+  _hwStrokes.pop();_hwRedraw();
+}
+function _hwClear(){_hwStrokes=[];_hwRedraw();}
+
+function _hwSave(){
   if(!_hwStrokes.length){_hwClose();return;}
-  const data=canvas.toDataURL('image/png');
+  // Find content bounding box in world coords
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  _hwStrokes.forEach(s=>s.pts.forEach(p=>{
+    const hw=(s.erase?s.size*2.5:s.size*0.5);
+    x0=Math.min(x0,p.x-hw);y0=Math.min(y0,p.y-hw);
+    x1=Math.max(x1,p.x+hw);y1=Math.max(y1,p.y+hw);
+  }));
+  const pad=16;
+  // Width = full world width (consistent for thesis); height = content height
+  const ww=_hwWorldWidth;
+  const wh=Math.max(y1-y0+pad*2,60);
+  const exportPx=_hwDpr*2; // 2× DPR for high resolution
+  const off=document.createElement('canvas');
+  off.width=Math.round(ww*exportPx);
+  off.height=Math.round(wh*exportPx);
+  const ctx=off.getContext('2d');
+  ctx.fillStyle='#12131f';ctx.fillRect(0,0,off.width,off.height);
+  // Translate so content origin (0, y0-pad) maps to (0,0)
+  ctx.setTransform(exportPx,0,0,exportPx,0,-(y0-pad)*exportPx);
+  _hwDrawStrokes(ctx,_hwStrokes);
+  const data=off.toDataURL('image/png');
   addPara(_hwNodeId,data,[],'handwriting',[]);
   _hwClose();
 }
+
 function _hwClose(){
   const overlay=document.getElementById('hw-overlay');
   if(overlay){
@@ -4364,7 +4457,7 @@ function _hwClose(){
     }
     overlay.remove();
   }
-  _hwNodeId=null;_hwDrawing=false;_hwStrokes=[];_hwCurrentStroke=[];
+  _hwNodeId=null;_hwDrawing=false;_hwStrokes=[];_hwCurrentStroke=[];_hwPointers=new Map();
 }
 function _viewHwNote(nodeId,paraId){
   const n=_nodeOrCore(nodeId);
