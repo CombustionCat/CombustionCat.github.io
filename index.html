@@ -350,6 +350,16 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 .para-title-input:focus{border-bottom-color:var(--accent);}
 .para-title-input::placeholder{color:var(--dim);font-weight:400;}
 .hw-title-input{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.18);color:#dde;font-family:inherit;font-size:13px;outline:none;padding:2px 6px;min-width:160px;max-width:260px;}
+/* ── REPLAY ── */
+#rf-replay-overlay{position:fixed;inset:0;z-index:4000;background:#07080e;display:none;flex-direction:column;}
+#rf-replay-svg-wrap{flex:1;position:relative;overflow:hidden;}
+#rf-replay-svg{display:block;width:100%;height:100%;}
+#rf-replay-date{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:300;letter-spacing:3px;color:rgba(160,185,255,0.55);pointer-events:none;white-space:nowrap;text-align:center;}
+#rf-replay-count{position:absolute;top:54px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(100,120,170,0.5);pointer-events:none;white-space:nowrap;}
+#rf-replay-controls{display:flex;align-items:center;gap:10px;padding:10px 18px;background:rgba(0,0,0,0.55);border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;flex-wrap:wrap;}
+#rf-replay-scrubber{flex:1;min-width:120px;accent-color:rgba(100,150,255,0.8);cursor:pointer;height:3px;}
+#rf-replay-dur{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:5px;color:rgba(200,210,255,0.8);font-size:11px;padding:3px 6px;outline:none;}
+.rp-lbl{font-family:inherit;pointer-events:none;}
 .hw-title-input::placeholder{color:#444;}
 .hw-title-input:focus{border-bottom-color:rgba(255,255,255,0.45);}
 /* Heading block */
@@ -592,6 +602,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
     </div>
     <div class="spacer"></div>
     <div class="right">
+      <button class="btn btn-ghost btn-sm" onclick="_replayOpen()" title="Replay timeline">▶ Replay</button>
       <button class="btn btn-ghost btn-sm" onclick="openSearch()" title="Search (Ctrl+K)">⌕ Search</button>
       <button class="btn btn-ghost btn-sm" onclick="showSettings()">⚙ Zotero</button>
       <button class="btn btn-ghost btn-sm" onclick="doExport()">Export</button>
@@ -813,6 +824,33 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   <input id="rte-col-w" type="number" min="20" max="800" step="10" placeholder="px" title="Column width (px)" oninput="_rteSetColWidth(this.value)" style="width:52px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;">
   <span style="font-size:10px;color:var(--dim);">Row H</span>
   <input id="rte-row-h" type="number" min="20" max="600" step="5" placeholder="px" title="Row height (px)" oninput="_rteSetRowHeight(this.value)" style="width:52px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;">
+</div>
+
+<!-- REPLAY OVERLAY -->
+<div id="rf-replay-overlay">
+  <div id="rf-replay-svg-wrap">
+    <svg id="rf-replay-svg"></svg>
+    <div id="rf-replay-date"></div>
+    <div id="rf-replay-count"></div>
+  </div>
+  <div id="rf-replay-controls">
+    <button id="rf-replay-play-btn" class="btn btn-sm" onclick="_replayToggle()" style="flex-shrink:0;">▶ Play</button>
+    <input id="rf-replay-scrubber" type="range" min="0" max="1000" value="0"
+      oninput="_replayScrub(+this.value)"
+      onmousedown="_replayScrubDrag=true" onmouseup="_replayScrubDrag=false"
+      ontouchstart="_replayScrubDrag=true" ontouchend="_replayScrubDrag=false">
+    <label style="font-size:11px;color:rgba(150,165,200,0.7);display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      Duration
+      <select id="rf-replay-dur">
+        <option value="20">20 s</option>
+        <option value="40">40 s</option>
+        <option value="60" selected>1 min</option>
+        <option value="120">2 min</option>
+        <option value="300">5 min</option>
+      </select>
+    </label>
+    <button class="btn btn-ghost btn-sm" onclick="_replayClose()" style="flex-shrink:0;">✕ Close</button>
+  </div>
 </div>
 
 <!-- D3 -->
@@ -4679,6 +4717,200 @@ function _viewHwNote(nodeId,paraId){
   const n=_nodeOrCore(nodeId);
   const p=n?.paragraphs?.find(x=>x.id===paraId);if(!p||p.format!=='handwriting')return;
   showModal(`<div style="text-align:center;padding:10px;"><img src="${p.content}" style="max-width:90vw;max-height:78vh;object-fit:contain;border-radius:6px;"></div>`);
+}
+
+// ── REPLAY ─────────────────────────────────────────────
+let _replayNodes=[],_replayPaths=[],_replayStart=0,_replayEnd=0;
+let _replayCurrentT=0,_replayPlaying=false,_replayRafId=null,_replayLastRealMs=null;
+let _replayVisible=new Set(),_replayScrubDrag=false;
+let _replaySvg=null,_replaySX=null,_replaySY=null;
+
+function _replayIdTs(id){
+  // First 8 chars of uid are Date.now().toString(36)
+  const ts=parseInt((id||'').substring(0,8),36);
+  return(ts>1400000000000&&ts<2600000000000)?ts:0;
+}
+
+function _replayOpen(){
+  const nodeList=Object.values(DB.nodes||{});
+  if(!nodeList.length){alert('No nodes yet — add some first!');return;}
+  _replayPrepare();
+  document.getElementById('rf-replay-overlay').style.display='flex';
+  _replayCurrentT=0;_replayPlaying=false;_replayVisible.clear();
+  document.getElementById('rf-replay-play-btn').textContent='▶ Play';
+  document.getElementById('rf-replay-scrubber').value=0;
+  // Wait one frame so SVG has correct dimensions before measuring
+  setTimeout(()=>{_replaySetup();_replayRender(0,false);},60);
+}
+
+function _replayPrepare(){
+  _replayNodes=Object.values(DB.nodes||{}).map(n=>({...n,ts:_replayIdTs(n.id)||_replayStart||Date.now()}))
+    .sort((a,b)=>a.ts-b.ts);
+  _replayPaths=Object.values(DB.paths||{}).map(p=>({...p,ts:_replayIdTs(p.id)||_replayStart||Date.now()}))
+    .sort((a,b)=>a.ts-b.ts);
+  const allTs=[..._replayNodes.map(n=>n.ts),..._replayPaths.map(p=>p.ts)].filter(Boolean);
+  _replayStart=allTs.length?Math.min(...allTs):Date.now()-86400000*30;
+  _replayEnd=allTs.length?Math.max(...allTs)+86400000*14:Date.now();
+}
+
+function _replaySetup(){
+  const svgEl=document.getElementById('rf-replay-svg');
+  const W=svgEl.clientWidth||window.innerWidth;
+  const H=svgEl.clientHeight||(window.innerHeight-56);
+  d3.select(svgEl).selectAll('*').remove();
+  _replaySvg=d3.select(svgEl);
+
+  // Blur filter for glow
+  const defs=_replaySvg.insert('defs','*');
+  const f=defs.append('filter').attr('id','rp-blur').attr('x','-100%').attr('y','-100%').attr('width','300%').attr('height','300%');
+  f.append('feGaussianBlur').attr('in','SourceGraphic').attr('stdDeviation','5');
+
+  // Scale: world coords → SVG coords
+  const xs=_replayNodes.map(n=>n.x),ys=_replayNodes.map(n=>n.y);
+  const pad=100;
+  _replaySX=d3.scaleLinear().domain([Math.min(...xs)-40,Math.max(...xs)+40]).range([pad,W-pad]);
+  _replaySY=d3.scaleLinear().domain([Math.min(...ys)-40,Math.max(...ys)+40]).range([pad,H-pad]);
+
+  // Decorative background stars
+  for(let i=0;i<260;i++){
+    const r=Math.random()<0.04?1.6:Math.random()*0.7+0.2;
+    _replaySvg.append('circle').attr('class','rp-bg-star')
+      .attr('cx',Math.random()*W).attr('cy',Math.random()*H).attr('r',r)
+      .attr('fill',`rgba(180,200,255,${(Math.random()*0.35+0.05).toFixed(2)})`);
+  }
+
+  // Pre-create path lines (hidden)
+  _replayPaths.forEach(p=>{
+    const s=_replayNodes.find(n=>n.id===p.source);
+    const t=_replayNodes.find(n=>n.id===p.target);
+    if(!s||!t)return;
+    _replaySvg.append('line')
+      .attr('id','rp-p-'+p.id)
+      .attr('x1',_replaySX(s.x)).attr('y1',_replaySY(s.y))
+      .attr('x2',_replaySX(t.x)).attr('y2',_replaySY(t.y))
+      .attr('stroke',pathColor(p.status))
+      .attr('stroke-width',p.status==='abandoned'?1.6:2)
+      .style('stroke-dasharray',p.status==='abandoned'?'6,5':'none')
+      .attr('opacity',0);
+  });
+
+  // Pre-create node groups (hidden)
+  _replayNodes.forEach(n=>{
+    const col=statusColor(n.status);
+    const g=_replaySvg.append('g')
+      .attr('id','rp-n-'+n.id)
+      .attr('transform',`translate(${_replaySX(n.x)},${_replaySY(n.y)})`)
+      .attr('opacity',0);
+    // Glow halo (blurred)
+    g.append('circle').attr('class','rp-glow')
+      .attr('r',16).attr('fill',col).attr('filter','url(#rp-blur)').attr('opacity',0.55);
+    // Core dot
+    g.append('circle').attr('class','rp-dot').attr('r',5)
+      .attr('fill',col).attr('stroke','rgba(255,255,255,0.35)').attr('stroke-width',0.8);
+    // Label
+    g.append('text').attr('class','rp-lbl')
+      .attr('x',9).attr('y',4).attr('font-size','11px')
+      .attr('fill','rgba(215,225,255,0.78)').text(n.name);
+  });
+}
+
+function _replayRender(t,animate){
+  const curTime=_replayStart+t*(_replayEnd-_replayStart);
+  const dateEl=document.getElementById('rf-replay-date');
+  if(dateEl)dateEl.textContent=new Date(curTime).toLocaleDateString('en-US',{year:'numeric',month:'long'});
+  const nv=_replayNodes.filter(n=>n.ts<=curTime).length;
+  const pv=_replayPaths.filter(p=>p.ts<=curTime).length;
+  const ce=document.getElementById('rf-replay-count');
+  if(ce)ce.textContent=`${nv} node${nv!==1?'s':''} · ${pv} path${pv!==1?'s':''}`;
+  if(!_replayScrubDrag){const s=document.getElementById('rf-replay-scrubber');if(s)s.value=t*1000;}
+
+  _replayPaths.forEach(p=>{
+    const key='p'+p.id;const el=document.getElementById('rp-p-'+p.id);if(!el)return;
+    const show=p.ts<=curTime;const was=_replayVisible.has(key);
+    if(show===was)return;
+    if(show)_replayVisible.add(key);else _replayVisible.delete(key);
+    const op=show?(p.status==='abandoned'?0.62:0.78):0;
+    if(animate&&show)d3.select(el).transition().duration(700).attr('opacity',op);
+    else d3.select(el).interrupt().attr('opacity',op);
+  });
+
+  _replayNodes.forEach(n=>{
+    const key='n'+n.id;const el=document.getElementById('rp-n-'+n.id);if(!el)return;
+    const show=n.ts<=curTime;const was=_replayVisible.has(key);
+    if(show===was)return;
+    if(show)_replayVisible.add(key);else _replayVisible.delete(key);
+    if(animate&&show){
+      const sel=d3.select(el);
+      sel.transition().duration(450).attr('opacity',1);
+      sel.select('.rp-glow').attr('r',0).transition().duration(220).attr('r',30)
+        .transition().duration(400).attr('r',16);
+      sel.select('.rp-dot').attr('r',0).transition().duration(280).attr('r',5);
+    }else{
+      const sel=d3.select(el).interrupt();
+      sel.attr('opacity',show?1:0);
+      sel.select('.rp-glow').interrupt().attr('r',16);
+      sel.select('.rp-dot').interrupt().attr('r',5);
+    }
+  });
+}
+
+function _replayToggle(){
+  if(_replayCurrentT>=1){_replayCurrentT=0;_replayVisible.clear();_replayReset();}
+  _replayPlaying=!_replayPlaying;
+  document.getElementById('rf-replay-play-btn').textContent=_replayPlaying?'⏸ Pause':'▶ Play';
+  if(_replayPlaying){
+    _replayLastRealMs=performance.now();
+    _replayRafId=requestAnimationFrame(_replayTick);
+  }else{
+    if(_replayRafId)cancelAnimationFrame(_replayRafId);_replayRafId=null;
+  }
+}
+
+function _replayTick(now){
+  if(!_replayPlaying)return;
+  const dur=parseInt(document.getElementById('rf-replay-dur').value)||60;
+  const dt=(now-(_replayLastRealMs||now))/1000;
+  _replayLastRealMs=now;
+  _replayCurrentT=Math.min(1,_replayCurrentT+dt/dur);
+  _replayRender(_replayCurrentT,true);
+  if(_replayCurrentT>=1){
+    _replayPlaying=false;
+    document.getElementById('rf-replay-play-btn').textContent='▶ Play';
+    return;
+  }
+  _replayRafId=requestAnimationFrame(_replayTick);
+}
+
+function _replayScrub(v){
+  _replayCurrentT=v/1000;
+  if(_replayPlaying){
+    _replayPlaying=false;
+    if(_replayRafId)cancelAnimationFrame(_replayRafId);_replayRafId=null;
+    document.getElementById('rf-replay-play-btn').textContent='▶ Play';
+  }
+  _replayReset();
+  _replayRender(_replayCurrentT,false);
+}
+
+function _replayReset(){
+  _replayVisible.clear();
+  _replayPaths.forEach(p=>{
+    const el=document.getElementById('rp-p-'+p.id);
+    if(el)d3.select(el).interrupt().attr('opacity',0);
+  });
+  _replayNodes.forEach(n=>{
+    const el=document.getElementById('rp-n-'+n.id);
+    if(!el)return;
+    d3.select(el).interrupt().attr('opacity',0);
+    d3.select(el).select('.rp-glow').interrupt().attr('r',16);
+    d3.select(el).select('.rp-dot').interrupt().attr('r',5);
+  });
+}
+
+function _replayClose(){
+  _replayPlaying=false;
+  if(_replayRafId)cancelAnimationFrame(_replayRafId);_replayRafId=null;
+  document.getElementById('rf-replay-overlay').style.display='none';
 }
 
 function saveThought(el){
