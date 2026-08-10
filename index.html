@@ -1913,6 +1913,41 @@ function _rteRemoveHighlight(editorId){
 
 // ── RICH TEXT EDITOR HELPERS ───────────────────
 
+// Symbol shorthands: triggered on the second character of a two-character sequence.
+// Called from keydown BEFORE the key is inserted, so inp.value ends with the first char.
+const _EQ_SYM={
+  '+-':'\\pm','->':'\\rightarrow','=>':'\\Rightarrow',
+  '<-':'\\leftarrow','<=':'\\leq','>=':'\\geq',
+  '!=':'\\neq','~=':'\\approx','**':'\\cdot',
+  '...':'\\ldots','-+':'\\mp',
+};
+function _eqAutoSym(inp,key){
+  const cursor=inp.selectionStart;
+  if(cursor!==inp.selectionEnd)return false;
+  const before=inp.value.substring(0,cursor);
+  // Check two-char sequences ending with 'key'
+  const seq2=before.slice(-1)+key;
+  if(_EQ_SYM[seq2]){
+    const rep=_EQ_SYM[seq2];
+    inp.value=before.slice(0,-1)+rep+inp.value.substring(cursor);
+    const p=before.length-1+rep.length;
+    inp.setSelectionRange(p,p);
+    inp.dispatchEvent(new Event('input'));
+    return true;
+  }
+  // Three-char sequence (e.g. "..." — check prev 2 chars + key)
+  const seq3=before.slice(-2)+key;
+  if(_EQ_SYM[seq3]){
+    const rep=_EQ_SYM[seq3];
+    inp.value=before.slice(0,-2)+rep+inp.value.substring(cursor);
+    const p=before.length-2+rep.length;
+    inp.setSelectionRange(p,p);
+    inp.dispatchEvent(new Event('input'));
+    return true;
+  }
+  return false;
+}
+
 // Auto-fraction: converts "a/b" → "\frac{a}{b}" when space is pressed in the equation input.
 // Handles plain tokens (x, \alpha, x^2) and parenthesised groups (a+b)/c → \frac{a+b}{c}.
 function _eqAutoFrac(inp){
@@ -1992,6 +2027,7 @@ function _rteInsertEq(editorId){
     inp.addEventListener('blur',finalize);
     inp.addEventListener('keydown',e=>{
       if(e.key===' '&&_eqAutoFrac(inp)){e.preventDefault();return;}
+      if(_eqAutoSym(inp,e.key)){e.preventDefault();return;}
       if(e.key==='Enter'){e.preventDefault();finalize();}
       if(e.key==='Escape'){e.preventDefault();if(done)return;done=true;const w=document.getElementById(eqId);if(w)w.remove();editor.focus();}
     });
