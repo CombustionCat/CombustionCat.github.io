@@ -336,6 +336,12 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 .hw-swatch.hw-active{border-color:#fff;transform:scale(1.15);}
 /* Handwritten para display */
 .para-hw-img{max-width:100%;border-radius:5px;border:1px solid var(--border);display:block;cursor:pointer;}
+.para-title-input{width:100%;background:transparent;border:none;border-bottom:1px solid transparent;color:var(--text);font-size:12px;font-weight:600;font-family:inherit;outline:none;padding:2px 0;margin-bottom:5px;display:block;}
+.para-title-input:focus{border-bottom-color:var(--accent);}
+.para-title-input::placeholder{color:var(--dim);font-weight:400;}
+.hw-title-input{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.18);color:#dde;font-family:inherit;font-size:13px;outline:none;padding:2px 6px;min-width:160px;max-width:260px;}
+.hw-title-input::placeholder{color:#444;}
+.hw-title-input:focus{border-bottom-color:rgba(255,255,255,0.45);}
 /* Heading block */
 .tblock-hd .tblock-inner{padding-top:10px;padding-bottom:6px;}
 .tblock-h1 [contenteditable]{font-size:20px;font-weight:700;color:var(--accent2);}
@@ -1198,11 +1204,15 @@ function _saveTaskName(id){
 
 // ── PARAGRAPHS ─────────────────────────────────
 function _nodeOrCore(nodeId){ return nodeId==='__core__'?DB.core:DB.nodes[nodeId]; }
-function addPara(nodeId,content,refKeys,format,customRefs){
+function addPara(nodeId,content,refKeys,format,customRefs,title){
   const n=_nodeOrCore(nodeId);if(!n)return;
   n.paragraphs=n.paragraphs||[];
-  n.paragraphs.push({id:uid(),content,refKeys:refKeys||[],customRefs:customRefs||[],format:format||'text',at:new Date().toISOString()});
+  n.paragraphs.push({id:uid(),title:title||'',content,refKeys:refKeys||[],customRefs:customRefs||[],format:format||'text',at:new Date().toISOString()});
   save();renderPanel();
+}
+function updateParaTitle(nodeId,paraId,title){
+  const n=_nodeOrCore(nodeId);if(!n)return;
+  const p=n.paragraphs?.find(x=>x.id===paraId);if(p)p.title=title;save();
 }
 function deletePara(nodeId,paraId){
   const n=_nodeOrCore(nodeId);if(!n)return;
@@ -1436,6 +1446,7 @@ function renderPanel(){
       ${_renderNodeImagesPanel(n)}
       ${paras.length?paras.map((p,i)=>`
         <div class="para" data-paraid="${p.id}" data-nodeid="${n.id}">
+          <input class="para-title-input" type="text" value="${esc(p.title||'')}" placeholder="Note title…" oninput="updateParaTitle('${n.id}','${p.id}',this.value)">
           <div class="para-meta">
             <span style="display:flex;align-items:center;gap:5px;">
               <svg class="para-dnd-handle" width="9" height="13" viewBox="0 0 9 13" draggable="true" ondragstart="_noteDragStart('${n.id}','${p.id}',event)" ondragend="_noteDragEnd()" title="Drag to move to another node"><circle cx="2.5" cy="2.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="2.5" r="1.3" fill="currentColor"/><circle cx="2.5" cy="6.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="6.5" r="1.3" fill="currentColor"/><circle cx="2.5" cy="10.5" r="1.3" fill="currentColor"/><circle cx="6.5" cy="10.5" r="1.3" fill="currentColor"/></svg>
@@ -1462,6 +1473,7 @@ function renderPanel(){
             <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
           </div>
         </div>
+        <input id="ptitle" type="text" placeholder="Note title (optional)…" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;font-family:inherit;outline:none;padding:4px 0;margin-bottom:6px;display:block;">
         <div class="rte-wrap">
           ${_rteToolbarHtml('ptext')}
           <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write paragraph content… type $$x^2 then Enter for math" onkeydown="_rteEqOnEnter(this,event)"></div>
@@ -1557,6 +1569,7 @@ function renderCorePanel(){
     ct.innerHTML=`
       ${paras.length?paras.map((p,i)=>`
         <div class="para" data-paraid="${p.id}" data-nodeid="__core__">
+          <input class="para-title-input" type="text" value="${esc(p.title||'')}" placeholder="Note title…" oninput="updateParaTitle('__core__','${p.id}',this.value)">
           <div class="para-meta">
             <span>${p.format==='handwriting'?'✍ Handwritten':'Para'} ${i+1} · ${new Date(p.at).toLocaleDateString()}</span>
             <div style="display:flex;gap:3px;">
@@ -1580,6 +1593,7 @@ function renderCorePanel(){
             <button class="rte-btn" title="Open expanded editor" onclick="_rteExpand()" style="font-size:11px;padding:2px 8px;">⤢ Expand</button>
           </div>
         </div>
+        <input id="ptitle" type="text" placeholder="Note title (optional)…" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;font-family:inherit;outline:none;padding:4px 0;margin-bottom:6px;display:block;">
         <div class="rte-wrap">
           ${_rteToolbarHtml('ptext')}
           <div id="ptext" class="rte-editor" contenteditable="true" data-placeholder="Write notes… type $$x^2 then Enter for math" onkeydown="_rteEqOnEnter(this,event)"></div>
@@ -1613,8 +1627,11 @@ function _submitTask(){
 function _submitPara(){
   const el=document.getElementById('ptext');
   if(!el||!el.textContent.trim())return;
-  addPara(selNode,el.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs]);
+  const titleEl=document.getElementById('ptitle');
+  const title=titleEl?titleEl.value.trim():'';
+  addPara(selNode,el.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs],title);
   el.innerHTML='';
+  if(titleEl)titleEl.value='';
   _pendingRefKeys=[];_pendingCustomRefs=[];
 }
 function _editPara(nodeId,paraId){
@@ -4265,6 +4282,8 @@ function _openHandwritingPad(nodeId){
       <button class="hw-btn" onclick="_hwUndo()">↩ Undo</button>
       <button class="hw-btn" onclick="_hwClear()">✕ Clear</button>
       <span id="hw-zoom-label" style="font-size:10px;color:#555;margin-left:4px;">100%</span>
+      <div class="hw-sep"></div>
+      <input id="hw-title-input" class="hw-title-input" type="text" placeholder="Note title…">
       <div style="flex:1"></div>
       <button class="hw-btn" onclick="_hwClose()">Cancel</button>
       <button class="hw-btn hw-btn-save" onclick="_hwSave()">Save Note</button>
@@ -4450,7 +4469,8 @@ function _hwSave(){
   ctx.setTransform(exportPx,0,0,exportPx,0,-(y0-pad)*exportPx);
   _hwDrawStrokes(ctx,_hwStrokes);
   const data=off.toDataURL('image/png');
-  addPara(_hwNodeId,data,[],'handwriting',[]);
+  const hwTitle=(document.getElementById('hw-title-input')?.value||'').trim();
+  addPara(_hwNodeId,data,[],'handwriting',[],hwTitle);
   _hwClose();
 }
 
@@ -4503,12 +4523,16 @@ function _tCoreBlock(){
       ${paras.map((p,pi)=>p.format==='handwriting'
         ?`<div class="tpara-item" data-nodeid="__core__" data-pi="${pi}">
           <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
+          ${p.title?`<div style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:4px;">${esc(p.title)}</div>`:''}
           <img src="${p.content}" style="max-width:100%;border-radius:4px;opacity:.85;">
           <button class="tpara-del" onclick="tDelCorePara(${pi})" title="Delete">✕</button>
         </div>`
         :`<div class="tpara-item" data-nodeid="__core__" data-pi="${pi}">
           <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
-          <div class="tpara-body" contenteditable="true" data-nodeid="__core__" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
+          <div>
+            ${p.title?`<div style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:3px;">${esc(p.title)}</div>`:''}
+            <div class="tpara-body" contenteditable="true" data-nodeid="__core__" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
+          </div>
           <button class="tpara-del" onclick="tDelCorePara(${pi})" title="Delete">✕</button>
         </div>`).join('')}
       <button class="tpara-add" onclick="tAddCorePara()">+ Add paragraph</button>
@@ -4558,12 +4582,16 @@ function _tNodeBlock(b,i){
       ${paras.map((p,pi)=>p.format==='handwriting'
         ?`<div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
           <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
+          ${p.title?`<div style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:4px;">${esc(p.title)}</div>`:''}
           <img src="${p.content}" style="max-width:100%;border-radius:4px;opacity:.85;">
           <button class="tpara-del" onclick="tDelPara('${esc(n.id)}',${pi})" title="Delete">✕</button>
         </div>`
         :`<div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
           <span class="tpara-drag" draggable="true" title="Drag to reorder">⠿⠿</span>
-          <div class="tpara-body" contenteditable="true" data-nodeid="${esc(n.id)}" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
+          <div>
+            ${p.title?`<div style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:3px;">${esc(p.title)}</div>`:''}
+            <div class="tpara-body" contenteditable="true" data-nodeid="${esc(n.id)}" data-pi="${pi}" onblur="tSavePara(this)">${p.format==='html'?p.content:esc(p.content)}</div>
+          </div>
           <button class="tpara-del" onclick="tDelPara('${esc(n.id)}',${pi})" title="Delete">✕</button>
         </div>`).join('')}
       ${_tImgsBlock(n)}
