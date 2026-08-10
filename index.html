@@ -176,6 +176,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .rte-eq{display:inline-block;background:rgba(74,144,255,0.08);border:1px solid rgba(74,144,255,0.2);border-radius:3px;padding:0 3px;cursor:default;user-select:all;}
 .rte-eq-editing{display:inline-flex;align-items:center;gap:4px;background:rgba(74,144,255,0.1);border:1px dashed rgba(74,144,255,0.5);border-radius:4px;padding:1px 6px;vertical-align:middle;line-height:1;}
 .rte-eq-input{background:transparent;border:none;outline:none;color:var(--accent2);font-family:monospace;font-size:12px;min-width:30px;max-width:280px;}
+.rte-eq-display{display:block;text-align:center;margin:6px 0;padding:4px 0;border:1px solid rgba(74,144,255,0.15);border-radius:5px;}
+.rte-img{display:block;border-radius:4px;max-width:100%;margin:4px 0;cursor:pointer;}
+.rte-img.rte-img-sel{outline:2px solid var(--accent);outline-offset:1px;}
+#rte-img-bar{position:fixed;display:none;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:6px 9px;z-index:800;box-shadow:0 4px 18px rgba(0,0,0,.6);font-size:11px;}
+#rte-img-bar .rte-btn{padding:2px 7px;font-size:11px;}
+.rte-img-bar-pct{width:40px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center;}
+#rte-matrix-backdrop{position:fixed;inset:0;z-index:1999;display:none;}
+#rte-matrix-backdrop.on{display:block;}
+#rte-matrix-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;z-index:2000;box-shadow:0 8px 40px rgba(0,0,0,.75);display:none;min-width:260px;}
+#rte-matrix-popup.on{display:block;}
 .modal.wide{width:min(960px,98vw);height:94vh;display:flex;flex-direction:column;padding:16px 20px;overflow:hidden;}
 .modal.wide .rte-wrap{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;overflow:hidden;}
 .modal.wide .rte-editor{flex:1;overflow-y:auto;min-height:0 !important;font-size:15px;line-height:1.9;padding:20px 28px;}
@@ -747,6 +757,47 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
   <div style="display:flex;gap:6px;justify-content:flex-end;">
     <button class="btn btn-ghost btn-sm" onclick="_rteTablePopupClose()">Cancel</button>
     <button class="btn btn-sm" onclick="_rteDoInsertTable()">Insert</button>
+  </div>
+</div>
+
+<!-- IMAGE RESIZE BAR -->
+<div id="rte-img-bar">
+  <span style="color:var(--dim);">Width:</span>
+  <button class="rte-btn" onclick="_rteImgW(25)">S</button>
+  <button class="rte-btn" onclick="_rteImgW(50)">M</button>
+  <button class="rte-btn" onclick="_rteImgW(75)">L</button>
+  <button class="rte-btn" onclick="_rteImgW(100)">Full</button>
+  <input class="rte-img-bar-pct" type="number" min="5" max="100" value="100" title="Width %" oninput="_rteImgW(+this.value)">%
+  <button class="icon-btn" onclick="_rteImgBarClose()" style="margin-left:2px;">✕</button>
+</div>
+
+<!-- MATRIX INSERT POPUP -->
+<div id="rte-matrix-backdrop" onclick="_rteMatrixPopupClose()"></div>
+<div id="rte-matrix-popup">
+  <div style="font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:12px;">Insert Matrix</div>
+  <div style="display:flex;gap:10px;margin-bottom:12px;">
+    <div class="fg" style="flex:1;margin:0;">
+      <label>Rows</label>
+      <input id="mat-rows" type="number" min="1" max="10" value="2" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')_rteDoInsertMatrix();if(event.key==='Escape')_rteMatrixPopupClose();">
+    </div>
+    <div class="fg" style="flex:1;margin:0;">
+      <label>Columns</label>
+      <input id="mat-cols" type="number" min="1" max="10" value="2" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')_rteDoInsertMatrix();if(event.key==='Escape')_rteMatrixPopupClose();">
+    </div>
+  </div>
+  <div class="fg" style="margin-bottom:14px;">
+    <label>Brackets</label>
+    <select id="mat-type" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;">
+      <option value="pmatrix">( ) — parentheses</option>
+      <option value="bmatrix">[ ] — square brackets</option>
+      <option value="vmatrix">| | — determinant</option>
+      <option value="Bmatrix">{ } — curly braces</option>
+      <option value="matrix">none — plain</option>
+    </select>
+  </div>
+  <div style="display:flex;gap:6px;justify-content:flex-end;">
+    <button class="btn btn-ghost btn-sm" onclick="_rteMatrixPopupClose()">Cancel</button>
+    <button class="btn btn-sm" onclick="_rteDoInsertMatrix()">Insert</button>
   </div>
 </div>
 
@@ -1727,7 +1778,9 @@ function _rteToolbarHtml(id){
     <button class="rte-btn" onclick="_toggleHighlightMenu('${id}',this)" title="Highlight selected text"><span style="display:inline-block;width:9px;height:9px;background:#ffd700;border-radius:2px;vertical-align:middle;margin-right:2px;"></span>Mark</button>
     <div class="rte-sep"></div>
     <button class="rte-btn" onclick="_rteInsertEq('${id}')" title="Insert equation (or type $$x^2 then Enter)">∑ Eq</button>
+    <button class="rte-btn" onclick="_rteInsertMatrix('${id}')" title="Insert matrix (KaTeX)">⊠ Matrix</button>
     <button class="rte-btn" onclick="_rteInsertTable('${id}')" title="Insert table">⊞ Table</button>
+    <button class="rte-btn" onclick="_rteInsertImage('${id}')" title="Insert image">🖼 Img</button>
   </div>`;
 }
 
@@ -1877,9 +1930,13 @@ function _rteInsertEq(editorId){
       const latex=input?input.value.trim():'';
       if(!latex){wrapper.remove();editor.focus();return;}
       try{
-        const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:false});
+        const isDisplay=/\\begin\{[a-zA-Z]*matrix\}/.test(latex);
+        const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:isDisplay});
         const span=document.createElement('span');
-        span.className='rte-eq';span.contentEditable='false';span.dataset.latex=latex;span.innerHTML=rendered;
+        span.className=isDisplay?'rte-eq rte-eq-display':'rte-eq';
+        span.contentEditable='false';span.dataset.latex=latex;
+        if(isDisplay)span.dataset.display='1';
+        span.innerHTML=rendered;
         const next=wrapper.nextSibling;
         wrapper.parentNode.replaceChild(span,wrapper);
         // place cursor after the inserted equation
@@ -1898,6 +1955,103 @@ function _rteInsertEq(editorId){
       if(e.key==='Escape'){e.preventDefault();if(done)return;done=true;const w=document.getElementById(eqId);if(w)w.remove();editor.focus();}
     });
   },0);
+}
+
+// ── IMAGE INSERT + RESIZE ──────────────────────
+let _rteActiveImg=null;
+
+function _rteInsertImage(editorId){
+  const editor=document.getElementById(editorId);if(!editor)return;
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';
+  inp.onchange=ev=>{
+    const file=ev.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=re=>{
+      editor.focus();
+      document.execCommand('insertHTML',false,
+        `<img class="rte-img" src="${re.target.result}" style="width:100%">&#8203;`);
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+
+function _rteImgShowBar(img,e){
+  _rteActiveImg=img;
+  document.querySelectorAll('.rte-img.rte-img-sel').forEach(x=>x.classList.remove('rte-img-sel'));
+  img.classList.add('rte-img-sel');
+  const bar=document.getElementById('rte-img-bar');if(!bar)return;
+  const pct=parseInt(img.style.width)||100;
+  bar.querySelector('.rte-img-bar-pct').value=pct;
+  const r=img.getBoundingClientRect();
+  bar.style.top=Math.min(r.bottom+window.scrollY+6,window.innerHeight-60)+'px';
+  bar.style.left=Math.max(4,Math.min(r.left,window.innerWidth-270))+'px';
+  bar.style.display='flex';
+}
+
+function _rteImgW(pct){
+  if(!_rteActiveImg)return;
+  _rteActiveImg.style.width=Math.max(5,Math.min(100,Math.round(+pct||100)))+'%';
+  const inp=document.getElementById('rte-img-bar')?.querySelector('.rte-img-bar-pct');
+  if(inp)inp.value=pct;
+}
+
+function _rteImgBarClose(){
+  const bar=document.getElementById('rte-img-bar');if(bar)bar.style.display='none';
+  document.querySelectorAll('.rte-img.rte-img-sel').forEach(x=>x.classList.remove('rte-img-sel'));
+  _rteActiveImg=null;
+}
+
+document.addEventListener('click',e=>{
+  if(e.target.classList.contains('rte-img')&&e.target.closest('.rte-editor')){
+    _rteImgShowBar(e.target,e);return;
+  }
+  if(!e.target.closest('#rte-img-bar'))_rteImgBarClose();
+});
+
+// ── MATRIX INSERT ──────────────────────────────
+let _rteMatrixEditorId=null,_rteMatrixRange=null;
+
+function _rteInsertMatrix(editorId){
+  _rteMatrixEditorId=editorId;
+  const sel=window.getSelection();
+  _rteMatrixRange=(sel&&sel.rangeCount)?sel.getRangeAt(0).cloneRange():null;
+  document.getElementById('rte-matrix-backdrop').classList.add('on');
+  document.getElementById('rte-matrix-popup').classList.add('on');
+  setTimeout(()=>{const el=document.getElementById('mat-rows');if(el){el.focus();el.select();}},60);
+}
+
+function _rteMatrixPopupClose(){
+  document.getElementById('rte-matrix-popup').classList.remove('on');
+  document.getElementById('rte-matrix-backdrop').classList.remove('on');
+}
+
+function _rteDoInsertMatrix(){
+  const rows=Math.max(1,Math.min(10,parseInt(document.getElementById('mat-rows')?.value)||2));
+  const cols=Math.max(1,Math.min(10,parseInt(document.getElementById('mat-cols')?.value)||2));
+  const type=document.getElementById('mat-type')?.value||'pmatrix';
+  const rowStrs=[];
+  for(let r=0;r<rows;r++){
+    const cells=[];
+    for(let c=0;c<cols;c++)cells.push(rows===1&&cols===1?'a':`a_{${r+1}${c+1}}`);
+    rowStrs.push(cells.join(' & '));
+  }
+  const latex=`\\begin{${type}} ${rowStrs.join(' \\\\ ')} \\end{${type}}`;
+  _rteMatrixPopupClose();
+  const editor=document.getElementById(_rteMatrixEditorId);if(!editor)return;
+  editor.focus();
+  if(_rteMatrixRange){const s=window.getSelection();s.removeAllRanges();s.addRange(_rteMatrixRange);}
+  try{
+    const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:true});
+    const span=document.createElement('span');
+    span.className='rte-eq rte-eq-display';
+    span.contentEditable='false';
+    span.dataset.latex=latex;
+    span.dataset.display='1';
+    span.innerHTML=rendered;
+    document.execCommand('insertHTML',false,span.outerHTML+'&#8203;');
+  }catch(err){}
 }
 
 // ── TABLE INSERT ───────────────────────────────
@@ -2138,13 +2292,17 @@ function _rteEqOnEnter(el,e){
   const latex=text.substring(openIdx+2,pos);
   if(!latex.trim())return;
   try{
-    const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:false});
+    const isDisplay=/\\begin\{[a-zA-Z]*matrix\}/.test(latex);
+    const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:isDisplay});
     e.preventDefault();
     const before=text.substring(0,openIdx);
     const after=text.substring(pos);
     const parent=node.parentNode;
     const span=document.createElement('span');
-    span.className='rte-eq';span.contentEditable='false';span.dataset.latex=latex;span.innerHTML=rendered;
+    span.className=isDisplay?'rte-eq rte-eq-display':'rte-eq';
+    span.contentEditable='false';span.dataset.latex=latex;
+    if(isDisplay)span.dataset.display='1';
+    span.innerHTML=rendered;
     const beforeNode=before?document.createTextNode(before):null;
     const afterNode=document.createTextNode(after||'​');
     if(beforeNode)parent.insertBefore(beforeNode,node);
