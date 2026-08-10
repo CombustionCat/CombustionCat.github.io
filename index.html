@@ -1695,13 +1695,14 @@ function _editPara(nodeId,paraId){
     const t=DB.tasks[tid];
     if(t&&t.zoteroData&&!seen.has(t.zoteroData.key)){seen.add(t.zoteroData.key);_editRefTasks.push(t);}
   });
-  showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+  showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
     <h3 style="margin:0;">Edit Paragraph</h3>
     <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);">🔍
       <input type="range" min="12" max="28" value="15" style="width:72px;accent-color:var(--accent2);"
         oninput="document.getElementById('ep').style.fontSize=this.value+'px'">
     </label>
   </div>
+    <input id="ep-title" type="text" value="${esc(p.title||'')}" placeholder="Note title (optional)…" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:14px;font-weight:600;font-family:inherit;outline:none;padding:4px 0;margin-bottom:8px;display:block;flex-shrink:0;">
     <div class="rte-wrap">
       ${_rteToolbarHtml('ep')}
       <div id="ep" class="rte-editor" contenteditable="true" data-placeholder="Paragraph content… type $$x^2 then Enter for math" onkeydown="_rteEqOnEnter(this,event)"></div>
@@ -1755,7 +1756,9 @@ function _renderEditRefPicker(){
 function _saveEditPara(nodeId,paraId){
   const el=document.getElementById('ep');
   if(!el||!el.textContent.trim())return;
+  const title=(document.getElementById('ep-title')?.value||'').trim();
   updatePara(nodeId,paraId,el.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs]);
+  const n=_nodeOrCore(nodeId);const p=n?.paragraphs?.find(x=>x.id===paraId);if(p)p.title=title;save();
   _pendingRefKeys=[];_pendingCustomRefs=[];_editRefTasks=[];closeModal();
 }
 
@@ -2402,7 +2405,8 @@ function _cancelInlineEdit(){
 function _rteExpand(){
   const inline=document.getElementById('ptext');
   const curHtml=inline?inline.innerHTML:'';
-  showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+  const curTitle=document.getElementById('ptitle')?.value||'';
+  showModal(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <h3 style="margin:0;">Paragraph</h3>
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:11px;color:var(--dim);">Type <code style="font-size:10px;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">$$x^2</code> then Enter · dbl-click to re-edit</span>
@@ -2412,6 +2416,7 @@ function _rteExpand(){
         </label>
       </div>
     </div>
+    <input id="ptext-popup-title" type="text" value="${esc(curTitle)}" placeholder="Note title (optional)…" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:14px;font-weight:600;font-family:inherit;outline:none;padding:4px 0;margin-bottom:8px;display:block;flex-shrink:0;">
     <div class="rte-wrap">
       ${_rteToolbarHtml('ptext-popup')}
       <div id="ptext-popup" class="rte-editor" contenteditable="true" data-placeholder="Write freely — type $$x^2 then Enter for math, Mark to highlight…" onkeydown="_rteEqOnEnter(this,event)"></div>
@@ -2425,7 +2430,8 @@ function _rteExpand(){
 function _rtePopupSubmit(){
   const popup=document.getElementById('ptext-popup');
   if(!popup||!popup.textContent.trim())return;
-  addPara(selNode,popup.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs]);
+  const title=(document.getElementById('ptext-popup-title')?.value||'').trim();
+  addPara(selNode,popup.innerHTML,[..._pendingRefKeys],'html',[..._pendingCustomRefs],title);
   _pendingRefKeys=[];_pendingCustomRefs=[];
   closeModal();
   const inline=document.getElementById('ptext');
