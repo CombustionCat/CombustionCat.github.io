@@ -2275,40 +2275,63 @@ function _rteDoInsertTable(){
   document.execCommand('insertHTML',false,html);
 }
 
-// Render $$latex on Enter: type $$x^2 then press Enter to commit the equation
+// Render $$latex on Enter: type $$x^2 then Enter to commit.
+// Works even when $$ and the closing cursor are on different DOM lines.
 function _rteEqOnEnter(el,e){
   if(e.key!=='Enter')return;
   const sel=window.getSelection();
   if(!sel||!sel.rangeCount)return;
   const range=sel.getRangeAt(0);
-  if(!range.collapsed)return; // let normal Enter handle selections
-  if(range.startContainer.nodeType!==Node.TEXT_NODE)return;
-  const node=range.startContainer;
-  const text=node.textContent;
-  const pos=range.startOffset;
-  // Find last $$ before cursor
-  const openIdx=text.lastIndexOf('$$',pos-1);
+  if(!range.collapsed)return;
+
+  // Build text of entire editor up to cursor (spans DOM lines / text nodes)
+  const preRange=document.createRange();
+  preRange.selectNodeContents(el);
+  preRange.setEnd(range.startContainer,range.startOffset);
+  const textBefore=preRange.toString();
+
+  const openIdx=textBefore.lastIndexOf('$$');
   if(openIdx<0)return;
-  const latex=text.substring(openIdx+2,pos);
+  const latex=textBefore.substring(openIdx+2);
   if(!latex.trim())return;
+
+  // Don't intercept Enter mid-matrix (\begin without matching \end)
+  const beginCount=(latex.match(/\\begin\{/g)||[]).length;
+  const endCount=(latex.match(/\\end\{/g)||[]).length;
+  if(beginCount!==endCount)return;
+
   try{
     const isDisplay=/\\begin\{[a-zA-Z]*matrix\}/.test(latex);
     const rendered=katex.renderToString(latex,{throwOnError:false,displayMode:isDisplay});
     e.preventDefault();
-    const before=text.substring(0,openIdx);
-    const after=text.substring(pos);
-    const parent=node.parentNode;
+
+    // Locate the text node that holds the opening $$ using a TreeWalker
+    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
+    let charPos=0,startNode=null,startOff=0;
+    while(walker.nextNode()){
+      const n=walker.currentNode;
+      const len=n.textContent.length;
+      if(charPos+len>openIdx){startNode=n;startOff=openIdx-charPos;break;}
+      charPos+=len;
+    }
+    if(!startNode)return;
+
+    // Delete from $$ to cursor and insert rendered span
+    const delRange=document.createRange();
+    delRange.setStart(startNode,startOff);
+    delRange.setEnd(range.startContainer,range.startOffset);
+    delRange.deleteContents();
+
     const span=document.createElement('span');
     span.className=isDisplay?'rte-eq rte-eq-display':'rte-eq';
     span.contentEditable='false';span.dataset.latex=latex;
     if(isDisplay)span.dataset.display='1';
     span.innerHTML=rendered;
-    const beforeNode=before?document.createTextNode(before):null;
-    const afterNode=document.createTextNode(after||'​');
-    if(beforeNode)parent.insertBefore(beforeNode,node);
-    parent.insertBefore(span,node);
-    parent.replaceChild(afterNode,node);
-    const nr=document.createRange();nr.setStart(afterNode,0);nr.collapse(true);
+    delRange.insertNode(span);
+
+    const zws=document.createTextNode('​');
+    span.after(zws);
+    const nr=document.createRange();nr.setStart(zws,1);nr.collapse(true);
     sel.removeAllRanges();sel.addRange(nr);
     el.focus();
   }catch(err){}
