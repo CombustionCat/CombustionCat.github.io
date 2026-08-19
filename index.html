@@ -429,6 +429,14 @@ a.ref-chip-sm{text-decoration:none;}a.ref-chip-sm:hover{opacity:.8;}
 .rl-group-hd{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);padding:0 2px 7px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:6px;}
 .rl-add{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:13px;margin-bottom:16px;}
 .rl-add-title{font-size:10px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;}
+/* ── READING STORAGE ── */
+.rs-section-hd{display:flex;align-items:center;gap:10px;padding:18px 0 14px;border-top:1px solid var(--border);margin-top:4px;}
+.rs-section-hd-title{font-size:11px;letter-spacing:1.1px;color:var(--dim);text-transform:uppercase;}
+.rs-section-sub{font-size:10px;color:rgba(200,216,255,0.28);}
+.rs-search{display:flex;align-items:center;gap:7px;margin-bottom:12px;}
+.rs-search-input{flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;outline:none;font-family:inherit;transition:border .2s;}
+.rs-search-input:focus{border-color:var(--accent);}
+.rs-match{background:rgba(74,144,255,0.28);color:inherit;border-radius:2px;padding:0 1px;}
 
 /* ── EMPTY STATE ── */
 .empty{text-align:center;color:var(--dim);padding:28px 16px;font-size:13px;line-height:1.7;}
@@ -667,6 +675,7 @@ sup.cite{font-size:9px;color:var(--accent2);letter-spacing:.3px;margin-left:1px;
       <!-- READING LIST VIEW -->
       <div id="reading-view" class="view">
         <div id="rl-inner" style="max-width:760px;margin:0 auto;"></div>
+        <div id="rs-inner" style="max-width:760px;margin:0 auto;"></div>
       </div>
 
       <!-- THOUGHTS VIEW -->
@@ -937,7 +946,7 @@ function toggleLoginNewDevice(){
 function load(){
   try{const s=localStorage.getItem('rf_data');if(s)DB=JSON.parse(s);}catch(e){}
   DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};DB.marvinSeen=DB.marvinSeen||[];
-  DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};DB.thoughts=DB.thoughts||[];
+  DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};DB.thoughts=DB.thoughts||[];DB.storage=DB.storage||{};
   // DB.core is initialized in initTopView() once the SVG has dimensions
 }
 let _syncDirty=false;
@@ -956,7 +965,7 @@ function doExport(){
 }
 function _normalizeDB(){
   DB.nodes=DB.nodes||{};DB.paths=DB.paths||{};DB.tasks=DB.tasks||{};
-  DB.marvinSeen=DB.marvinSeen||[];DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};DB.thoughts=DB.thoughts||[];
+  DB.marvinSeen=DB.marvinSeen||[];DB.corePaths=DB.corePaths||{};DB.reading=DB.reading||{};DB.thoughts=DB.thoughts||[];DB.storage=DB.storage||{};
 }
 function doImport(ev){
   const f=ev.target.files[0];if(!f)return;
@@ -3467,6 +3476,7 @@ function _rfRemoveLabel(taskId,label){
 
 // ── READING LIST ───────────────────────────────
 let _rlSort='date'; // 'date' | 'node' | 'alpha'
+let _rsSearch='';
 const _rlTypes=['paper','textbook','article','report','other'];
 function _rlTypeName(t){return t==='paper'?'Paper':t==='textbook'?'Textbook':t==='article'?'Article':t==='report'?'Report':'Other';}
 
@@ -3617,6 +3627,7 @@ function renderReadingView(){
   }
 
   inner.innerHTML=addForm+toolbar+listHtml;
+  renderStorageSection();
 }
 
 function _rlSubmit(){
@@ -3628,6 +3639,111 @@ function _rlSubmit(){
   document.getElementById('rl-title').value='';
   document.getElementById('rl-url').value='';
   document.getElementById('rl-desc').value='';
+}
+
+// ── READING STORAGE ────────────────────────────
+function addStorageItem(title,url,desc){
+  const id=uid();
+  DB.storage[id]={id,title:title||'',url:url||'',description:desc||'',addedAt:new Date().toISOString()};
+  save();renderStorageSection();return id;
+}
+function deleteStorageItem(id){delete DB.storage[id];save();renderStorageSection();}
+function updateStorageItem(id,patch){if(DB.storage[id])Object.assign(DB.storage[id],patch);save();renderStorageSection();}
+
+function _rsEditModal(id){
+  const item=DB.storage[id];if(!item)return;
+  showModal(`<h3>Edit Stored Paper</h3>
+    <div class="fg"><label>Title</label><input id="rse-title" value="${esc(item.title)}"></div>
+    <div class="fg"><label>URL</label><input id="rse-url" value="${esc(item.url||'')}" placeholder="https://…"></div>
+    <div class="fg"><label>Description / Notes</label><textarea id="rse-desc" rows="3">${esc(item.description||'')}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm" onclick="_rsSaveEdit('${id}')">Save</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('rse-title')?.focus(),50);
+}
+function _rsSaveEdit(id){
+  const title=document.getElementById('rse-title')?.value.trim();if(!title)return;
+  const url=document.getElementById('rse-url')?.value.trim()||'';
+  const desc=document.getElementById('rse-desc')?.value.trim()||'';
+  updateStorageItem(id,{title,url,description:desc});closeModal();
+}
+
+function _rsSubmit(){
+  const title=document.getElementById('rs-title')?.value.trim();if(!title)return;
+  const url=document.getElementById('rs-url')?.value.trim()||'';
+  const desc=document.getElementById('rs-desc')?.value.trim()||'';
+  addStorageItem(title,url,desc);
+  document.getElementById('rs-title').value='';
+  document.getElementById('rs-url').value='';
+  document.getElementById('rs-desc').value='';
+  document.getElementById('rs-title').focus();
+}
+
+function _rsHighlight(text,q){
+  if(!q)return esc(text);
+  const safe=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return esc(text).replace(new RegExp('('+safe+')','gi'),'<mark class="rs-match">$1</mark>');
+}
+
+function renderStorageSection(){
+  const inner=document.getElementById('rs-inner');
+  if(!inner)return;
+  const allItems=Object.values(DB.storage||{});
+  const q=_rsSearch.toLowerCase().trim();
+  const filtered=q?allItems.filter(it=>
+    it.title.toLowerCase().includes(q)||(it.description||'').toLowerCase().includes(q)
+  ):allItems;
+  const sorted=[...filtered].sort((a,b)=>new Date(b.addedAt)-new Date(a.addedAt));
+
+  const addForm=`<div class="rl-add">
+    <div class="rl-add-title">Add to Reading Storage</div>
+    <div class="fg" style="margin-bottom:7px;">
+      <input id="rs-title" placeholder="Paper title…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_rsSubmit();}" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+    </div>
+    <div class="fg" style="margin-bottom:7px;">
+      <input id="rs-url" placeholder="URL / DOI…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+    </div>
+    <div class="fg" style="margin-bottom:8px;">
+      <textarea id="rs-desc" rows="2" placeholder="Why this might be useful…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+    </div>
+    <button class="btn btn-sm" style="width:100%;justify-content:center;" onclick="_rsSubmit()">Save to Storage</button>
+  </div>`;
+
+  const searchBar=allItems.length?`<div class="rs-search">
+    <input class="rs-search-input" id="rs-search-inp" placeholder="Search title or description…" value="${esc(_rsSearch)}" oninput="_rsSearch=this.value;renderStorageSection()">
+    ${_rsSearch?`<button class="icon-btn" onclick="_rsSearch='';renderStorageSection()" title="Clear search">✕</button>`:''}
+    <span style="font-size:11px;color:var(--dim);white-space:nowrap;">${filtered.length}${q?' match'+(filtered.length!==1?'es':''):''}/${allItems.length}</span>
+  </div>`:'';
+
+  function itemHtml(item){
+    const linkHtml=item.url
+      ?`<a href="${esc(item.url)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent2);text-decoration:none;margin-right:auto;" title="${esc(item.url)}">🔗 Open</a>`
+      :'<span style="margin-right:auto;"></span>';
+    return`<div class="rl-item">
+      <div class="rl-item-hd">
+        <span class="rl-title">${_rsHighlight(item.title,q)}</span>
+        <button class="icon-btn" title="Edit" onclick="_rsEditModal('${item.id}')" style="flex-shrink:0;">✎</button>
+        <button class="icon-btn" title="Delete" onclick="deleteStorageItem('${item.id}')" style="flex-shrink:0;">✕</button>
+      </div>
+      ${item.description?`<div class="rl-desc">${_rsHighlight(item.description,q)}</div>`:''}
+      <div class="rl-footer">
+        ${linkHtml}
+        <span class="rl-date">${new Date(item.addedAt).toLocaleDateString()}</span>
+      </div>
+    </div>`;
+  }
+
+  let listHtml='';
+  if(!allItems.length){
+    listHtml=`<div class="empty">No stored papers yet.<br>Drop links here for quick future reference.</div>`;
+  } else if(!sorted.length){
+    listHtml=`<div class="empty">No results for "<em>${esc(q)}</em>".</div>`;
+  } else {
+    listHtml=sorted.map(itemHtml).join('');
+  }
+
+  inner.innerHTML=`<div class="rs-section-hd"><span class="rs-section-hd-title">Reading Storage</span><span class="rs-section-sub">papers saved for later reference</span></div>`+addForm+searchBar+listHtml;
 }
 
 // ── TASK VIEW ──────────────────────────────────
@@ -4756,7 +4872,7 @@ function _viewHwNote(nodeId,paraId){
 }
 
 // ── REPLAY ─────────────────────────────────────────────
-let _replayNodes=[],_replayPaths=[],_replayStart=0,_replayEnd=0;
+let _replayNodes=[],_replayPaths=[],_replayCorePaths=[],_replayStart=0,_replayEnd=0;
 let _replayCurrentT=0,_replayPlaying=false,_replayRafId=null,_replayLastRealMs=null;
 let _replayVisible=new Set(),_replayScrubDrag=false;
 let _replaySvg=null,_replaySX=null,_replaySY=null;
@@ -4784,6 +4900,7 @@ function _replayPrepare(){
     .sort((a,b)=>a.ts-b.ts);
   _replayPaths=Object.values(DB.paths||{}).map(p=>({...p,ts:_replayIdTs(p.id)||_replayStart||Date.now()}))
     .sort((a,b)=>a.ts-b.ts);
+  _replayCorePaths=Object.values(DB.corePaths||{});
   const allTs=[..._replayNodes.map(n=>n.ts),..._replayPaths.map(p=>p.ts)].filter(Boolean);
   _replayStart=allTs.length?Math.min(...allTs):Date.now()-86400000*30;
   _replayEnd=allTs.length?Math.max(...allTs)+86400000*14:Date.now();
@@ -4800,9 +4917,12 @@ function _replaySetup(){
   const defs=_replaySvg.insert('defs','*');
   const f=defs.append('filter').attr('id','rp-blur').attr('x','-100%').attr('y','-100%').attr('width','300%').attr('height','300%');
   f.append('feGaussianBlur').attr('in','SourceGraphic').attr('stdDeviation','5');
+  const cf=defs.append('filter').attr('id','rp-core-blur').attr('x','-300%').attr('y','-300%').attr('width','700%').attr('height','700%');
+  cf.append('feGaussianBlur').attr('in','SourceGraphic').attr('stdDeviation','10');
 
   // Scale: world coords → SVG coords
-  const xs=_replayNodes.map(n=>n.x),ys=_replayNodes.map(n=>n.y);
+  const coreWX=DB.core?.x||0,coreWY=DB.core?.y||0;
+  const xs=[..._replayNodes.map(n=>n.x),coreWX],ys=[..._replayNodes.map(n=>n.y),coreWY];
   const pad=100;
   _replaySX=d3.scaleLinear().domain([Math.min(...xs)-40,Math.max(...xs)+40]).range([pad,W-pad]);
   _replaySY=d3.scaleLinear().domain([Math.min(...ys)-40,Math.max(...ys)+40]).range([pad,H-pad]);
@@ -4813,6 +4933,18 @@ function _replaySetup(){
     _replaySvg.append('circle').attr('class','rp-bg-star')
       .attr('cx',Math.random()*W).attr('cy',Math.random()*H).attr('r',r)
       .attr('fill',`rgba(180,200,255,${(Math.random()*0.35+0.05).toFixed(2)})`);
+  }
+
+  // Pre-create core path lines (hidden; revealed when target node appears)
+  if(DB.core){
+    const cX=_replaySX(DB.core.x),cY=_replaySY(DB.core.y);
+    _replayCorePaths.forEach(cp=>{
+      const tgt=_replayNodes.find(n=>n.id===cp.target);if(!tgt)return;
+      _replaySvg.append('line').attr('id','rp-cp-'+cp.id)
+        .attr('x1',cX).attr('y1',cY).attr('x2',_replaySX(tgt.x)).attr('y2',_replaySY(tgt.y))
+        .attr('stroke','rgba(180,150,255,0.45)').attr('stroke-width',1.2)
+        .style('stroke-dasharray','5,6').attr('opacity',0);
+    });
   }
 
   // Pre-create path lines (hidden)
@@ -4848,6 +4980,20 @@ function _replaySetup(){
       .attr('x',9).attr('y',4).attr('font-size','11px')
       .attr('fill','rgba(215,225,255,0.78)').text(n.name);
   });
+
+  // Core node (always visible from the start)
+  if(DB.core){
+    const cX=_replaySX(DB.core.x),cY=_replaySY(DB.core.y);
+    const cG=_replaySvg.append('g').attr('id','rp-core').attr('transform',`translate(${cX},${cY})`);
+    cG.append('circle').attr('r',80).attr('fill','rgba(170,150,255,0.07)').attr('stroke','none').attr('filter','url(#rp-core-blur)');
+    cG.append('circle').attr('r',40).attr('fill','rgba(210,190,255,0.11)').attr('stroke','none').attr('filter','url(#rp-core-blur)');
+    cG.append('circle').attr('r',20).attr('fill','rgba(255,248,215,0.28)').attr('stroke','none').attr('filter','url(#rp-core-blur)');
+    cG.append('circle').attr('r',6).attr('fill','rgba(255,252,230,0.88)').attr('stroke','none').attr('filter','url(#rp-core-blur)');
+    cG.append('circle').attr('r',2.5).attr('fill','white').attr('opacity',1);
+    cG.append('circle').attr('r',12).attr('fill','none').attr('stroke','rgba(200,180,255,0.2)').attr('stroke-width',0.8);
+    const coreLbl=DB.core.name||'CORE';
+    cG.append('text').attr('y',32).attr('text-anchor','middle').attr('fill','rgba(200,178,255,0.4)').attr('font-size','8.5px').attr('letter-spacing','1.5px').attr('font-weight','300').text(coreLbl.length>14?coreLbl.slice(0,12)+'…':coreLbl);
+  }
 }
 
 function _replayRender(t,animate){
@@ -4887,6 +5033,17 @@ function _replayRender(t,animate){
       sel.select('.rp-glow').interrupt().attr('r',16);
       sel.select('.rp-dot').interrupt().attr('r',5);
     }
+  });
+
+  // Show core paths when their target node becomes visible
+  _replayCorePaths.forEach(cp=>{
+    const key='cp'+cp.id;const el=document.getElementById('rp-cp-'+cp.id);if(!el)return;
+    const tgt=_replayNodes.find(n=>n.id===cp.target);
+    const show=!!(tgt&&tgt.ts<=curTime);const was=_replayVisible.has(key);
+    if(show===was)return;
+    if(show)_replayVisible.add(key);else _replayVisible.delete(key);
+    if(animate&&show)d3.select(el).transition().duration(700).attr('opacity',0.6);
+    else d3.select(el).interrupt().attr('opacity',show?0.6:0);
   });
 }
 
@@ -4941,6 +5098,10 @@ function _replayReset(){
     d3.select(el).select('.rp-glow').interrupt().attr('r',16);
     d3.select(el).select('.rp-dot').interrupt().attr('r',5);
   });
+  _replayCorePaths.forEach(cp=>{
+    const el=document.getElementById('rp-cp-'+cp.id);
+    if(el)d3.select(el).interrupt().attr('opacity',0);
+  });
 }
 
 function _replayClose(){
@@ -4978,7 +5139,7 @@ function _tCoreBlock(){
       ${paras.map((p,pi)=>p.format==='handwriting'
         ?`<div class="tpara-item" data-nodeid="__core__" data-pi="${pi}">
           <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
-          ${p.title?`<div style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:4px;">${esc(p.title)}</div>`:''}
+          ${p.title?`<div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid rgba(74,144,255,0.2);">${esc(p.title)}</div>`:''}
           <img src="${p.content}" style="max-width:100%;border-radius:4px;opacity:.85;">
           <button class="tpara-del" onclick="tDelCorePara(${pi})" title="Delete">✕</button>
         </div>`
@@ -5037,7 +5198,7 @@ function _tNodeBlock(b,i){
       ${paras.map((p,pi)=>p.format==='handwriting'
         ?`<div class="tpara-item" data-nodeid="${esc(n.id)}" data-pi="${pi}">
           <span class="tpara-drag" style="visibility:hidden;">⠿⠿</span>
-          ${p.title?`<div style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:4px;">${esc(p.title)}</div>`:''}
+          ${p.title?`<div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid rgba(74,144,255,0.2);">${esc(p.title)}</div>`:''}
           <img src="${p.content}" style="max-width:100%;border-radius:4px;opacity:.85;">
           <button class="tpara-del" onclick="tDelPara('${esc(n.id)}',${pi})" title="Delete">✕</button>
         </div>`
@@ -5216,8 +5377,8 @@ function _renderThesisDocView(doc){
         <h2 class="tvdoc-node-hd"><span style="color:rgba(180,150,255,0.8);font-size:0.7em;margin-right:5px;">⦿</span>Research Problem &amp; Motivation</h2>
         ${DB.core.description?`<div class="tvdoc-desc">${esc(DB.core.description)}</div>`:''}
         ${coreParas.map(p=>p.format==='handwriting'
-          ?`<img src="${p.content}" style="max-width:100%;border-radius:4px;margin:6px 0;display:block;">`
-          :`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}</p>`).join('')}
+          ?`${p.title?`<h3 class="tvdoc-h3">${esc(p.title)}</h3>`:''}<img src="${p.content}" style="max-width:100%;border-radius:4px;margin:6px 0;display:block;">`
+          :`${p.title?`<h3 class="tvdoc-h3">${esc(p.title)}</h3>`:''}<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}</p>`).join('')}
       </div>`;
     }
   }
@@ -5239,8 +5400,8 @@ function _renderThesisDocView(doc){
         <h2 class="tvdoc-node-hd"><span style="color:${col};font-size:0.7em;margin-right:5px;">●</span>${esc(n.name)}</h2>
         ${n.description?`<div class="tvdoc-desc">${esc(n.description)}</div>`:''}
         ${paras.map(p=>p.format==='handwriting'
-          ?`<img src="${p.content}" style="max-width:100%;border-radius:4px;margin:6px 0;display:block;">`
-          :`<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}${renderCites(p)}</p>`).join('')}
+          ?`${p.title?`<h3 class="tvdoc-h3">${esc(p.title)}</h3>`:''}<img src="${p.content}" style="max-width:100%;border-radius:4px;margin:6px 0;display:block;">`
+          :`${p.title?`<h3 class="tvdoc-h3">${esc(p.title)}</h3>`:''}<p class="tvdoc-para">${p.format==='html'?p.content:esc(p.content)}${renderCites(p)}</p>`).join('')}
         ${_tvImgsBlock(n)}
       </div>`;
     } else if(b.type==='heading'){
